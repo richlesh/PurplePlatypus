@@ -4,8 +4,14 @@
     <annotationProcessing>
       <profile name="Default" enabled="true">
         <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="true" />
+      </profile>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="MarkdownPro" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel target="17" />
   </component>
 </project>
