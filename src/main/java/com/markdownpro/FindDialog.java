@@ -1,3 +1,18 @@
+/*
+ * (c) 2026 The Boeing Company
+ */
+
+/**
+ * FindDialog.java
+ *
+ * Provides a non-modal Find dialog for the MarkdownPro editor.
+ * Supports Find Next, Find All (with a clickable results window), and Count
+ * operations with options for case sensitivity, wrap-around, search direction,
+ * and searching within a remembered selection.
+ * <p>
+ * Designed as a base class that can be extended (see {@link ReplaceDialog})
+ * via template methods for the top panel, options panel, and button panel.
+ */
 package com.markdownpro;
 
 import javax.swing.*;
@@ -17,24 +32,58 @@ import java.util.Map;
 /**
  * A non-modal Find dialog with Find Next, Find All, Count,
  * and search option checkboxes.
+ * <p>
+ * Subclasses can override {@link #createTopPanel()}, {@link #createOptionsPanel()},
+ * and {@link #createButtonPanel()} to customize the dialog layout while reusing
+ * the core search logic.
  */
 public class FindDialog extends JDialog {
+
+    /** The parent frame, used for positioning and bringing to front. */
     protected final JFrame ownerFrame;
+
+    /** The text area being searched. */
     protected final JTextArea textArea;
+
+    /** Text field where the user enters the search query. */
     protected JTextField searchField;
+
+    /** Checkbox to restrict search to the remembered selection range. */
     protected JCheckBox findInSelectionBox;
+
+    /** Checkbox to reverse the search direction (search backwards from caret). */
     protected JCheckBox searchBackwardsBox;
+
+    /** Checkbox for case-sensitive matching. */
     protected JCheckBox matchCaseBox;
+
+    /** Checkbox to wrap around to the start/end of the search region. */
     protected JCheckBox wrapAroundBox;
 
-    // Remembered selection boundaries for "Find in selection"
+    /** Start offset of the remembered selection for "Find in selection". */
     protected int selectionStart = -1;
+
+    /** End offset of the remembered selection for "Find in selection". */
     protected int selectionEnd = -1;
 
+    /**
+     * Creates a Find dialog with the default title "Find".
+     *
+     * @param owner    the parent frame
+     * @param textArea the text area to search within
+     */
     public FindDialog(JFrame owner, JTextArea textArea) {
         this(owner, textArea, "Find");
     }
 
+    /**
+     * Creates a Find dialog with a custom title. This constructor is used by subclasses
+     * to provide their own dialog title (e.g., "Replace").
+     *
+     * @param owner    the parent frame
+     * @param textArea the text area to search within
+     * @param title    the dialog window title
+     */
     protected FindDialog(JFrame owner, JTextArea textArea, String title) {
         super(owner, title, false);
         this.ownerFrame = owner;
@@ -60,6 +109,12 @@ public class FindDialog extends JDialog {
         setResizable(false);
     }
 
+    /**
+     * Creates the top panel containing the search text field.
+     * Subclasses can override this to add additional fields (e.g., a replace field).
+     *
+     * @return the configured top panel
+     */
     protected JPanel createTopPanel() {
         JPanel topPanel = new JPanel(new BorderLayout(8, 0));
         topPanel.add(new JLabel("Find:"), BorderLayout.WEST);
@@ -67,6 +122,15 @@ public class FindDialog extends JDialog {
         return topPanel;
     }
 
+    /**
+     * Creates the options panel with search modifier checkboxes:
+     * Find in Selection, Search Backwards, Match Case, and Wrap Around.
+     * <p>
+     * When "Find in selection" is checked, the current editor selection boundaries
+     * are captured and remembered for subsequent searches.
+     *
+     * @return the configured options panel
+     */
     protected JPanel createOptionsPanel() {
         JPanel optionsPanel = new JPanel();
         optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.Y_AXIS));
@@ -105,6 +169,12 @@ public class FindDialog extends JDialog {
         return optionsPanel;
     }
 
+    /**
+     * Creates the button panel with Find Next, Find All, and Count buttons.
+     * Subclasses can override this to provide different buttons (e.g., Replace).
+     *
+     * @return the configured button panel
+     */
     protected JPanel createButtonPanel() {
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
@@ -126,6 +196,12 @@ public class FindDialog extends JDialog {
         return buttonPanel;
     }
 
+    /**
+     * Creates a button with a standardized size for consistent dialog layout.
+     *
+     * @param text the button label
+     * @return the configured button
+     */
     protected JButton createButton(String text) {
         JButton btn = new JButton(text);
         Dimension btnSize = new Dimension(130, 28);
@@ -134,6 +210,14 @@ public class FindDialog extends JDialog {
         return btn;
     }
 
+    /**
+     * Populates the bounds array with the start and end offsets of the search region.
+     * If "Find in selection" is active with a valid remembered range, uses that range;
+     * otherwise uses the full document.
+     *
+     * @param bounds a two-element array where bounds[0] receives the start offset
+     *              and bounds[1] receives the end offset
+     */
     protected void getSearchBounds(int[] bounds) {
         if (findInSelectionBox.isSelected() && selectionStart >= 0 && selectionEnd > selectionStart) {
             bounds[0] = selectionStart;
@@ -144,6 +228,11 @@ public class FindDialog extends JDialog {
         }
     }
 
+    /**
+     * Finds and selects the next occurrence of the search text from the current
+     * caret position. Respects all search options (case, direction, wrap, selection).
+     * Displays a message if no match is found.
+     */
     public void findNext() {
         String searchText = searchField.getText();
         if (searchText.isEmpty()) return;
@@ -199,6 +288,11 @@ public class FindDialog extends JDialog {
         }
     }
 
+    /**
+     * Finds all occurrences of the search text within the search region and
+     * displays them in a new results window. Each matching line is shown with
+     * its line number and the matched text highlighted in yellow.
+     */
     protected void findAll() {
         String searchText = searchField.getText();
         if (searchText.isEmpty()) return;
@@ -231,6 +325,15 @@ public class FindDialog extends JDialog {
         showFindAllResults(searchText, matches, content);
     }
 
+    /**
+     * Displays a results window containing all matching lines with highlighted
+     * match text. Clicking a highlighted match selects the corresponding text
+     * in the editor and brings the main window to the front.
+     *
+     * @param searchText the search query (used in the window title)
+     * @param matches    list of [start, end] offset pairs for each match
+     * @param content    the full document text (used for line extraction)
+     */
     protected void showFindAllResults(String searchText, List<int[]> matches, String content) {
         JFrame resultsFrame = new JFrame("Find All Results - \"" + searchText + "\" (" + matches.size() + " matches)");
         resultsFrame.setSize(600, 400);
@@ -346,6 +449,14 @@ public class FindDialog extends JDialog {
         resultsFrame.setVisible(true);
     }
 
+    /**
+     * Determines which line a given character offset falls on using binary-style
+     * reverse scan of the line start offsets array.
+     *
+     * @param lineStartOffsets array of character offsets where each line begins
+     * @param offset           the character offset to locate
+     * @return the zero-based line index
+     */
     protected int getLineForOffset(int[] lineStartOffsets, int offset) {
         for (int i = lineStartOffsets.length - 1; i >= 0; i--) {
             if (offset >= lineStartOffsets[i]) {
@@ -355,6 +466,10 @@ public class FindDialog extends JDialog {
         return 0;
     }
 
+    /**
+     * Counts and displays the number of occurrences of the search text within
+     * the current search region. Shows the result in a message dialog.
+     */
     protected void count() {
         String searchText = searchField.getText();
         if (searchText.isEmpty()) return;

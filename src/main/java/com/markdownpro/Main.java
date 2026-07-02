@@ -1,3 +1,15 @@
+/*
+ * (c) 2026 The Boeing Company
+ */
+
+/**
+ * Main.java
+ *
+ * Entry point and primary UI class for the MarkdownPro application.
+ * Creates a Swing-based split-pane markdown editor with a live HTML preview,
+ * line number gutter, file operations, undo/redo, clipboard support, and
+ * find/replace functionality.
+ */
 package com.markdownpro;
 
 import org.commonmark.node.Node;
@@ -19,6 +31,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
+/**
+ * The main application class for MarkdownPro.
+ * <p>
+ * Constructs the GUI on the Event Dispatch Thread and manages the editor state
+ * including the current file, markdown parser, and undo history.
+ */
 public class Main {
 
     private JFrame frame;
@@ -28,13 +46,28 @@ public class Main {
     private final Parser parser;
     private final HtmlRenderer renderer;
     private final UndoManager undoManager = new UndoManager();
+    private Preferences preferences;
 
+    /**
+     * Constructs the application, initializing the markdown parser and renderer,
+     * loading user preferences, then building and displaying the GUI.
+     */
     public Main() {
         parser = Parser.builder().build();
         renderer = HtmlRenderer.builder().build();
+        preferences = Preferences.load();
         createAndShowGUI();
     }
 
+    /**
+     * Builds and displays the main application window, including:
+     * <ul>
+     *   <li>Menu bar with File, Edit, and Search menus</li>
+     *   <li>Split pane with editor (left) and HTML preview (right)</li>
+     *   <li>Line number gutter on the editor pane</li>
+     *   <li>Live preview via document change listener</li>
+     * </ul>
+     */
     private void createAndShowGUI() {
         frame = new JFrame("MarkdownPro");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -42,6 +75,21 @@ public class Main {
 
         // Menu bar
         JMenuBar menuBar = new JMenuBar();
+
+        // MarkdownPro menu
+        JMenu appMenu = new JMenu("MarkdownPro");
+
+        JMenuItem aboutItem = new JMenuItem("About MarkdownPro...");
+        aboutItem.addActionListener(e -> showAboutDialog());
+
+        JMenuItem prefsItem = new JMenuItem("Preferences...");
+        prefsItem.addActionListener(e -> showPreferencesDialog());
+
+        appMenu.add(aboutItem);
+        appMenu.add(prefsItem);
+        menuBar.add(appMenu);
+
+        // File menu
         JMenu fileMenu = new JMenu("File");
 
         JMenuItem newItem = new JMenuItem("New");
@@ -130,7 +178,7 @@ public class Main {
 
         // Editor pane (left) - plain text area for markdown source
         editorPane = new JTextArea();
-        editorPane.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        editorPane.setFont(new Font(preferences.getEditorFontFamily(), Font.PLAIN, preferences.getEditorFontSize()));
         editorPane.setLineWrap(true);
         editorPane.setWrapStyleWord(true);
         editorPane.getDocument().addUndoableEditListener(undoManager);
@@ -184,14 +232,21 @@ public class Main {
         frame.setVisible(true);
     }
 
+    /**
+     * Parses the current editor content as Markdown and renders it as styled HTML
+     * in the preview pane. Uses the current preview font preferences for styling.
+     * Called automatically on every document change.
+     */
     private void updatePreview() {
         String markdown = editorPane.getText();
         Node document = parser.parse(markdown);
         String html = renderer.render(document);
 
-        // Wrap in basic HTML with some styling
+        String fontFamily = preferences.getPreviewFontFamily();
+        int fontSize = preferences.getPreviewFontSize();
+
         String styledHtml = "<html><head><style>"
-                + "body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; line-height: 1.6; }"
+                + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; padding: 10px; line-height: 1.6; }"
                 + "h1, h2, h3 { color: #333; }"
                 + "code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }"
                 + "pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }"
@@ -202,12 +257,20 @@ public class Main {
         previewPane.setCaretPosition(0);
     }
 
+    /**
+     * Resets the editor to an empty state for a new file.
+     * Clears the current file reference and resets the window title.
+     */
     private void newFile() {
         currentFile = null;
         editorPane.setText("");
         frame.setTitle("MarkdownPro");
     }
 
+    /**
+     * Displays a file chooser dialog and loads the selected markdown file
+     * into the editor. Supports .md, .markdown, and .txt extensions.
+     */
     private void openFile() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("Markdown Files", "md", "markdown", "txt"));
@@ -225,6 +288,10 @@ public class Main {
         }
     }
 
+    /**
+     * Saves the editor content to the current file. If no file has been set,
+     * delegates to {@link #saveFileAs()}.
+     */
     private void saveFile() {
         if (currentFile == null) {
             saveFileAs();
@@ -233,6 +300,10 @@ public class Main {
         }
     }
 
+    /**
+     * Displays a file chooser dialog for the user to specify a save location.
+     * Appends a .md extension if none is provided.
+     */
     private void saveFileAs() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("Markdown Files", "md", "markdown"));
@@ -246,6 +317,11 @@ public class Main {
         }
     }
 
+    /**
+     * Writes the current editor content to the specified file using UTF-8 encoding.
+     *
+     * @param file the target file to write to
+     */
     private void writeFile(File file) {
         try {
             Files.write(file.toPath(), editorPane.getText().getBytes(StandardCharsets.UTF_8));
@@ -255,6 +331,11 @@ public class Main {
         }
     }
 
+    /**
+     * Application entry point. Launches the GUI on the Swing Event Dispatch Thread.
+     *
+     * @param args command-line arguments (not used)
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(Main::new);
     }
@@ -262,6 +343,48 @@ public class Main {
     private FindDialog findDialog;
     private ReplaceDialog replaceDialog;
 
+    /**
+     * Shows the About dialog with version information about MarkdownPro.
+     */
+    private void showAboutDialog() {
+        JOptionPane.showMessageDialog(frame,
+                "MarkdownPro\n"
+                        + "Version 1.0\n\n"
+                        + "A lightweight desktop Markdown editor\n"
+                        + "with live preview.\n\n"
+                        + "\u00a9 2026 The Boeing Company",
+                "About MarkdownPro",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Shows the Preferences dialog. If the user confirms changes, applies the
+     * new font settings to the editor and preview panes, saves the preferences
+     * to disk, and refreshes the preview.
+     */
+    private void showPreferencesDialog() {
+        PreferencesDialog dialog = new PreferencesDialog(frame, preferences);
+        dialog.setVisible(true);
+        if (dialog.isConfirmed()) {
+            dialog.applyTo(preferences);
+            preferences.save();
+            applyPreferences();
+        }
+    }
+
+    /**
+     * Applies the current preferences to the editor and preview panes.
+     * Updates the editor font and refreshes the preview HTML styling.
+     */
+    private void applyPreferences() {
+        editorPane.setFont(new Font(preferences.getEditorFontFamily(), Font.PLAIN, preferences.getEditorFontSize()));
+        updatePreview();
+    }
+
+    /**
+     * Shows the Find dialog, creating it on first use. If already open,
+     * brings it to the front.
+     */
     private void showFindDialog() {
         if (findDialog == null) {
             findDialog = new FindDialog(frame, editorPane);
@@ -270,6 +393,10 @@ public class Main {
         findDialog.toFront();
     }
 
+    /**
+     * Shows the Replace dialog, creating it on first use. If already open,
+     * brings it to the front.
+     */
     private void showReplaceDialog() {
         if (replaceDialog == null) {
             replaceDialog = new ReplaceDialog(frame, editorPane);
@@ -279,12 +406,21 @@ public class Main {
     }
 
     /**
-     * A panel that displays line numbers alongside a JTextArea.
+     * A custom component that displays line numbers in a gutter alongside a JTextArea.
+     * <p>
+     * Automatically updates its width as the line count changes and repaints
+     * when the document is modified or the font changes.
      */
     private static class LineNumberPanel extends JComponent implements DocumentListener, PropertyChangeListener {
         private final JTextArea textArea;
         private int lastDigits;
 
+        /**
+         * Creates a line number panel attached to the given text area.
+         * Registers itself as a document listener and font property listener.
+         *
+         * @param textArea the text area to display line numbers for
+         */
         public LineNumberPanel(JTextArea textArea) {
             this.textArea = textArea;
             setFont(textArea.getFont());
@@ -295,6 +431,10 @@ public class Main {
             updateWidth();
         }
 
+        /**
+         * Recalculates the preferred width of the panel based on the number of
+         * digits needed to display the highest line number (minimum 3 digits).
+         */
         private void updateWidth() {
             int lines = textArea.getLineCount();
             int digits = Math.max(String.valueOf(lines).length(), 3);
@@ -307,6 +447,12 @@ public class Main {
             }
         }
 
+        /**
+         * Paints the line numbers for all visible lines within the current clip bounds.
+         * Numbers are right-aligned with anti-aliased text rendering.
+         *
+         * @param g the graphics context
+         */
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -344,23 +490,32 @@ public class Main {
             g2.dispose();
         }
 
+        /** {@inheritDoc} */
         @Override
         public void insertUpdate(DocumentEvent e) {
             updateWidth();
             repaint();
         }
 
+        /** {@inheritDoc} */
         @Override
         public void removeUpdate(DocumentEvent e) {
             updateWidth();
             repaint();
         }
 
+        /** {@inheritDoc} */
         @Override
         public void changedUpdate(DocumentEvent e) {
             repaint();
         }
 
+        /**
+         * Responds to font property changes on the text area by updating
+         * this panel's font and recalculating its width.
+         *
+         * @param evt the property change event
+         */
         @Override
         public void propertyChange(PropertyChangeEvent evt) {
             setFont(textArea.getFont());

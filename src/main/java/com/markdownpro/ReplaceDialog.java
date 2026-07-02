@@ -1,20 +1,48 @@
+/*
+ * (c) 2026 The Boeing Company
+ */
+
+/**
+ * ReplaceDialog.java
+ *
+ * Provides a Find and Replace dialog for the MarkdownPro editor.
+ * Extends {@link FindDialog} to add a replacement text field and replace
+ * operations (Replace, Replace and Find, Replace All) while reusing the
+ * search logic and option checkboxes from the parent class.
+ */
 package com.markdownpro;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * A Replace dialog that extends FindDialog, adding a replacement text field
- * and Replace, Replace and Find, and Replace All buttons.
+ * A Replace dialog that extends {@link FindDialog}, adding a replacement text field
+ * and buttons for Replace, Replace and Find, and Replace All operations.
+ * <p>
+ * Inherits all search options (Match Case, Wrap Around, Search Backwards,
+ * Find in Selection) from FindDialog.
  */
 public class ReplaceDialog extends FindDialog {
 
+    /** Text field where the user enters the replacement text. */
     private JTextField replaceField;
 
+    /**
+     * Creates a Replace dialog attached to the given owner frame and text area.
+     *
+     * @param owner    the parent frame
+     * @param textArea the text area to perform replacements on
+     */
     public ReplaceDialog(JFrame owner, JTextArea textArea) {
         super(owner, textArea, "Replace");
     }
 
+    /**
+     * Creates the top panel with both a "Find:" and a "Replace:" text field,
+     * arranged in a two-row grid layout.
+     *
+     * @return the configured top panel with find and replace fields
+     */
     @Override
     protected JPanel createTopPanel() {
         JPanel topPanel = new JPanel(new GridBagLayout());
@@ -30,8 +58,6 @@ public class ReplaceDialog extends FindDialog {
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        // Initialize the parent's searchField via direct field assignment
-        // (the field is declared in FindDialog as protected final, but initialized here)
         topPanel.add(searchField = new JTextField(24), gbc);
 
         // Replace label and field
@@ -50,6 +76,11 @@ public class ReplaceDialog extends FindDialog {
         return topPanel;
     }
 
+    /**
+     * Creates the button panel with Find, Replace, Replace and Find, and Replace All buttons.
+     *
+     * @return the configured button panel
+     */
     @Override
     protected JPanel createButtonPanel() {
         JPanel buttonPanel = new JPanel();
@@ -79,7 +110,11 @@ public class ReplaceDialog extends FindDialog {
 
     /**
      * Replaces the currently selected text if it matches the search text.
-     * Returns true if a replacement was made.
+     * Respects the Match Case option. If "Find in selection" is active,
+     * adjusts the remembered selection end boundary to account for the
+     * length difference between the search and replacement text.
+     *
+     * @return {@code true} if a replacement was made, {@code false} otherwise
      */
     private boolean replace() {
         String searchText = searchField.getText();
@@ -109,7 +144,9 @@ public class ReplaceDialog extends FindDialog {
     }
 
     /**
-     * Replaces the current match (if any) then finds the next occurrence.
+     * Replaces the current match (if selected and matching) then finds the
+     * next occurrence of the search text. This allows iterative replace-then-advance
+     * workflows.
      */
     private void replaceAndFind() {
         replace();
@@ -117,7 +154,10 @@ public class ReplaceDialog extends FindDialog {
     }
 
     /**
-     * Replaces all occurrences within the search bounds.
+     * Replaces all occurrences of the search text within the current search region
+     * with the replacement text. Rebuilds the affected region of the document in
+     * a single operation and updates the remembered selection bounds if applicable.
+     * Displays a count of replacements made.
      */
     private void replaceAll() {
         String searchText = searchField.getText();
