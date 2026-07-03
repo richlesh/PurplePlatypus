@@ -163,6 +163,33 @@ public class EditorWindow {
         fileMenu.add(saveItem);
         fileMenu.add(saveAsItem);
         fileMenu.addSeparator();
+
+        JMenuItem pageSetupItem = new JMenuItem("Page Setup...");
+        pageSetupItem.addActionListener(e -> showPageSetup());
+
+        JMenuItem printItem = new JMenuItem("Print...");
+        printItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_P, shortcutMask));
+        printItem.addActionListener(e -> printPreview());
+
+        fileMenu.add(pageSetupItem);
+        fileMenu.add(printItem);
+        fileMenu.addSeparator();
+
+        JMenu exportMenu = new JMenu("Export");
+        JMenuItem exportHtmlItem = new JMenuItem("HTML...");
+        exportHtmlItem.addActionListener(e -> exportHtml());
+        JMenuItem exportPdfItem = new JMenuItem("PDF...");
+        exportPdfItem.addActionListener(e -> exportPdf());
+        JMenuItem exportTextBundleItem = new JMenuItem("TextBundle...");
+        exportTextBundleItem.addActionListener(e -> exportTextBundle());
+        JMenuItem exportRtfItem = new JMenuItem("RTF...");
+        exportRtfItem.addActionListener(e -> exportRtf());
+        exportMenu.add(exportHtmlItem);
+        exportMenu.add(exportPdfItem);
+        exportMenu.add(exportTextBundleItem);
+        exportMenu.add(exportRtfItem);
+        fileMenu.add(exportMenu);
+        fileMenu.addSeparator();
         fileMenu.add(exitItem);
         menuBar.add(fileMenu);
 
@@ -203,7 +230,7 @@ public class EditorWindow {
         findItem.addActionListener(e -> showFindDialog());
 
         JMenuItem replaceItem = new JMenuItem("Replace...");
-        replaceItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_H, shortcutMask));
+        replaceItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask));
         replaceItem.addActionListener(e -> showReplaceDialog());
 
         searchMenu.add(findItem);
@@ -240,12 +267,17 @@ public class EditorWindow {
         subscriptItem.setEnabled(false);
         subscriptItem.addActionListener(e -> wrapSelection("<sub>", "</sub>"));
 
+        JMenuItem insItem = new JMenuItem("Insert (Underline)");
+        insItem.setEnabled(false);
+        insItem.addActionListener(e -> wrapSelection("++", "++"));
+
         markdownMenu.add(boldItem);
         markdownMenu.add(italicItem);
         markdownMenu.add(underlineItem);
         markdownMenu.add(strikethroughItem);
         markdownMenu.add(superscriptItem);
         markdownMenu.add(subscriptItem);
+        markdownMenu.add(insItem);
         markdownMenu.addSeparator();
 
         JMenuItem linkItem = new JMenuItem("Link...");
@@ -263,6 +295,10 @@ public class EditorWindow {
         markdownMenu.add(linkItem);
         markdownMenu.add(imageItem);
         markdownMenu.add(tableItem);
+
+        JMenuItem footnoteItem = new JMenuItem("Footnote");
+        footnoteItem.addActionListener(e -> insertFootnote());
+        markdownMenu.add(footnoteItem);
         markdownMenu.addSeparator();
 
         JMenuItem orderedListItem = new JMenuItem("Ordered List");
@@ -336,6 +372,7 @@ public class EditorWindow {
             strikethroughItem.setEnabled(hasSelection);
             superscriptItem.setEnabled(hasSelection);
             subscriptItem.setEnabled(hasSelection);
+            insItem.setEnabled(hasSelection);
         });
     }
 
@@ -509,20 +546,49 @@ public class EditorWindow {
 
         if (dirty && !confirmClose()) return;
 
-        FileDialog dialog = new FileDialog(frame, "Open", FileDialog.LOAD);
-        dialog.setFilenameFilter((dir, name) -> {
-            String lower = name.toLowerCase();
-            return lower.endsWith(".md") || lower.endsWith(".markdown") || lower.endsWith(".txt");
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Open");
+        chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                if (f.isDirectory()) {
+                    // Show .textbundle directories as selectable, allow navigating other dirs
+                    return true;
+                }
+                String lower = f.getName().toLowerCase();
+                return lower.endsWith(".md") || lower.endsWith(".markdown") || lower.endsWith(".txt");
+            }
+            @Override
+            public String getDescription() {
+                return "Markdown Files (*.md, *.markdown, *.txt, *.textbundle)";
+            }
         });
-        dialog.setVisible(true);
-        if (dialog.getFile() != null) {
-            File file = new File(dialog.getDirectory(), dialog.getFile());
-            try {
-                String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-                loadFileContent(file, content);
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+
+        if (chooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            // Handle .textbundle directories
+            if (file.isDirectory() && file.getName().toLowerCase().endsWith(".textbundle")) {
+                File textMd = new File(file, "text.md");
+                if (!textMd.exists()) textMd = new File(file, "text.markdown");
+                if (textMd.exists()) {
+                    try {
+                        String content = new String(Files.readAllBytes(textMd.toPath()), StandardCharsets.UTF_8);
+                        loadFileContent(textMd, content);
+                    } catch (IOException ex) {
+                        JOptionPane.showMessageDialog(frame, "Error reading TextBundle: " + ex.getMessage(),
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else if (file.isFile()) {
+                try {
+                    String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                    loadFileContent(file, content);
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
         lastOpenTime = System.currentTimeMillis();
@@ -570,6 +636,390 @@ public class EditorWindow {
             JOptionPane.showMessageDialog(frame, "Error saving file: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    // --- Printing ---
+
+    /** Shared PageFormat for page setup persistence within the session. */
+    private static java.awt.print.PageFormat pageFormat;
+
+    private void showPageSetup() {
+        java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
+        if (pageFormat == null) {
+            pageFormat = job.defaultPage();
+        }
+        pageFormat = job.pageDialog(pageFormat);
+    }
+
+    private void printPreview() {
+        javafx.application.Platform.runLater(() -> {
+            javafx.scene.web.WebEngine engine = previewPanel.getWebEngine();
+            if (engine == null) return;
+            javafx.print.PrinterJob fxJob = javafx.print.PrinterJob.createPrinterJob();
+            if (fxJob != null && fxJob.showPrintDialog(null)) {
+                engine.print(fxJob);
+                fxJob.endJob();
+            }
+        });
+    }
+
+    private void exportHtml() {
+        FileDialog dialog = new FileDialog(frame, "Export HTML", FileDialog.SAVE);
+        if (currentFile != null) {
+            dialog.setDirectory(currentFile.getParent());
+            String name = currentFile.getName();
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) name = name.substring(0, dot);
+            dialog.setFile(name + ".html");
+        } else {
+            dialog.setFile("untitled.html");
+        }
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File outFile = new File(dialog.getDirectory(), dialog.getFile());
+            if (!outFile.getName().contains(".")) {
+                outFile = new File(outFile.getAbsolutePath() + ".html");
+            }
+            String html = previewPanel.getStyledHtml(getRenderedHtml(), null, preferences);
+            try {
+                Files.writeString(outFile.toPath(), html, StandardCharsets.UTF_8);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error exporting HTML: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void exportPdf() {
+        FileDialog dialog = new FileDialog(frame, "Export PDF", FileDialog.SAVE);
+        if (currentFile != null) {
+            dialog.setDirectory(currentFile.getParent());
+            String name = currentFile.getName();
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) name = name.substring(0, dot);
+            dialog.setFile(name + ".pdf");
+        } else {
+            dialog.setFile("untitled.pdf");
+        }
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File outFile = new File(dialog.getDirectory(), dialog.getFile());
+            if (!outFile.getName().contains(".")) {
+                outFile = new File(outFile.getAbsolutePath() + ".pdf");
+            }
+            final File pdfFile = outFile;
+            javafx.application.Platform.runLater(() -> {
+                javafx.scene.web.WebEngine engine = previewPanel.getWebEngine();
+                if (engine == null) return;
+                javafx.print.PrinterJob fxJob = javafx.print.PrinterJob.createPrinterJob();
+                if (fxJob != null) {
+                    // Configure to print to PDF via the job attributes
+                    javafx.print.JobSettings settings = fxJob.getJobSettings();
+                    settings.setJobName(pdfFile.getName());
+                    // Use a virtual PDF printer if available, otherwise use native print-to-file
+                    fxJob.getJobSettings().setOutputFile(pdfFile.getAbsolutePath());
+                    engine.print(fxJob);
+                    fxJob.endJob();
+                    SwingUtilities.invokeLater(() -> {
+                        if (pdfFile.exists()) {
+                            // Success - no message needed
+                        } else {
+                            JOptionPane.showMessageDialog(frame,
+                                    "PDF export may require a PDF printer to be installed on your system.",
+                                    "Export PDF", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    private void exportTextBundle() {
+        FileDialog dialog = new FileDialog(frame, "Export TextBundle", FileDialog.SAVE);
+        if (currentFile != null) {
+            dialog.setDirectory(currentFile.getParent());
+            String name = currentFile.getName();
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) name = name.substring(0, dot);
+            dialog.setFile(name + ".textbundle");
+        } else {
+            dialog.setFile("untitled.textbundle");
+        }
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File bundleDir = new File(dialog.getDirectory(), dialog.getFile());
+            if (!bundleDir.getName().contains(".")) {
+                bundleDir = new File(bundleDir.getAbsolutePath() + ".textbundle");
+            }
+            try {
+                // Create bundle directory
+                Files.createDirectories(bundleDir.toPath());
+
+                // Write info.json
+                String info = "{\n  \"version\": 2,\n  \"type\": \"net.daringfireball.markdown\",\n"
+                        + "  \"transient\": false,\n  \"creatorIdentifier\": \"com.glowingcat.purpleplatypus\"\n}";
+                Files.writeString(bundleDir.toPath().resolve("info.json"), info, StandardCharsets.UTF_8);
+
+                // Process markdown: copy images into assets/ and rewrite URLs
+                String markdown = editorPane.getText();
+                java.util.regex.Pattern imgPattern = java.util.regex.Pattern.compile(
+                        "(!\\[[^\\]]*\\]\\()([^)]+)(\\))");
+                java.util.regex.Matcher matcher = imgPattern.matcher(markdown);
+                StringBuilder mdSb = new StringBuilder();
+                java.nio.file.Path assetsDir = bundleDir.toPath().resolve("assets");
+                boolean assetsCreated = false;
+
+                while (matcher.find()) {
+                    String imgPath = matcher.group(2).replace("%20", " ");
+                    if (imgPath.startsWith("http://") || imgPath.startsWith("https://")) {
+                        matcher.appendReplacement(mdSb, java.util.regex.Matcher.quoteReplacement(matcher.group(0)));
+                        continue;
+                    }
+                    // Resolve source file
+                    File srcFile = null;
+                    if (currentFile != null && currentFile.getParentFile() != null) {
+                        srcFile = new File(currentFile.getParentFile(), imgPath);
+                        // Also check assets/ subfolder if we're in a TextBundle
+                        if (!srcFile.exists() && currentFile.getParentFile().getName().toLowerCase().endsWith(".textbundle")) {
+                            File inAssets = new File(currentFile.getParentFile(), "assets/" + imgPath);
+                            if (inAssets.exists()) srcFile = inAssets;
+                        }
+                    }
+                    if (srcFile != null && srcFile.exists()) {
+                        if (!assetsCreated) {
+                            Files.createDirectories(assetsDir);
+                            assetsCreated = true;
+                        }
+                        // Strip leading "assets/" if present to avoid assets/assets/ nesting
+                        String relPath = imgPath;
+                        if (relPath.startsWith("assets/")) {
+                            relPath = relPath.substring("assets/".length());
+                        }
+                        java.nio.file.Path relativePath = java.nio.file.Path.of(relPath);
+                        java.nio.file.Path destPath = assetsDir.resolve(relativePath);
+                        Files.createDirectories(destPath.getParent());
+                        Files.copy(srcFile.toPath(), destPath,
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        // Rewrite URL to assets/relative/path
+                        String newUrl = "assets/" + relativePath.toString().replace(" ", "%20");
+                        matcher.appendReplacement(mdSb,
+                                java.util.regex.Matcher.quoteReplacement(matcher.group(1) + newUrl + matcher.group(3)));
+                    } else {
+                        matcher.appendReplacement(mdSb, java.util.regex.Matcher.quoteReplacement(matcher.group(0)));
+                    }
+                }
+                matcher.appendTail(mdSb);
+
+                // Write text.md with updated image URLs
+                Files.writeString(bundleDir.toPath().resolve("text.md"), mdSb.toString(), StandardCharsets.UTF_8);
+
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error exporting TextBundle: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void exportRtf() {
+        FileDialog dialog = new FileDialog(frame, "Export RTF", FileDialog.SAVE);
+        if (currentFile != null) {
+            dialog.setDirectory(currentFile.getParent());
+            String name = currentFile.getName();
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) name = name.substring(0, dot);
+            dialog.setFile(name + ".rtf");
+        } else {
+            dialog.setFile("untitled.rtf");
+        }
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File outFile = new File(dialog.getDirectory(), dialog.getFile());
+            if (!outFile.getName().contains(".")) {
+                outFile = new File(outFile.getAbsolutePath() + ".rtf");
+            }
+            try {
+                String rtf = markdownToRtf(editorPane.getText());
+                Files.writeString(outFile.toPath(), rtf, StandardCharsets.UTF_8);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error exporting RTF: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Converts markdown text to RTF format with basic formatting support.
+     */
+    private String markdownToRtf(String markdown) {
+        StringBuilder rtf = new StringBuilder();
+        rtf.append("{\\rtf1\\ansi\\deff0\n");
+        rtf.append("{\\fonttbl{\\f0\\fswiss Arial;}{\\f1\\fmodern Courier New;}}\n");
+        rtf.append("{\\colortbl;\\red0\\green0\\blue0;\\red100\\green100\\blue100;}\n");
+        rtf.append("\\f0\\fs28\n");
+
+        String[] lines = markdown.split("\n");
+        boolean inCodeBlock = false;
+
+        for (String line : lines) {
+            if (line.startsWith("```")) {
+                inCodeBlock = !inCodeBlock;
+                continue;
+            }
+            if (inCodeBlock) {
+                rtf.append("{\\f1\\fs22 ").append(escapeRtf(line)).append("}\\par\n");
+                continue;
+            }
+            if (line.startsWith("# ")) {
+                rtf.append("{\\b\\fs48 ").append(escapeRtf(line.substring(2))).append("}\\par\\par\n");
+            } else if (line.startsWith("## ")) {
+                rtf.append("{\\b\\fs40 ").append(escapeRtf(line.substring(3))).append("}\\par\\par\n");
+            } else if (line.startsWith("### ")) {
+                rtf.append("{\\b\\fs32 ").append(escapeRtf(line.substring(4))).append("}\\par\\par\n");
+            } else if (line.startsWith("#### ")) {
+                rtf.append("{\\b\\fs28 ").append(escapeRtf(line.substring(5))).append("}\\par\\par\n");
+            } else if (line.startsWith("##### ")) {
+                rtf.append("{\\b\\fs24 ").append(escapeRtf(line.substring(6))).append("}\\par\\par\n");
+            } else if (line.startsWith("###### ")) {
+                rtf.append("{\\b\\fs22 ").append(escapeRtf(line.substring(7))).append("}\\par\\par\n");
+            } else if (line.startsWith("---") && line.trim().matches("-{3,}")) {
+                rtf.append("\\pard\\brdrb\\brdrs\\brdrw10\\brsp20\\par\\pard\n");
+            } else if (line.startsWith("> ")) {
+                rtf.append("{\\li720\\cf2 ").append(formatInlineRtf(line.substring(2))).append("}\\par\n");
+            } else if (line.matches("^\\s*[-*+]\\s+.*")) {
+                String content = line.replaceFirst("^\\s*[-*+]\\s+", "");
+                rtf.append("{\\li360\\fi-360\\bullet\\tab ").append(formatInlineRtf(content)).append("}\\par\n");
+            } else if (line.matches("^\\s*\\d+\\.\\s+.*")) {
+                String content = line.replaceFirst("^\\s*\\d+\\.\\s+", "");
+                String num = line.trim().substring(0, line.trim().indexOf('.'));
+                rtf.append("{\\li360\\fi-360 ").append(num).append(".\\tab ").append(formatInlineRtf(content)).append("}\\par\n");
+            } else if (line.trim().isEmpty()) {
+                rtf.append("\\par\n");
+            } else {
+                rtf.append(formatInlineRtf(line)).append("\\par\n");
+            }
+        }
+        rtf.append("}");
+        return rtf.toString();
+    }
+
+    private String formatInlineRtf(String text) {
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        while (i < text.length()) {
+            // Bold: **...**
+            if (i + 1 < text.length() && text.charAt(i) == '*' && text.charAt(i + 1) == '*') {
+                int end = text.indexOf("**", i + 2);
+                if (end > i) {
+                    sb.append("{\\b ").append(escapeRtf(text.substring(i + 2, end))).append("}");
+                    i = end + 2;
+                    continue;
+                }
+            }
+            // Italic: *...*
+            if (text.charAt(i) == '*') {
+                int end = text.indexOf('*', i + 1);
+                if (end > i && !(i + 1 < text.length() && text.charAt(i + 1) == '*')) {
+                    sb.append("{\\i ").append(escapeRtf(text.substring(i + 1, end))).append("}");
+                    i = end + 1;
+                    continue;
+                }
+            }
+            // Inline code: `...`
+            if (text.charAt(i) == '`') {
+                int end = text.indexOf('`', i + 1);
+                if (end > i) {
+                    sb.append("{\\f1 ").append(escapeRtf(text.substring(i + 1, end))).append("}");
+                    i = end + 1;
+                    continue;
+                }
+            }
+            // Strikethrough: ~~...~~
+            if (i + 1 < text.length() && text.charAt(i) == '~' && text.charAt(i + 1) == '~') {
+                int end = text.indexOf("~~", i + 2);
+                if (end > i) {
+                    sb.append("{\\strike ").append(escapeRtf(text.substring(i + 2, end))).append("}");
+                    i = end + 2;
+                    continue;
+                }
+            }
+            // Link: [text](url) - just output the text
+            if (text.charAt(i) == '[') {
+                int bc = text.indexOf(']', i + 1);
+                if (bc > i && bc + 1 < text.length() && text.charAt(bc + 1) == '(') {
+                    int pc = text.indexOf(')', bc + 2);
+                    if (pc > bc) {
+                        sb.append("{\\ul ").append(escapeRtf(text.substring(i + 1, bc))).append("}");
+                        i = pc + 1;
+                        continue;
+                    }
+                }
+            }
+            sb.append(escapeRtf(String.valueOf(text.charAt(i))));
+            i++;
+        }
+        return sb.toString();
+    }
+
+    private static String escapeRtf(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '\\') sb.append("\\\\");
+            else if (c == '{') sb.append("\\{");
+            else if (c == '}') sb.append("\\}");
+            else if (c > 127) sb.append("\\u").append((int) c).append("?");
+            else sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Renders the current editor content to HTML body (without styling wrapper).
+     * Pre-processes markdown to encode spaces in URLs, then resolves relative
+     * image paths to absolute file paths for export.
+     */
+    private String getRenderedHtml() {
+        String markdown = editorPane.getText();
+
+        // Encode spaces in image/link URLs (same as PreviewPanel)
+        java.util.regex.Pattern mdLinkPattern = java.util.regex.Pattern.compile(
+                "(!?\\[[^\\]]*\\]\\()([^)]+)(\\))");
+        java.util.regex.Matcher mdMatcher = mdLinkPattern.matcher(markdown);
+        StringBuilder mdSb = new StringBuilder();
+        while (mdMatcher.find()) {
+            String url = mdMatcher.group(2);
+            if (!url.startsWith("http://") && !url.startsWith("https://") && url.contains(" ")) {
+                url = url.replace(" ", "%20");
+            }
+            mdMatcher.appendReplacement(mdSb,
+                    java.util.regex.Matcher.quoteReplacement(mdMatcher.group(1) + url + mdMatcher.group(3)));
+        }
+        mdMatcher.appendTail(mdSb);
+        markdown = mdSb.toString();
+
+        org.commonmark.Extension tablesExt = org.commonmark.ext.gfm.tables.TablesExtension.create();
+        org.commonmark.Extension strikethroughExt = org.commonmark.ext.gfm.strikethrough.StrikethroughExtension.create();
+        org.commonmark.Extension taskListExt = org.commonmark.ext.task.list.items.TaskListItemsExtension.create();
+        org.commonmark.Extension autolinkExt = org.commonmark.ext.autolink.AutolinkExtension.create();
+        org.commonmark.Extension footnotesExt = org.commonmark.ext.footnotes.FootnotesExtension.create();
+        org.commonmark.Extension headingAnchorExt = org.commonmark.ext.heading.anchor.HeadingAnchorExtension.create();
+        org.commonmark.Extension imageAttrExt = org.commonmark.ext.image.attributes.ImageAttributesExtension.create();
+        org.commonmark.Extension insExt = org.commonmark.ext.ins.InsExtension.create();
+        org.commonmark.Extension yamlExt = org.commonmark.ext.front.matter.YamlFrontMatterExtension.create();
+        java.util.List<org.commonmark.Extension> extensions = java.util.Arrays.asList(
+                tablesExt, strikethroughExt, taskListExt, autolinkExt, footnotesExt,
+                headingAnchorExt, imageAttrExt, insExt, yamlExt);
+        org.commonmark.parser.Parser parser = org.commonmark.parser.Parser.builder().extensions(extensions).build();
+        org.commonmark.renderer.html.HtmlRenderer renderer = org.commonmark.renderer.html.HtmlRenderer.builder().extensions(extensions).build();
+        org.commonmark.node.Node document = parser.parse(markdown);
+        String html = renderer.render(document);
+
+        // Resolve relative image paths - keep them relative since the exported
+        // HTML will be placed alongside the markdown file. Just decode %20 back
+        // to spaces for readable paths, but leave them relative.
+        // No resolution needed - paths are already correct relative to the file.
+
+        return html;
     }
 
     // --- Dirty tracking ---
@@ -657,6 +1107,26 @@ public class EditorWindow {
 
         editorPane.setCaretPosition(lineEnd);
         editorPane.replaceSelection("\n\n---\n");
+    }
+
+    /**
+     * Inserts a footnote reference at the caret and appends the footnote definition
+     * at the end of the document.
+     */
+    private void insertFootnote() {
+        String fullText = editorPane.getText();
+        // Find next available footnote number
+        int num = 1;
+        while (fullText.contains("[^" + num + "]")) num++;
+
+        String ref = "[^" + num + "]";
+        int caret = editorPane.getCaretPosition();
+        editorPane.insert(ref, caret);
+
+        // Append definition at end of document
+        String def = "\n\n" + ref + ": ";
+        editorPane.append(def);
+        editorPane.setCaretPosition(editorPane.getText().length());
     }
 
     /**
@@ -937,15 +1407,26 @@ public class EditorWindow {
 
     public static void openFileInWindow(File file) {
         try {
-            String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            File actualFile = file;
+            // If it's a .textbundle directory, open text.md inside it
+            if (file.isDirectory() && file.getName().toLowerCase().endsWith(".textbundle")) {
+                actualFile = new File(file, "text.md");
+                if (!actualFile.exists()) {
+                    // Try text.markdown as fallback
+                    actualFile = new File(file, "text.markdown");
+                }
+                if (!actualFile.exists()) return;
+            }
+            String content = new String(Files.readAllBytes(actualFile.toPath()), StandardCharsets.UTF_8);
+            final File fileToOpen = actualFile;
             for (EditorWindow instance : openInstances) {
                 if (!instance.dirty && instance.currentFile == null) {
-                    instance.loadFileContent(file, content);
+                    instance.loadFileContent(fileToOpen, content);
                     return;
                 }
             }
             EditorWindow newWindow = new EditorWindow();
-            newWindow.loadFileContent(file, content);
+            newWindow.loadFileContent(fileToOpen, content);
         } catch (IOException ex) {
             // Silently fail
         }

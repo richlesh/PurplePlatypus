@@ -4,9 +4,15 @@
 package com.glowingcat;
 
 import org.commonmark.Extension;
+import org.commonmark.ext.autolink.AutolinkExtension;
+import org.commonmark.ext.footnotes.FootnotesExtension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.ext.heading.anchor.HeadingAnchorExtension;
+import org.commonmark.ext.image.attributes.ImageAttributesExtension;
+import org.commonmark.ext.ins.InsExtension;
 import org.commonmark.ext.task.list.items.TaskListItemsExtension;
+import org.commonmark.ext.front.matter.YamlFrontMatterExtension;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -31,6 +37,7 @@ public class PreviewPanel extends JPanel {
     private WebEngine webEngine;
     private final Parser parser;
     private final HtmlRenderer renderer;
+    private String lastHtml = "";
 
     public PreviewPanel() {
         super(new BorderLayout());
@@ -39,7 +46,13 @@ public class PreviewPanel extends JPanel {
         List<Extension> extensions = Arrays.asList(
                 TablesExtension.create(),
                 StrikethroughExtension.create(),
-                TaskListItemsExtension.create()
+                TaskListItemsExtension.create(),
+                AutolinkExtension.create(),
+                FootnotesExtension.create(),
+                HeadingAnchorExtension.create(),
+                ImageAttributesExtension.create(),
+                InsExtension.create(),
+                YamlFrontMatterExtension.create()
         );
         parser = Parser.builder().extensions(extensions).build();
         renderer = HtmlRenderer.builder().extensions(extensions).build();
@@ -52,7 +65,7 @@ public class PreviewPanel extends JPanel {
             webEngine = webView.getEngine();
             webEngine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
                 if (newUrl != null && !newUrl.isEmpty() && !newUrl.startsWith("data:")) {
-                    Platform.runLater(() -> webEngine.loadContent(getStyledHtml("", null, null)));
+                    Platform.runLater(() -> webEngine.loadContent(lastHtml));
                     try {
                         java.awt.Desktop.getDesktop().browse(new java.net.URI(newUrl));
                     } catch (Exception ex) {
@@ -63,6 +76,13 @@ public class PreviewPanel extends JPanel {
             Scene scene = new Scene(webView);
             jfxPanel.setScene(scene);
         });
+    }
+
+    /**
+     * Returns the JavaFX WebEngine used for rendering, or null if not yet initialized.
+     */
+    public WebEngine getWebEngine() {
+        return webEngine;
     }
 
     /**
@@ -91,6 +111,9 @@ public class PreviewPanel extends JPanel {
         // Resolve relative image paths to absolute file:// URLs
         if (currentFile != null && currentFile.getParentFile() != null) {
             File baseDir = currentFile.getParentFile();
+            // For TextBundle: if baseDir is a .textbundle, also check assets/ subfolder
+            File assetsDir = new File(baseDir, "assets");
+            boolean isTextBundle = baseDir.getName().toLowerCase().endsWith(".textbundle");
             java.util.regex.Pattern imgPattern = java.util.regex.Pattern.compile(
                     "(<img[^>]+src=\")([^\"]+)(\"[^>]*>)");
             java.util.regex.Matcher matcher = imgPattern.matcher(html);
@@ -101,6 +124,11 @@ public class PreviewPanel extends JPanel {
                         && !src.startsWith("data:") && !src.startsWith("file://")) {
                     String decodedSrc = src.replace("%20", " ");
                     File imgFile = new File(baseDir, decodedSrc);
+                    // If not found and we're in a TextBundle, try the assets/ subfolder
+                    if (!imgFile.exists() && isTextBundle && assetsDir.exists()) {
+                        File inAssets = new File(assetsDir, decodedSrc);
+                        if (inAssets.exists()) imgFile = inAssets;
+                    }
                     src = imgFile.toURI().toString();
                 }
                 matcher.appendReplacement(sb,
@@ -111,6 +139,7 @@ public class PreviewPanel extends JPanel {
         }
 
         String styledHtml = getStyledHtml(html, currentFile, preferences);
+        lastHtml = styledHtml;
 
         Platform.runLater(() -> {
             if (webEngine != null) {

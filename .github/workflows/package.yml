@@ -23,48 +23,56 @@ jobs:
             arch: arm64
             icon: src/main/resources/app_icon.icns
             doc_icon: src/main/resources/doc_icon.icns
+            textbundle_icon: src/main/resources/textbundle_icon.icns
             pkg_type: dmg
             label: macos-arm64
           - os: macos-13
             arch: x64
             icon: src/main/resources/app_icon.icns
             doc_icon: src/main/resources/doc_icon.icns
+            textbundle_icon: src/main/resources/textbundle_icon.icns
             pkg_type: dmg
             label: macos-x64
           - os: windows-latest
             arch: x64
             icon: src/main/resources/app_icon.ico
             doc_icon: src/main/resources/doc_icon.ico
+            textbundle_icon: src/main/resources/textbundle_icon.ico
             pkg_type: msi
             label: windows-x64
           - os: windows-11-arm
             arch: arm64
             icon: src/main/resources/app_icon.ico
             doc_icon: src/main/resources/doc_icon.ico
+            textbundle_icon: src/main/resources/textbundle_icon.ico
             pkg_type: msi
             label: windows-arm64
           - os: ubuntu-22.04
             arch: x64
             icon: src/main/resources/app_icon_256.png
             doc_icon: src/main/resources/doc_icon_256.png
+            textbundle_icon: src/main/resources/textbundle_icon_256.png
             pkg_type: deb
             label: linux-x64-deb
           - os: ubuntu-22.04
             arch: x64
             icon: src/main/resources/app_icon_256.png
             doc_icon: src/main/resources/doc_icon_256.png
+            textbundle_icon: src/main/resources/textbundle_icon_256.png
             pkg_type: rpm
             label: linux-x64-rpm
           - os: ubuntu-24.04-arm
             arch: arm64
             icon: src/main/resources/app_icon_256.png
             doc_icon: src/main/resources/doc_icon_256.png
+            textbundle_icon: src/main/resources/textbundle_icon_256.png
             pkg_type: deb
             label: linux-arm64-deb
           - os: ubuntu-24.04-arm
             arch: arm64
             icon: src/main/resources/app_icon_256.png
             doc_icon: src/main/resources/doc_icon_256.png
+            textbundle_icon: src/main/resources/textbundle_icon_256.png
             pkg_type: rpm
             label: linux-arm64-rpm
 
@@ -129,6 +137,13 @@ jobs:
           description=Markdown Document
           EOF
 
+          cat > fa-textbundle.properties <<EOF
+          mime-type=application/x-textbundle
+          extension=textbundle
+          icon=${{ matrix.textbundle_icon }}
+          description=TextBundle Document
+          EOF
+
       - name: Run jpackage
         shell: bash
         run: |
@@ -146,6 +161,7 @@ jobs:
               --icon "${{ matrix.icon }}" \
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
+              --file-associations fa-textbundle.properties \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6 --add-modules javafx.controls,javafx.web,javafx.swing" \
               --type app-image
           elif [ "${{ runner.os }}" = "Linux" ]; then
@@ -178,6 +194,7 @@ jobs:
               --icon "${{ matrix.icon }}" \
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
+              --file-associations fa-textbundle.properties \
               --linux-app-category editors \
               --linux-menu-group "Office;TextEditor;" \
               --type ${{ matrix.pkg_type }}
@@ -194,6 +211,7 @@ jobs:
               --icon "${{ matrix.icon }}" \
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
+              --file-associations fa-textbundle.properties \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6 --add-modules javafx.controls,javafx.web,javafx.swing" \
               --win-menu \
               --win-shortcut \
