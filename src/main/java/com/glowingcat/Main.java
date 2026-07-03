@@ -17,11 +17,15 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Application entry point for PurplePlatypus.
  */
 public class Main {
+
+    /** Set when the OS delivers an open-file event (e.g. double-clicking a .md file). */
+    private static final AtomicBoolean fileOpenRequested = new AtomicBoolean(false);
 
     /**
      * Application entry point. Sets up the platform, registers macOS handlers,
@@ -68,6 +72,7 @@ public class Main {
             }
             if (desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) {
                 desktop.setOpenFileHandler(e -> {
+                    fileOpenRequested.set(true);
                     for (File file : e.getFiles()) {
                         SwingUtilities.invokeLater(() -> EditorWindow.openFileInWindow(file));
                     }
@@ -90,7 +95,8 @@ public class Main {
                 } else {
                     new EditorWindow();
                 }
-            } else {
+            } else if (!fileOpenRequested.get()) {
+                // Only create an empty window if not launched by double-clicking a document
                 new EditorWindow();
             }
         });
