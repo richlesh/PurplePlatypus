@@ -5,12 +5,12 @@
 /**
  * ReplaceDialog.java
  *
- * Provides a Find and Replace dialog for the MarkdownPro editor.
+ * Provides a Find and Replace dialog for the PurplePlatypus editor.
  * Extends {@link FindDialog} to add a replacement text field and replace
  * operations (Replace, Replace and Find, Replace All) while reusing the
  * search logic and option checkboxes from the parent class.
  */
-package com.markdownpro;
+package com.glowingcat;
 
 import javax.swing.*;
 import java.awt.*;

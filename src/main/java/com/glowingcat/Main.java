@@ -5,12 +5,12 @@
 /**
  * Main.java
  *
- * Entry point and primary UI class for the MarkdownPro application.
+ * Entry point and primary UI class for the PurplePlatypus application.
  * Creates a Swing-based split-pane markdown editor with a live HTML preview,
  * line number gutter, file operations, undo/redo, clipboard support, and
  * find/replace functionality.
  */
-package com.markdownpro;
+package com.glowingcat;
 
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
@@ -32,7 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 /**
- * The main application class for MarkdownPro.
+ * The main application class for PurplePlatypus.
  * <p>
  * Constructs the GUI on the Event Dispatch Thread and manages the editor state
  * including the current file, markdown parser, and undo history.
@@ -69,17 +69,25 @@ public class Main {
      * </ul>
      */
     private void createAndShowGUI() {
-        frame = new JFrame("MarkdownPro");
+        frame = new JFrame("PurplePlatypus");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(1200, 700);
+
+        // Application icon
+        java.net.URL iconUrl = getClass().getClassLoader().getResource("icon.png");
+        ImageIcon appIcon = null;
+        if (iconUrl != null) {
+            appIcon = new ImageIcon(iconUrl);
+            frame.setIconImage(appIcon.getImage());
+        }
 
         // Menu bar
         JMenuBar menuBar = new JMenuBar();
 
-        // MarkdownPro menu
-        JMenu appMenu = new JMenu("MarkdownPro");
+        // PurplePlatypus menu
+        JMenu appMenu = new JMenu("PurplePlatypus");
 
-        JMenuItem aboutItem = new JMenuItem("About MarkdownPro...");
+        JMenuItem aboutItem = new JMenuItem("About PurplePlatypus...");
         aboutItem.addActionListener(e -> showAboutDialog());
 
         JMenuItem prefsItem = new JMenuItem("Preferences...");
@@ -222,7 +230,7 @@ public class Main {
         });
 
         // Set initial content
-        editorPane.setText("# Welcome to MarkdownPro\n\nStart typing your markdown here.\n\n"
+        editorPane.setText("# Welcome to PurplePlatypus\n\nStart typing your markdown here.\n\n"
                 + "## Features\n\n"
                 + "- **Live preview** as you type\n"
                 + "- Open and save `.md` files\n"
@@ -264,7 +272,7 @@ public class Main {
     private void newFile() {
         currentFile = null;
         editorPane.setText("");
-        frame.setTitle("MarkdownPro");
+        frame.setTitle("PurplePlatypus");
     }
 
     /**
@@ -280,7 +288,7 @@ public class Main {
                 String content = new String(Files.readAllBytes(currentFile.toPath()), StandardCharsets.UTF_8);
                 editorPane.setText(content);
                 editorPane.setCaretPosition(0);
-                frame.setTitle("MarkdownPro - " + currentFile.getName());
+                frame.setTitle("PurplePlatypus - " + currentFile.getName());
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
                         "Error", JOptionPane.ERROR_MESSAGE);
@@ -313,7 +321,7 @@ public class Main {
                 currentFile = new File(currentFile.getAbsolutePath() + ".md");
             }
             writeFile(currentFile);
-            frame.setTitle("MarkdownPro - " + currentFile.getName());
+            frame.setTitle("PurplePlatypus - " + currentFile.getName());
         }
     }
 
@@ -344,17 +352,26 @@ public class Main {
     private ReplaceDialog replaceDialog;
 
     /**
-     * Shows the About dialog with version information about MarkdownPro.
+     * Shows the About dialog with version information and the application icon.
      */
     private void showAboutDialog() {
+        ImageIcon icon = null;
+        java.net.URL iconUrl = getClass().getClassLoader().getResource("icon.png");
+        if (iconUrl != null) {
+            // Scale to 64x64 for the about box
+            ImageIcon fullIcon = new ImageIcon(iconUrl);
+            Image scaled = fullIcon.getImage().getScaledInstance(64, 64, Image.SCALE_SMOOTH);
+            icon = new ImageIcon(scaled);
+        }
         JOptionPane.showMessageDialog(frame,
-                "MarkdownPro\n"
+                "PurplePlatypus\n"
                         + "Version 1.0\n\n"
                         + "A lightweight desktop Markdown editor\n"
                         + "with live preview.\n\n"
                         + "\u00a9 2026 The Boeing Company",
-                "About MarkdownPro",
-                JOptionPane.INFORMATION_MESSAGE);
+                "About PurplePlatypus",
+                JOptionPane.INFORMATION_MESSAGE,
+                icon);
     }
 
     /**

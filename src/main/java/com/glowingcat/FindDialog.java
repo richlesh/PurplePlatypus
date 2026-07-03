@@ -5,7 +5,7 @@
 /**
  * FindDialog.java
  *
- * Provides a non-modal Find dialog for the MarkdownPro editor.
+ * Provides a non-modal Find dialog for the PurplePlatypus editor.
  * Supports Find Next, Find All (with a clickable results window), and Count
  * operations with options for case sensitivity, wrap-around, search direction,
  * and searching within a remembered selection.
@@ -13,7 +13,7 @@
  * Designed as a base class that can be extended (see {@link ReplaceDialog})
  * via template methods for the top panel, options panel, and button panel.
  */
-package com.markdownpro;
+package com.glowingcat;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;

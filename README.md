@@ -1,4 +1,4 @@
-# MarkdownPro
+# PurplePlatypus
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type.
 
@@ -32,10 +32,10 @@ mvn compile
 ## Running
 
 ```bash
-mvn exec:java -Dexec.mainClass="com.markdownpro.Main"
+mvn exec:java -Dexec.mainClass="com.glowingcat.Main"
 ```
 
-Or run `com.markdownpro.Main` directly from your IDE.
+Or run `com.glowingcat.Main` directly from your IDE.
 
 ## Tech Stack
 
