@@ -84,7 +84,7 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: ${{ (matrix.os == 'windows-11-arm') && 'oracle' || 'temurin' }}
           java-version: '25'
           cache: maven
 
