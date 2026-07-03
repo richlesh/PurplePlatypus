@@ -147,6 +147,14 @@ jobs:
         if: matrix.pkg_type == 'rpm'
         run: sudo apt-get update && sudo apt-get install -y rpm
 
+      - name: Install WiX Toolset (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          curl -L -o wix314.exe https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314.exe
+          ./wix314.exe /install /quiet /norestart || true
+          echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" >> $GITHUB_PATH
+
       - name: Create file associations config
         shell: bash
         run: |
