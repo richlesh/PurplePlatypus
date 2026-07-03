@@ -130,6 +130,27 @@ public class EditorWindow {
         JMenuBar menuBar = new JMenuBar();
         int shortcutMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
 
+        // On non-macOS, add a "PurplePlatypus" application menu with About, Preferences, License Key, Quit
+        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+        if (!isMac) {
+            JMenu appMenu = new JMenu("PurplePlatypus");
+            JMenuItem aboutItem = new JMenuItem("About PurplePlatypus");
+            aboutItem.addActionListener(e -> showAboutDialog());
+            JMenuItem prefsItem = new JMenuItem("Settings...");
+            prefsItem.addActionListener(e -> showPreferencesDialog());
+            JMenuItem licenseItem = new JMenuItem("License Key...");
+            licenseItem.addActionListener(e -> showLicenseDialog());
+            JMenuItem quitItem = new JMenuItem("Quit PurplePlatypus");
+            quitItem.addActionListener(e -> exitApplication());
+            appMenu.add(aboutItem);
+            appMenu.addSeparator();
+            appMenu.add(prefsItem);
+            appMenu.add(licenseItem);
+            appMenu.addSeparator();
+            appMenu.add(quitItem);
+            menuBar.add(appMenu);
+        }
+
         // File menu
         JMenu fileMenu = new JMenu("File");
         JMenuItem newItem = new JMenuItem("New");
@@ -151,9 +172,6 @@ public class EditorWindow {
         JMenuItem saveAsItem = new JMenuItem("Save As...");
         saveAsItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         saveAsItem.addActionListener(e -> saveFileAs());
-
-        JMenuItem exitItem = new JMenuItem("Exit");
-        exitItem.addActionListener(e -> exitApplication());
 
         fileMenu.add(newItem);
         fileMenu.add(openItem);
@@ -189,8 +207,12 @@ public class EditorWindow {
         exportMenu.add(exportTextBundleItem);
         exportMenu.add(exportRtfItem);
         fileMenu.add(exportMenu);
-        fileMenu.addSeparator();
-        fileMenu.add(exitItem);
+        if (isMac) {
+            fileMenu.addSeparator();
+            JMenuItem licenseItem = new JMenuItem("License Key...");
+            licenseItem.addActionListener(e -> showLicenseDialog());
+            fileMenu.add(licenseItem);
+        }
         menuBar.add(fileMenu);
 
         // Edit menu
@@ -360,13 +382,6 @@ public class EditorWindow {
         markdownMenu.add(hrItem);
 
         menuBar.add(markdownMenu);
-
-        // Help menu
-        JMenu helpMenu = new JMenu("Help");
-        JMenuItem licenseItem = new JMenuItem("License Key...");
-        licenseItem.addActionListener(e -> showLicenseDialog());
-        helpMenu.add(licenseItem);
-        menuBar.add(helpMenu);
 
         frame.setJMenuBar(menuBar);
 
@@ -1386,16 +1401,7 @@ public class EditorWindow {
     }
 
     public void showAboutDialog() {
-        ImageIcon icon = null;
-        java.net.URL iconUrl = getClass().getClassLoader().getResource("app_icon_256.png");
-        if (iconUrl != null) {
-            ImageIcon fullIcon = new ImageIcon(iconUrl);
-            Image scaled = fullIcon.getImage().getScaledInstance(64, 64, Image.SCALE_SMOOTH);
-            icon = new ImageIcon(scaled);
-        }
-        JOptionPane.showMessageDialog(frame,
-                "PurplePlatypus\nVersion 1.0\n\nA lightweight desktop Markdown editor\nwith live preview.\n\n\u00a9 2026 Glowing Cat Software",
-                "About PurplePlatypus", JOptionPane.INFORMATION_MESSAGE, icon);
+        AboutDialog.show(frame, preferences);
     }
 
     public void showPreferencesDialog() {
