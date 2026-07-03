@@ -127,8 +127,13 @@ jobs:
           EOF
 
       - name: Build fat JAR
+        shell: bash
         run: |
-          mvn clean package -DskipTests=true
+          MAVEN_OPTS=""
+          if [ "${{ runner.os }}" = "Linux" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
+            MAVEN_OPTS="-Djavafx.platform=linux"
+          fi
+          mvn clean package -DskipTests=true $MAVEN_OPTS
           mkdir -p lib
           cp target/PurplePlatypus-*.jar lib/
 
