@@ -269,7 +269,7 @@ jobs:
 
           # Sign all nested dylibs and executables first
           find PurplePlatypus.app -type f \( -name "*.dylib" -o -name "*.jnilib" -o -perm +111 \) | while read f; do
-            codesign --force --options runtime --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
+            codesign --force --options runtime --timestamp --entitlements entitlements.plist --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
           done
 
           # Sign native libraries inside the fat JAR (Apple notarization inspects JAR contents)
@@ -279,7 +279,7 @@ jobs:
             cd "$TMPJAR"
             jar xf "$OLDPWD/$JAR_PATH"
             find . -name "*.dylib" -o -name "*.jnilib" | while read f; do
-              codesign --force --options runtime --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
+              codesign --force --options runtime --timestamp --entitlements "$OLDPWD/entitlements.plist" --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
             done
             jar cf "$OLDPWD/$JAR_PATH" .
             cd "$OLDPWD"
@@ -287,7 +287,7 @@ jobs:
           fi
 
           # Sign the app bundle
-          codesign --force --options runtime --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain PurplePlatypus.app
+          codesign --force --options runtime --timestamp --entitlements entitlements.plist --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain PurplePlatypus.app
 
           # Verify signature
           codesign --verify --deep --strict PurplePlatypus.app
