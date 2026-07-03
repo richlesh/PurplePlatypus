@@ -61,7 +61,7 @@ Configure your LLM provider in Preferences (vendor, model, and API key).
 
 ## Requirements
 
-- Java 25 or later
+- Java 21 or later
 - Maven 3.6+
 
 ## Building

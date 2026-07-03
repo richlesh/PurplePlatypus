@@ -84,8 +84,8 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          distribution: ${{ (matrix.os == 'windows-11-arm') && 'oracle' || 'temurin' }}
-          java-version: '25'
+          distribution: temurin
+          java-version: '21'
           cache: maven
 
       - name: Normalize version
