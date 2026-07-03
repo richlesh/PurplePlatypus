@@ -1,5 +1,5 @@
 /*
- * (c) 2026 The Boeing Company
+ * (c) 2026 Glowing Cat Software
  */
 
 /**
@@ -44,6 +44,12 @@ public class Preferences {
     /** Font size for the HTML preview pane. */
     private int previewFontSize = 14;
 
+    /** Font family for code in the HTML preview pane. */
+    private String previewCodeFontFamily = "Monospaced";
+
+    /** Font size for code in the HTML preview pane. */
+    private int previewCodeFontSize = 13;
+
     public String getEditorFontFamily() { return editorFontFamily; }
     public void setEditorFontFamily(String editorFontFamily) { this.editorFontFamily = editorFontFamily; }
     public int getEditorFontSize() { return editorFontSize; }
@@ -52,6 +58,10 @@ public class Preferences {
     public void setPreviewFontFamily(String previewFontFamily) { this.previewFontFamily = previewFontFamily; }
     public int getPreviewFontSize() { return previewFontSize; }
     public void setPreviewFontSize(int previewFontSize) { this.previewFontSize = previewFontSize; }
+    public String getPreviewCodeFontFamily() { return previewCodeFontFamily; }
+    public void setPreviewCodeFontFamily(String previewCodeFontFamily) { this.previewCodeFontFamily = previewCodeFontFamily; }
+    public int getPreviewCodeFontSize() { return previewCodeFontSize; }
+    public void setPreviewCodeFontSize(int previewCodeFontSize) { this.previewCodeFontSize = previewCodeFontSize; }
 
     private static Path getPrefsPath() {
         return Paths.get(System.getProperty("user.home"), PREFS_FILENAME);

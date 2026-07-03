@@ -1,5 +1,5 @@
 /*
- * (c) 2026 The Boeing Company
+ * (c) 2026 Glowing Cat Software
  */
 
 /**
