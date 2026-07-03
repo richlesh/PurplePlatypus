@@ -272,6 +272,20 @@ jobs:
             codesign --force --options runtime --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
           done
 
+          # Sign native libraries inside the fat JAR (Apple notarization inspects JAR contents)
+          JAR_PATH=$(find PurplePlatypus.app/Contents/app -name "*.jar" | head -1)
+          if [ -n "$JAR_PATH" ]; then
+            TMPJAR=$(mktemp -d)
+            cd "$TMPJAR"
+            jar xf "$OLDPWD/$JAR_PATH"
+            find . -name "*.dylib" -o -name "*.jnilib" | while read f; do
+              codesign --force --options runtime --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
+            done
+            jar cf "$OLDPWD/$JAR_PATH" .
+            cd "$OLDPWD"
+            rm -rf "$TMPJAR"
+          fi
+
           # Sign the app bundle
           codesign --force --options runtime --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain PurplePlatypus.app
 
