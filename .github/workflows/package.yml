@@ -151,9 +151,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          curl -L -o wix314.exe https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314.exe
-          ./wix314.exe /install /quiet /norestart || true
-          echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" >> $GITHUB_PATH
+          curl -L -o wix314-binaries.zip https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip
+          mkdir -p wix
+          unzip -q wix314-binaries.zip -d wix
+          echo "$PWD/wix" >> $GITHUB_PATH
 
       - name: Create file associations config
         shell: bash
