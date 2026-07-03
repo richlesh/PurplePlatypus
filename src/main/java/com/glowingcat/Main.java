@@ -77,6 +77,12 @@ public class Main {
 
         // Open file from command-line argument, or create empty window
         SwingUtilities.invokeLater(() -> {
+            // Show splash screen if not licensed
+            Preferences prefs = Preferences.load();
+            if (!LicenseDialog.isLicensed(prefs)) {
+                SplashScreen.show();
+            }
+
             if (args.length > 0) {
                 File file = new File(args[0]);
                 if (file.exists()) {

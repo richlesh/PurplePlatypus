@@ -36,6 +36,7 @@ public class AIChatPanel extends JPanel {
     private Timer pulseTimer;
     private volatile Thread currentThread;
     private float pulseAlpha = 0f;
+    private int promptCount = 0;
 
     public AIChatPanel(RSyntaxTextArea editorPane, Preferences preferences) {
         super(new BorderLayout());
@@ -153,6 +154,12 @@ public class AIChatPanel extends JPanel {
         if (text.isEmpty()) return;
         inputArea.setText("");
         addUserBubble(text);
+
+        // Show splash every 10 prompts if not licensed
+        promptCount++;
+        if (promptCount % 10 == 0 && !LicenseDialog.isLicensed(preferences)) {
+            SplashScreen.show();
+        }
 
         String context = "Current markdown document:\n```markdown\n" + editorPane.getText() + "\n```";
 

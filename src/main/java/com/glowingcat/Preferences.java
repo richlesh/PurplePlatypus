@@ -96,6 +96,14 @@ public class Preferences {
     /** Whether the AI chat pane is visible. */
     private boolean aiVisible = true;
 
+    // --- License ---
+
+    /** License email address. */
+    private String licenseEmail = null;
+
+    /** License key (16 hex chars). */
+    private String licenseKey = null;
+
     private static String detectAIFont() {
         String os = System.getProperty("os.name", "").toLowerCase();
         String[] candidates;
@@ -159,6 +167,13 @@ public class Preferences {
     public void setPreviewVisible(boolean previewVisible) { this.previewVisible = previewVisible; }
     public boolean isAiVisible() { return aiVisible; }
     public void setAiVisible(boolean aiVisible) { this.aiVisible = aiVisible; }
+
+    // --- License getters/setters ---
+
+    public String getLicenseEmail() { return licenseEmail; }
+    public void setLicenseEmail(String licenseEmail) { this.licenseEmail = licenseEmail; }
+    public String getLicenseKey() { return licenseKey; }
+    public void setLicenseKey(String licenseKey) { this.licenseKey = licenseKey; }
 
     private static Path getPrefsPath() {
         return Paths.get(System.getProperty("user.home"), PREFS_FILENAME);

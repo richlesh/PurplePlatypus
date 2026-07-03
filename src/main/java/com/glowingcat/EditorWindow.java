@@ -361,6 +361,13 @@ public class EditorWindow {
 
         menuBar.add(markdownMenu);
 
+        // Help menu
+        JMenu helpMenu = new JMenu("Help");
+        JMenuItem licenseItem = new JMenuItem("License Key...");
+        licenseItem.addActionListener(e -> showLicenseDialog());
+        helpMenu.add(licenseItem);
+        menuBar.add(helpMenu);
+
         frame.setJMenuBar(menuBar);
 
         // Enable/disable formatting items based on selection
@@ -1401,6 +1408,10 @@ public class EditorWindow {
             if (aiChatPanel != null) aiChatPanel.updateFont();
             updatePreview();
         }
+    }
+
+    public void showLicenseDialog() {
+        LicenseDialog.show(frame, preferences);
     }
 
     // --- Static helpers ---
