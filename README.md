@@ -13,24 +13,28 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
 - **Toolbar** — Status bar showing the full file path with toggle buttons to show/hide the preview and AI panels
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
-- **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt` files, and save your work
+- **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt`/`.textbundle` files, and save your work
+- **TextBundle support** — Open and export `.textbundle` packages with images in the `assets/` subfolder
 - **Dirty checking** — Prompts to save unsaved changes when closing a window or quitting the application
 - **Undo/Redo** — Full multi-level undo and redo support
 - **Clipboard** — Cut, Copy, and Paste via the Edit menu
-- **Markdown formatting** — Bold, Italic, Underline, Strikethrough, Superscript, and Subscript via the Markdown menu (enabled when text is selected)
+- **Markdown formatting** — Bold, Italic, Underline, Strikethrough, Superscript, Subscript, and Insert (++underline++) via the Markdown menu (enabled when text is selected)
 - **Headings** — Insert Heading 1 through Heading 6 via the Markdown menu (replaces any existing heading prefix)
 - **Horizontal Rule** — Insert a `---` separator via the Markdown menu
+- **Footnotes** — Insert footnote references and definitions via the Markdown menu
 - **Links and Images** — Insert or edit markdown links and images via dialogs
 - **Tables** — Insert or edit GFM-style markdown tables via a visual dialog
 - **Lists** — Convert lines to ordered, unordered, or task lists
 - **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, and Block Math
+- **Print** — Page Setup and Print (⌘/Ctrl+P) using the native system print dialog
+- **Export** — Export to HTML, PDF, TextBundle, or RTF formats
 - **Find** — Search with options for Match Case, Wrap Around, Search Backwards, and Find in Selection (remembers the original selection for repeated searches)
 - **Find All** — Opens a results window showing matching lines with highlighted text; click a match to jump to it in the editor
 - **Count** — Quickly count the number of matches in the document or selection
 - **Replace** — Find and replace with Replace, Replace and Find, and Replace All operations
-- **Keyboard shortcuts** — ⌘/Ctrl+N (New), ⌘/Ctrl+O (Open), ⌘/Ctrl+W (Close), ⌘/Ctrl+S (Save), ⌘/Ctrl+Shift+S (Save As), ⌘/Ctrl+Z (Undo), ⌘/Ctrl+Y (Redo), ⌘/Ctrl+X (Cut), ⌘/Ctrl+C (Copy), ⌘/Ctrl+V (Paste), ⌘/Ctrl+F (Find), ⌘/Ctrl+H (Replace), ⌘/Ctrl+B (Bold), ⌘/Ctrl+I (Italic), ⌘/Ctrl+U (Underline), ⌘/Ctrl+L (Link), ⌘/Ctrl+G (Image), ⌘/Ctrl+T (Table)
-- **Markdown support** — Headings, bold, italic, strikethrough, superscript, subscript, lists, code blocks, blockquotes, links, images, tables, math, and more via the CommonMark specification with GFM extensions
-- **Styled preview** — Clean, readable HTML output with custom CSS styling
+- **Keyboard shortcuts** — ⌘/Ctrl+N (New), ⌘/Ctrl+O (Open), ⌘/Ctrl+W (Close), ⌘/Ctrl+S (Save), ⌘/Ctrl+Shift+S (Save As), ⌘/Ctrl+P (Print), ⌘/Ctrl+Z (Undo), ⌘/Ctrl+Y (Redo), ⌘/Ctrl+X (Cut), ⌘/Ctrl+C (Copy), ⌘/Ctrl+V (Paste), ⌘/Ctrl+F (Find), ⌘/Ctrl+R (Replace), ⌘/Ctrl+B (Bold), ⌘/Ctrl+I (Italic), ⌘/Ctrl+U (Underline), ⌘/Ctrl+L (Link), ⌘/Ctrl+G (Image), ⌘/Ctrl+T (Table)
+- **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins (underline), and YAML front matter
+- **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
 - **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors
 - **Window state persistence** — Window size, divider positions, and panel visibility are remembered between sessions
 
@@ -47,6 +51,13 @@ The built-in AI chat panel helps you write and improve markdown content:
 When the AI suggests a complete document replacement, you're given Allow/Reject buttons to accept or decline the changes.
 
 Configure your LLM provider in Preferences (vendor, model, and API key).
+
+## Export Formats
+
+- **HTML** — Fully styled HTML with CSS, relative image paths preserved
+- **PDF** — Print-to-file via the system's PDF output
+- **TextBundle** — Standard `.textbundle` package with `text.md`, `info.json`, and images copied into `assets/` (preserving subfolder hierarchy)
+- **RTF** — Rich Text Format with headings, bold, italic, strikethrough, code, lists, and block quotes
 
 ## Requirements
 
@@ -70,8 +81,8 @@ Or run `com.glowingcat.Main` directly from your IDE.
 ## Tech Stack
 
 - **Java Swing** — GUI framework
-- **commonmark-java** — Markdown parsing and HTML rendering (with GFM tables, strikethrough, and task list extensions)
+- **commonmark-java** — Markdown parsing and HTML rendering (with GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins, and YAML front matter extensions)
 - **RSyntaxTextArea** — Syntax-aware text editor component
-- **JavaFX WebView** — HTML preview rendering
+- **JavaFX WebView** — HTML preview rendering with MathJax
 - **Gson** — JSON serialization for user preferences
 - **java.net.http** — HTTP client for LLM API calls
