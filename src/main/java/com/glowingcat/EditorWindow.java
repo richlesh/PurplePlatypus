@@ -272,11 +272,6 @@ public class EditorWindow {
         italicItem.setEnabled(false);
         italicItem.addActionListener(e -> wrapSelection("*", "*"));
 
-        JMenuItem underlineItem = new JMenuItem("Underline");
-        underlineItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, shortcutMask));
-        underlineItem.setEnabled(false);
-        underlineItem.addActionListener(e -> wrapSelection("<u>", "</u>"));
-
         JMenuItem strikethroughItem = new JMenuItem("Strikethrough");
         strikethroughItem.setEnabled(false);
         strikethroughItem.addActionListener(e -> wrapSelection("~~", "~~"));
@@ -295,7 +290,6 @@ public class EditorWindow {
 
         markdownMenu.add(boldItem);
         markdownMenu.add(italicItem);
-        markdownMenu.add(underlineItem);
         markdownMenu.add(strikethroughItem);
         markdownMenu.add(superscriptItem);
         markdownMenu.add(subscriptItem);
@@ -390,7 +384,6 @@ public class EditorWindow {
             boolean hasSelection = e.getDot() != e.getMark();
             boldItem.setEnabled(hasSelection);
             italicItem.setEnabled(hasSelection);
-            underlineItem.setEnabled(hasSelection);
             strikethroughItem.setEnabled(hasSelection);
             superscriptItem.setEnabled(hasSelection);
             subscriptItem.setEnabled(hasSelection);
