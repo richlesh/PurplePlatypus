@@ -133,6 +133,8 @@ jobs:
           MAVEN_OPTS=""
           if [ "${{ runner.os }}" = "Linux" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
             MAVEN_OPTS="-Djavafx.platform=linux"
+          elif [ "${{ runner.os }}" = "Windows" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
+            MAVEN_OPTS="-Djavafx.platform=win"
           fi
           mvn clean package -DskipTests=true $MAVEN_OPTS
           mkdir -p lib
