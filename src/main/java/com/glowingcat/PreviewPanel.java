@@ -38,6 +38,7 @@ public class PreviewPanel extends JPanel {
     private final Parser parser;
     private final HtmlRenderer renderer;
     private String lastHtml = "";
+    private java.io.File tempHtmlFile;
 
     public PreviewPanel() {
         super(new BorderLayout());
@@ -64,8 +65,9 @@ public class PreviewPanel extends JPanel {
             WebView webView = new WebView();
             webEngine = webView.getEngine();
             webEngine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
-                if (newUrl != null && !newUrl.isEmpty() && !newUrl.startsWith("data:")) {
-                    Platform.runLater(() -> webEngine.loadContent(lastHtml));
+                if (newUrl != null && !newUrl.isEmpty() && !newUrl.startsWith("data:")
+                        && tempHtmlFile != null && !newUrl.equals(tempHtmlFile.toURI().toString())) {
+                    Platform.runLater(() -> webEngine.load(tempHtmlFile.toURI().toString()));
                     try {
                         java.awt.Desktop.getDesktop().browse(new java.net.URI(newUrl));
                     } catch (Exception ex) {
@@ -143,7 +145,17 @@ public class PreviewPanel extends JPanel {
 
         Platform.runLater(() -> {
             if (webEngine != null) {
-                webEngine.loadContent(styledHtml);
+                try {
+                    if (tempHtmlFile == null) {
+                        tempHtmlFile = java.io.File.createTempFile("purpleplatypus_preview", ".html");
+                        tempHtmlFile.deleteOnExit();
+                    }
+                    java.nio.file.Files.writeString(tempHtmlFile.toPath(), styledHtml, java.nio.charset.StandardCharsets.UTF_8);
+                    webEngine.load(tempHtmlFile.toURI().toString());
+                } catch (Exception ex) {
+                    // Fallback to loadContent if temp file fails
+                    webEngine.loadContent(styledHtml);
+                }
             }
         });
     }

@@ -182,7 +182,7 @@ public class AIChatPanel extends JPanel {
                 SwingUtilities.invokeLater(() -> {
                     stopPulse();
                     if (!Thread.currentThread().isInterrupted())
-                        addAiBubble("Error: " + ex.getMessage());
+                        addAiBubble("Error (" + ex.getClass().getSimpleName() + "): " + ex.getMessage());
                     sendBtn.setEnabled(true);
                 });
             }
@@ -440,13 +440,16 @@ public class AIChatPanel extends JPanel {
         HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
             .uri(URI.create(baseUrl + "/chat/completions"))
             .header("Content-Type", "application/json")
+            .timeout(java.time.Duration.ofSeconds(120))
             .POST(HttpRequest.BodyPublishers.ofString(body.toString()));
 
         if (apiKey != null && !apiKey.isEmpty()) {
             reqBuilder.header("Authorization", "Bearer " + apiKey);
         }
 
-        HttpResponse<String> resp = HttpClient.newHttpClient()
+        HttpResponse<String> resp = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(30))
+            .build()
             .send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
         String respBody = resp.body();
