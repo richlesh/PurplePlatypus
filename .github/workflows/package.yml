@@ -195,7 +195,7 @@ jobs:
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
-              --add-modules javafx.controls,javafx.web,javafx.swing \
+              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,jdk.crypto.ec,jdk.crypto.cryptoki \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --type app-image
           elif [ "${{ runner.os }}" = "Linux" ]; then
@@ -210,7 +210,7 @@ jobs:
               --copyright "(C) 2026 Glowing Cat" \
               --description "A lightweight desktop Markdown editor with live preview" \
               --icon "${{ matrix.icon }}" \
-              --add-modules javafx.controls,javafx.web,javafx.swing \
+              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,jdk.crypto.ec,jdk.crypto.cryptoki \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --java-options "-Dawt.useSystemAAFontSettings=on" \
               --type app-image
@@ -247,7 +247,7 @@ jobs:
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
-              --add-modules javafx.controls,javafx.web,javafx.swing \
+              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,jdk.crypto.ec,jdk.crypto.cryptoki \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --win-menu \
               --win-shortcut \
