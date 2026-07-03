@@ -26,13 +26,6 @@ jobs:
             textbundle_icon: src/main/resources/textbundle_icon.icns
             pkg_type: dmg
             label: macos-arm64
-          - os: macos-13
-            arch: x64
-            icon: src/main/resources/app_icon.icns
-            doc_icon: src/main/resources/doc_icon.icns
-            textbundle_icon: src/main/resources/textbundle_icon.icns
-            pkg_type: dmg
-            label: macos-x64
           - os: windows-latest
             arch: x64
             icon: src/main/resources/app_icon.ico
