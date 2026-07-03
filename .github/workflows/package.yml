@@ -186,7 +186,8 @@ jobs:
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
-              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6 --add-modules javafx.controls,javafx.web,javafx.swing" \
+              --add-modules javafx.controls,javafx.web,javafx.swing \
+              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --type app-image
           elif [ "${{ runner.os }}" = "Linux" ]; then
             # Build app-image first to remove ALSA-linked native libs
@@ -200,7 +201,8 @@ jobs:
               --copyright "(C) 2026 Glowing Cat" \
               --description "A lightweight desktop Markdown editor with live preview" \
               --icon "${{ matrix.icon }}" \
-              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6 --add-modules javafx.controls,javafx.web,javafx.swing" \
+              --add-modules javafx.controls,javafx.web,javafx.swing \
+              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --java-options "-Dawt.useSystemAAFontSettings=on" \
               --type app-image
 
@@ -236,7 +238,8 @@ jobs:
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
-              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6 --add-modules javafx.controls,javafx.web,javafx.swing" \
+              --add-modules javafx.controls,javafx.web,javafx.swing \
+              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --win-menu \
               --win-shortcut \
               --type ${{ matrix.pkg_type }}
