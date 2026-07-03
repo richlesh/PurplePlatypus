@@ -284,7 +284,7 @@ public class EditorWindow {
         subscriptItem.setEnabled(false);
         subscriptItem.addActionListener(e -> wrapSelection("<sub>", "</sub>"));
 
-        JMenuItem insItem = new JMenuItem("Insert (Underline)");
+        JMenuItem insItem = new JMenuItem("Underline (Insert)");
         insItem.setEnabled(false);
         insItem.addActionListener(e -> wrapSelection("++", "++"));
 
@@ -330,6 +330,7 @@ public class EditorWindow {
         markdownMenu.addSeparator();
 
         JMenuItem blockQuoteItem = new JMenuItem("Block Quote");
+        blockQuoteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         blockQuoteItem.addActionListener(e -> prefixLines("> "));
 
         JMenuItem inlineCodeItem = new JMenuItem("Inline Code");
@@ -352,16 +353,22 @@ public class EditorWindow {
         markdownMenu.addSeparator();
 
         JMenuItem h1Item = new JMenuItem("Heading 1");
+        h1Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_1, shortcutMask));
         h1Item.addActionListener(e -> prefixCurrentLine("# "));
         JMenuItem h2Item = new JMenuItem("Heading 2");
+        h2Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_2, shortcutMask));
         h2Item.addActionListener(e -> prefixCurrentLine("## "));
         JMenuItem h3Item = new JMenuItem("Heading 3");
+        h3Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_3, shortcutMask));
         h3Item.addActionListener(e -> prefixCurrentLine("### "));
         JMenuItem h4Item = new JMenuItem("Heading 4");
+        h4Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_4, shortcutMask));
         h4Item.addActionListener(e -> prefixCurrentLine("#### "));
         JMenuItem h5Item = new JMenuItem("Heading 5");
+        h5Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_5, shortcutMask));
         h5Item.addActionListener(e -> prefixCurrentLine("##### "));
         JMenuItem h6Item = new JMenuItem("Heading 6");
+        h6Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_6, shortcutMask));
         h6Item.addActionListener(e -> prefixCurrentLine("###### "));
         JMenuItem hrItem = new JMenuItem("Horizontal Rule");
         hrItem.addActionListener(e -> insertHorizontalRule());
