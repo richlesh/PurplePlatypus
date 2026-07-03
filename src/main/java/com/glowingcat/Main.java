@@ -22,9 +22,13 @@ import org.commonmark.renderer.html.HtmlRenderer;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.Element;
 import javax.swing.undo.UndoManager;
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -57,7 +61,8 @@ public class Main {
 
     private JFrame frame;
     private JTextArea editorPane;
-    private JEditorPane previewPane;
+    private WebEngine webEngine;
+    private JFXPanel jfxPanel;
     private File currentFile;
     private final Parser parser;
     private final HtmlRenderer renderer;
@@ -126,7 +131,7 @@ public class Main {
         frame.setSize(1200, 700);
 
         // Application icon
-        java.net.URL iconUrl = getClass().getClassLoader().getResource("icon.png");
+        java.net.URL iconUrl = getClass().getClassLoader().getResource("app_icon_256.png");
         ImageIcon appIcon = null;
         if (iconUrl != null) {
             appIcon = new ImageIcon(iconUrl);
@@ -302,24 +307,31 @@ public class Main {
         LineNumberPanel lineNumbers = new LineNumberPanel(editorPane);
         editorScroll.setRowHeaderView(lineNumbers);
 
-        // Preview pane (right) - HTML rendering of the markdown
-        previewPane = new JEditorPane();
-        previewPane.setContentType("text/html");
-        previewPane.setEditable(false);
-        previewPane.addHyperlinkListener(e -> {
-            if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                try {
-                    Desktop.getDesktop().browse(e.getURL().toURI());
-                } catch (Exception ex) {
-                    // Silently fail if browser can't be opened
+        // Preview pane (right) - JavaFX WebView for HTML5/CSS3 rendering
+        jfxPanel = new JFXPanel();
+        Platform.runLater(() -> {
+            WebView webView = new WebView();
+            webEngine = webView.getEngine();
+            // Open links in the default browser
+            webEngine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
+                if (newUrl != null && !newUrl.isEmpty() && !newUrl.startsWith("data:")) {
+                    Platform.runLater(() -> webEngine.loadContent(getStyledHtml("")));
+                    try {
+                        java.awt.Desktop.getDesktop().browse(new java.net.URI(newUrl));
+                    } catch (Exception ex) {
+                        // Silently fail
+                    }
                 }
-            }
+            });
+            Scene scene = new Scene(webView);
+            jfxPanel.setScene(scene);
         });
-        JScrollPane previewScroll = new JScrollPane(previewPane);
-        previewScroll.setBorder(BorderFactory.createTitledBorder("Preview"));
+        JPanel previewPanel = new JPanel(new BorderLayout());
+        previewPanel.setBorder(BorderFactory.createTitledBorder("Preview"));
+        previewPanel.add(jfxPanel, BorderLayout.CENTER);
 
         // Split pane
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorScroll, previewScroll);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorScroll, previewPanel);
         splitPane.setDividerLocation(600);
         splitPane.setResizeWeight(0.5);
 
@@ -363,60 +375,93 @@ public class Main {
 
     /**
      * Parses the current editor content as Markdown and renders it as styled HTML
-     * in the preview pane. Uses the current preview font preferences for styling.
-     * Called automatically on every document change.
+     * in the preview pane using JavaFX WebView. Called automatically on every document change.
      */
     private void updatePreview() {
         String markdown = editorPane.getText();
+
+        // Pre-process: encode spaces in markdown image/link URLs so CommonMark parses them
+        // Matches ![alt](path with spaces) and [text](url with spaces)
+        java.util.regex.Pattern mdLinkPattern = java.util.regex.Pattern.compile(
+                "(!?\\[[^\\]]*\\]\\()([^)]+)(\\))");
+        java.util.regex.Matcher mdMatcher = mdLinkPattern.matcher(markdown);
+        StringBuilder mdSb = new StringBuilder();
+        while (mdMatcher.find()) {
+            String url = mdMatcher.group(2);
+            if (!url.startsWith("http://") && !url.startsWith("https://") && url.contains(" ")) {
+                url = url.replace(" ", "%20");
+            }
+            mdMatcher.appendReplacement(mdSb,
+                    java.util.regex.Matcher.quoteReplacement(mdMatcher.group(1) + url + mdMatcher.group(3)));
+        }
+        mdMatcher.appendTail(mdSb);
+        markdown = mdSb.toString();
+
         Node document = parser.parse(markdown);
         String html = renderer.render(document);
 
+        // Resolve relative image paths to absolute file:// URLs with proper encoding
+        if (currentFile != null && currentFile.getParentFile() != null) {
+            File baseDir = currentFile.getParentFile();
+            java.util.regex.Pattern imgPattern = java.util.regex.Pattern.compile(
+                    "(<img[^>]+src=\")([^\"]+)(\"[^>]*>)");
+            java.util.regex.Matcher matcher = imgPattern.matcher(html);
+            StringBuilder sb = new StringBuilder();
+            while (matcher.find()) {
+                String src = matcher.group(2);
+                // Only resolve relative paths
+                if (!src.startsWith("http://") && !src.startsWith("https://") && !src.startsWith("data:") && !src.startsWith("file://")) {
+                    // Decode %20 back to space for File resolution, then let toURI() re-encode properly
+                    String decodedSrc = src.replace("%20", " ");
+                    File imgFile = new File(baseDir, decodedSrc);
+                    src = imgFile.toURI().toString();
+                }
+                matcher.appendReplacement(sb,
+                        java.util.regex.Matcher.quoteReplacement(matcher.group(1) + src + matcher.group(3)));
+            }
+            matcher.appendTail(sb);
+            html = sb.toString();
+        }
+
+        String styledHtml = getStyledHtml(html);
+
+        Platform.runLater(() -> {
+            if (webEngine != null) {
+                webEngine.loadContent(styledHtml);
+            }
+        });
+    }
+
+    /**
+     * Builds a complete styled HTML document from the given body HTML.
+     * Resolves relative image paths using the current file's location.
+     */
+    private String getStyledHtml(String bodyHtml) {
         String fontFamily = preferences.getPreviewFontFamily();
         int fontSize = preferences.getPreviewFontSize();
 
-        // Resolve relative image paths to absolute file:// URLs for JEditorPane
+        String baseTag = "";
         if (currentFile != null && currentFile.getParentFile() != null) {
-            java.io.File baseDir = currentFile.getParentFile();
-            // Replace <img src="relative/path"> with absolute file:// URLs
-            html = html.replaceAll(
-                    "<img\\s+src=\"(?!https?://|file://)(.*?)\"",
-                    java.util.regex.Matcher.quoteReplacement("<img src=\"") +
-                    "FILE_BASE_PLACEHOLDER$1\""
-            );
             try {
-                String baseUrl = baseDir.toURI().toURL().toString();
-                html = html.replace("FILE_BASE_PLACEHOLDER", baseUrl);
+                baseTag = "<base href=\"" + currentFile.getParentFile().toURI().toURL() + "\">";
             } catch (Exception ex) {
-                html = html.replace("FILE_BASE_PLACEHOLDER", "");
+                // Ignore
             }
         }
 
-        // Wrap img tags with <center> and add width attribute for JEditorPane compatibility
-        html = html.replaceAll(
-                "<img\\s+src=\"(.*?)\"\\s*alt=\"(.*?)\"\\s*/?>",
-                "<center><img src=\"$1\" alt=\"$2\" width=\"75%\"></center>"
-        );
-        // Also handle img tags with alt before src
-        html = html.replaceAll(
-                "<img\\s+alt=\"(.*?)\"\\s+src=\"(.*?)\"\\s*/?>",
-                "<center><img src=\"$2\" alt=\"$1\" width=\"75%\"></center>"
-        );
-
-        String styledHtml = "<html><head><style>"
+        return "<html><head>" + baseTag + "<style>"
                 + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; padding: 10px; line-height: 1.6; }"
                 + "h1, h2, h3 { color: #333; }"
-                + "code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }"
-                + "pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }"
+                + "code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }"
+                + "pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }"
                 + "blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }"
-                + "table { border-collapse: collapse; margin: 12px 0; }"
+                + "table { border-collapse: collapse; margin: 12px auto; }"
                 + "th, td { border: 1px solid #ddd; padding: 6px 12px; text-align: left; }"
                 + "th { background-color: #f0f0f0; font-weight: bold; }"
                 + "tr:nth-child(even) { background-color: #f9f9f9; }"
+                + "img { max-width: 75%; display: block; margin: 12px auto; }"
                 + "a { color: #0366d6; }"
-                + "</style></head><body>" + html + "</body></html>";
-
-        previewPane.setText(styledHtml);
-        previewPane.setCaretPosition(0);
+                + "</style></head><body>" + bodyHtml + "</body></html>";
     }
 
     /**
@@ -818,6 +863,10 @@ public class Main {
             // Fall back to default cross-platform L&F
         }
 
+        // Initialize JavaFX toolkit and prevent it from exiting when windows close
+        new JFXPanel(); // triggers JavaFX initialization
+        Platform.setImplicitExit(false);
+
         // Register macOS application menu handlers once, targeting the active window
         if (Desktop.isDesktopSupported()) {
             Desktop desktop = Desktop.getDesktop();
@@ -919,7 +968,7 @@ public class Main {
      */
     private void showAboutDialog() {
         ImageIcon icon = null;
-        java.net.URL iconUrl = getClass().getClassLoader().getResource("icon.png");
+        java.net.URL iconUrl = getClass().getClassLoader().getResource("app_icon_256.png");
         if (iconUrl != null) {
             // Scale to 64x64 for the about box
             ImageIcon fullIcon = new ImageIcon(iconUrl);

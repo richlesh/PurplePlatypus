@@ -6,27 +6,21 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 
 - **Split-pane editor** — Write Markdown on the left, see the rendered HTML preview on the right
 - **Live preview** — The preview updates in real time as you type, with no manual refresh needed
-- **Multi-window** — Open multiple editor windows with File > New
-- **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
-- **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
 - **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt` files, and save your work
-- **Dirty checking** — Prompts to save unsaved changes when closing a window or quitting the application
 - **Undo/Redo** — Full multi-level undo and redo support
 - **Clipboard** — Cut, Copy, and Paste via the Edit menu
-- **Markdown formatting** — Bold, Italic, Underline, and Strikethrough via the Markdown menu (enabled when text is selected)
 - **Find** — Search with options for Match Case, Wrap Around, Search Backwards, and Find in Selection (remembers the original selection for repeated searches)
 - **Find All** — Opens a results window showing matching lines with highlighted text; click a match to jump to it in the editor
 - **Count** — Quickly count the number of matches in the document or selection
 - **Replace** — Find and replace with Replace, Replace and Find, and Replace All operations
-- **Keyboard shortcuts** — ⌘/Ctrl+N (New), ⌘/Ctrl+O (Open), ⌘/Ctrl+W (Close), ⌘/Ctrl+S (Save), ⌘/Ctrl+Shift+S (Save As), ⌘/Ctrl+Z (Undo), ⌘/Ctrl+Y (Redo), ⌘/Ctrl+X (Cut), ⌘/Ctrl+C (Copy), ⌘/Ctrl+V (Paste), ⌘/Ctrl+F (Find), ⌘/Ctrl+H (Replace), ⌘/Ctrl+B (Bold), ⌘/Ctrl+I (Italic), ⌘/Ctrl+U (Underline)
+- **Keyboard shortcuts** — Ctrl+N (New), Ctrl+O (Open), Ctrl+S (Save), Ctrl+Shift+S (Save As), Ctrl+Z (Undo), Ctrl+Y (Redo), Ctrl+X (Cut), Ctrl+C (Copy), Ctrl+V (Paste), Ctrl+F (Find), Ctrl+H (Replace)
 - **Markdown support** — Headings, bold, italic, lists, code blocks, blockquotes, links, and more via the CommonMark specification
 - **Styled preview** — Clean, readable HTML output with custom CSS styling
-- **Preferences** — Configurable font family and size for both editor and preview panes
 
 ## Requirements
 
-- Java 25 or later
+- Java 17 or later
 - Maven 3.6+
 
 ## Building
@@ -47,4 +41,3 @@ Or run `com.glowingcat.Main` directly from your IDE.
 
 - **Java Swing** — GUI framework
 - **commonmark-java** — Markdown parsing and HTML rendering
-- **Gson** — JSON serialization for user preferences
