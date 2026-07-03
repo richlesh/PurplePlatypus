@@ -12,6 +12,9 @@
  */
 package com.glowingcat;
 
+import org.commonmark.Extension;
+import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
+import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -19,17 +22,24 @@ import org.commonmark.renderer.html.HtmlRenderer;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.Element;
 import javax.swing.undo.UndoManager;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.geom.Rectangle2D;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The main application class for PurplePlatypus.
@@ -39,6 +49,12 @@ import java.nio.file.Files;
  */
 public class Main {
 
+    /** Tracks the number of open windows so the app exits when the last one closes. */
+    private static final AtomicInteger windowCount = new AtomicInteger(0);
+
+    /** Tracks all open Main instances for macOS Desktop handler routing. */
+    private static final List<Main> openInstances = new ArrayList<>();
+
     private JFrame frame;
     private JTextArea editorPane;
     private JEditorPane previewPane;
@@ -47,14 +63,19 @@ public class Main {
     private final HtmlRenderer renderer;
     private final UndoManager undoManager = new UndoManager();
     private Preferences preferences;
+    private boolean dirty = false;
 
     /**
      * Constructs the application, initializing the markdown parser and renderer,
      * loading user preferences, then building and displaying the GUI.
      */
     public Main() {
-        parser = Parser.builder().build();
-        renderer = HtmlRenderer.builder().build();
+        List<Extension> extensions = Arrays.asList(
+                TablesExtension.create(),
+                StrikethroughExtension.create()
+        );
+        parser = Parser.builder().extensions(extensions).build();
+        renderer = HtmlRenderer.builder().extensions(extensions).build();
         preferences = Preferences.load();
         createAndShowGUI();
     }
@@ -70,7 +91,38 @@ public class Main {
      */
     private void createAndShowGUI() {
         frame = new JFrame("PurplePlatypus");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowOpened(WindowEvent e) {
+                windowCount.incrementAndGet();
+                openInstances.add(Main.this);
+            }
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (confirmClose()) {
+                    frame.dispose();
+                }
+            }
+
+            @Override
+            public void windowClosed(WindowEvent e) {
+                openInstances.remove(Main.this);
+                if (windowCount.decrementAndGet() == 0) {
+                    System.exit(0);
+                } else {
+                    // Activate the next open window so macOS transfers the menu bar
+                    for (Main instance : openInstances) {
+                        if (instance.frame.isDisplayable()) {
+                            instance.frame.toFront();
+                            instance.frame.requestFocus();
+                            break;
+                        }
+                    }
+                }
+            }
+        });
         frame.setSize(1200, 700);
 
         // Application icon
@@ -83,44 +135,42 @@ public class Main {
 
         // Menu bar
         JMenuBar menuBar = new JMenuBar();
-
-        // PurplePlatypus menu
-        JMenu appMenu = new JMenu("PurplePlatypus");
-
-        JMenuItem aboutItem = new JMenuItem("About PurplePlatypus...");
-        aboutItem.addActionListener(e -> showAboutDialog());
-
-        JMenuItem prefsItem = new JMenuItem("Preferences...");
-        prefsItem.addActionListener(e -> showPreferencesDialog());
-
-        appMenu.add(aboutItem);
-        appMenu.add(prefsItem);
-        menuBar.add(appMenu);
+        int shortcutMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
 
         // File menu
         JMenu fileMenu = new JMenu("File");
 
         JMenuItem newItem = new JMenuItem("New");
-        newItem.setAccelerator(KeyStroke.getKeyStroke("control N"));
+        newItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_N, shortcutMask));
         newItem.addActionListener(e -> newFile());
 
         JMenuItem openItem = new JMenuItem("Open...");
-        openItem.setAccelerator(KeyStroke.getKeyStroke("control O"));
+        openItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, shortcutMask));
         openItem.addActionListener(e -> openFile());
 
+        JMenuItem closeItem = new JMenuItem("Close");
+        closeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, shortcutMask));
+        closeItem.addActionListener(e -> {
+            if (confirmClose()) {
+                frame.dispose();
+            }
+        });
+
         JMenuItem saveItem = new JMenuItem("Save");
-        saveItem.setAccelerator(KeyStroke.getKeyStroke("control S"));
+        saveItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, shortcutMask));
         saveItem.addActionListener(e -> saveFile());
 
         JMenuItem saveAsItem = new JMenuItem("Save As...");
-        saveAsItem.setAccelerator(KeyStroke.getKeyStroke("control shift S"));
+        saveAsItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         saveAsItem.addActionListener(e -> saveFileAs());
 
         JMenuItem exitItem = new JMenuItem("Exit");
-        exitItem.addActionListener(e -> System.exit(0));
+        exitItem.addActionListener(e -> exitApplication());
 
         fileMenu.add(newItem);
         fileMenu.add(openItem);
+        fileMenu.addSeparator();
+        fileMenu.add(closeItem);
         fileMenu.addSeparator();
         fileMenu.add(saveItem);
         fileMenu.add(saveAsItem);
@@ -132,7 +182,7 @@ public class Main {
         JMenu editMenu = new JMenu("Edit");
 
         JMenuItem undoItem = new JMenuItem("Undo");
-        undoItem.setAccelerator(KeyStroke.getKeyStroke("control Z"));
+        undoItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Z, shortcutMask));
         undoItem.addActionListener(e -> {
             if (undoManager.canUndo()) {
                 undoManager.undo();
@@ -140,7 +190,7 @@ public class Main {
         });
 
         JMenuItem redoItem = new JMenuItem("Redo");
-        redoItem.setAccelerator(KeyStroke.getKeyStroke("control Y"));
+        redoItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Y, shortcutMask));
         redoItem.addActionListener(e -> {
             if (undoManager.canRedo()) {
                 undoManager.redo();
@@ -148,15 +198,15 @@ public class Main {
         });
 
         JMenuItem cutItem = new JMenuItem("Cut");
-        cutItem.setAccelerator(KeyStroke.getKeyStroke("control X"));
+        cutItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_X, shortcutMask));
         cutItem.addActionListener(e -> editorPane.cut());
 
         JMenuItem copyItem = new JMenuItem("Copy");
-        copyItem.setAccelerator(KeyStroke.getKeyStroke("control C"));
+        copyItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C, shortcutMask));
         copyItem.addActionListener(e -> editorPane.copy());
 
         JMenuItem pasteItem = new JMenuItem("Paste");
-        pasteItem.setAccelerator(KeyStroke.getKeyStroke("control V"));
+        pasteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V, shortcutMask));
         pasteItem.addActionListener(e -> editorPane.paste());
 
         editMenu.add(undoItem);
@@ -171,16 +221,61 @@ public class Main {
         JMenu searchMenu = new JMenu("Search");
 
         JMenuItem findItem = new JMenuItem("Find...");
-        findItem.setAccelerator(KeyStroke.getKeyStroke("control F"));
+        findItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask));
         findItem.addActionListener(e -> showFindDialog());
 
         JMenuItem replaceItem = new JMenuItem("Replace...");
-        replaceItem.setAccelerator(KeyStroke.getKeyStroke("control H"));
+        replaceItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_H, shortcutMask));
         replaceItem.addActionListener(e -> showReplaceDialog());
 
         searchMenu.add(findItem);
         searchMenu.add(replaceItem);
         menuBar.add(searchMenu);
+
+        // Markdown menu
+        JMenu markdownMenu = new JMenu("Markdown");
+
+        JMenuItem boldItem = new JMenuItem("Bold");
+        boldItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask));
+        boldItem.setEnabled(false);
+        boldItem.addActionListener(e -> wrapSelection("**", "**"));
+
+        JMenuItem italicItem = new JMenuItem("Italic");
+        italicItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_I, shortcutMask));
+        italicItem.setEnabled(false);
+        italicItem.addActionListener(e -> wrapSelection("*", "*"));
+
+        JMenuItem underlineItem = new JMenuItem("Underline");
+        underlineItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, shortcutMask));
+        underlineItem.setEnabled(false);
+        underlineItem.addActionListener(e -> wrapSelection("<u>", "</u>"));
+
+        JMenuItem strikethroughItem = new JMenuItem("Strikethrough");
+        strikethroughItem.setEnabled(false);
+        strikethroughItem.addActionListener(e -> wrapSelection("~~", "~~"));
+
+        markdownMenu.add(boldItem);
+        markdownMenu.add(italicItem);
+        markdownMenu.add(underlineItem);
+        markdownMenu.add(strikethroughItem);
+        markdownMenu.addSeparator();
+
+        JMenuItem linkItem = new JMenuItem("Link...");
+        linkItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, shortcutMask));
+        linkItem.addActionListener(e -> showLinkDialog());
+
+        JMenuItem imageItem = new JMenuItem("Image...");
+        imageItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_G, shortcutMask));
+        imageItem.addActionListener(e -> showImageDialog());
+
+        JMenuItem tableItem = new JMenuItem("Table...");
+        tableItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask));
+        tableItem.addActionListener(e -> showTableDialog());
+
+        markdownMenu.add(linkItem);
+        markdownMenu.add(imageItem);
+        markdownMenu.add(tableItem);
+        menuBar.add(markdownMenu);
 
         frame.setJMenuBar(menuBar);
 
@@ -190,6 +285,16 @@ public class Main {
         editorPane.setLineWrap(true);
         editorPane.setWrapStyleWord(true);
         editorPane.getDocument().addUndoableEditListener(undoManager);
+
+        // Enable/disable Markdown menu items based on text selection
+        editorPane.addCaretListener(e -> {
+            boolean hasSelection = e.getDot() != e.getMark();
+            boldItem.setEnabled(hasSelection);
+            italicItem.setEnabled(hasSelection);
+            underlineItem.setEnabled(hasSelection);
+            strikethroughItem.setEnabled(hasSelection);
+        });
+
         JScrollPane editorScroll = new JScrollPane(editorPane);
         editorScroll.setBorder(BorderFactory.createTitledBorder("Markdown Source"));
 
@@ -201,6 +306,15 @@ public class Main {
         previewPane = new JEditorPane();
         previewPane.setContentType("text/html");
         previewPane.setEditable(false);
+        previewPane.addHyperlinkListener(e -> {
+            if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                try {
+                    Desktop.getDesktop().browse(e.getURL().toURI());
+                } catch (Exception ex) {
+                    // Silently fail if browser can't be opened
+                }
+            }
+        });
         JScrollPane previewScroll = new JScrollPane(previewPane);
         previewScroll.setBorder(BorderFactory.createTitledBorder("Preview"));
 
@@ -216,16 +330,19 @@ public class Main {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 updatePreview();
+                markDirty();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
                 updatePreview();
+                markDirty();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
                 updatePreview();
+                markDirty();
             }
         });
 
@@ -235,9 +352,13 @@ public class Main {
                 + "- **Live preview** as you type\n"
                 + "- Open and save `.md` files\n"
                 + "- Split pane editor\n");
+        dirty = false;
 
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+        frame.toFront();
+        frame.requestFocus();
+        editorPane.requestFocusInWindow();
     }
 
     /**
@@ -253,12 +374,45 @@ public class Main {
         String fontFamily = preferences.getPreviewFontFamily();
         int fontSize = preferences.getPreviewFontSize();
 
+        // Resolve relative image paths to absolute file:// URLs for JEditorPane
+        if (currentFile != null && currentFile.getParentFile() != null) {
+            java.io.File baseDir = currentFile.getParentFile();
+            // Replace <img src="relative/path"> with absolute file:// URLs
+            html = html.replaceAll(
+                    "<img\\s+src=\"(?!https?://|file://)(.*?)\"",
+                    java.util.regex.Matcher.quoteReplacement("<img src=\"") +
+                    "FILE_BASE_PLACEHOLDER$1\""
+            );
+            try {
+                String baseUrl = baseDir.toURI().toURL().toString();
+                html = html.replace("FILE_BASE_PLACEHOLDER", baseUrl);
+            } catch (Exception ex) {
+                html = html.replace("FILE_BASE_PLACEHOLDER", "");
+            }
+        }
+
+        // Wrap img tags with <center> and add width attribute for JEditorPane compatibility
+        html = html.replaceAll(
+                "<img\\s+src=\"(.*?)\"\\s*alt=\"(.*?)\"\\s*/?>",
+                "<center><img src=\"$1\" alt=\"$2\" width=\"75%\"></center>"
+        );
+        // Also handle img tags with alt before src
+        html = html.replaceAll(
+                "<img\\s+alt=\"(.*?)\"\\s+src=\"(.*?)\"\\s*/?>",
+                "<center><img src=\"$2\" alt=\"$1\" width=\"75%\"></center>"
+        );
+
         String styledHtml = "<html><head><style>"
                 + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; padding: 10px; line-height: 1.6; }"
                 + "h1, h2, h3 { color: #333; }"
                 + "code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }"
                 + "pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }"
                 + "blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }"
+                + "table { border-collapse: collapse; margin: 12px 0; }"
+                + "th, td { border: 1px solid #ddd; padding: 6px 12px; text-align: left; }"
+                + "th { background-color: #f0f0f0; font-weight: bold; }"
+                + "tr:nth-child(even) { background-color: #f9f9f9; }"
+                + "a { color: #0366d6; }"
                 + "</style></head><body>" + html + "</body></html>";
 
         previewPane.setText(styledHtml);
@@ -266,33 +420,268 @@ public class Main {
     }
 
     /**
-     * Resets the editor to an empty state for a new file.
-     * Clears the current file reference and resets the window title.
+     * Opens a new document window by creating a new application instance.
      */
     private void newFile() {
-        currentFile = null;
-        editorPane.setText("");
-        frame.setTitle("PurplePlatypus");
+        SwingUtilities.invokeLater(Main::new);
     }
 
     /**
-     * Displays a file chooser dialog and loads the selected markdown file
-     * into the editor. Supports .md, .markdown, and .txt extensions.
+     * Displays a file chooser dialog and opens the selected markdown file
+     * in a new document window. Supports .md, .markdown, and .txt extensions.
      */
+    private long lastOpenTime = 0;
+
     private void openFile() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("Markdown Files", "md", "markdown", "txt"));
-        if (chooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
-            currentFile = chooser.getSelectedFile();
+        // Debounce: ignore if called again within 1 second
+        long now = System.currentTimeMillis();
+        if (now - lastOpenTime < 1000) return;
+        lastOpenTime = now;
+
+        // Prompt to save if current document has unsaved changes
+        if (dirty) {
+            if (!confirmClose()) {
+                return;
+            }
+        }
+        FileDialog dialog = new FileDialog(frame, "Open", FileDialog.LOAD);
+        dialog.setFilenameFilter((dir, name) -> {
+            String lower = name.toLowerCase();
+            return lower.endsWith(".md") || lower.endsWith(".markdown") || lower.endsWith(".txt");
+        });
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File file = new File(dialog.getDirectory(), dialog.getFile());
             try {
-                String content = new String(Files.readAllBytes(currentFile.toPath()), StandardCharsets.UTF_8);
-                editorPane.setText(content);
-                editorPane.setCaretPosition(0);
-                frame.setTitle("PurplePlatypus - " + currentFile.getName());
+                String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                loadFileContent(file, content);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
+        }
+        lastOpenTime = System.currentTimeMillis();
+    }
+
+    /**
+     * Loads the given file content into this window's editor.
+     */
+    private void loadFileContent(File file, String content) {
+        currentFile = file;
+        editorPane.setText(content);
+        editorPane.setCaretPosition(0);
+        undoManager.discardAllEdits();
+        dirty = false;
+        updateTitle();
+    }
+
+    /**
+     * Wraps the currently selected text with the given prefix and suffix.
+     * For example, wrapSelection("**", "**") turns "hello" into "**hello**".
+     *
+     * @param prefix the text to insert before the selection
+     * @param suffix the text to insert after the selection
+     */
+    private void wrapSelection(String prefix, String suffix) {
+        int start = editorPane.getSelectionStart();
+        int end = editorPane.getSelectionEnd();
+        if (start == end) return;
+
+        String selected = editorPane.getSelectedText();
+        editorPane.replaceSelection(prefix + selected + suffix);
+        // Re-select the wrapped text (including markers)
+        editorPane.setSelectionStart(start);
+        editorPane.setSelectionEnd(start + prefix.length() + selected.length() + suffix.length());
+    }
+
+    /**
+     * Shows the Link dialog. If the selection is or overlaps an existing markdown link,
+     * the dialog is pre-populated with that link's text and URI, and the entire link
+     * is replaced on save. Otherwise uses selected text as link text for a new link.
+     */
+    private void showLinkDialog() {
+        String selectedText = editorPane.getSelectedText();
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        String fullText = editorPane.getText();
+
+        // Try to find an existing markdown link that overlaps the selection
+        String linkText = selectedText != null ? selectedText : "";
+        String linkUri = "";
+        int replaceStart = selStart;
+        int replaceEnd = selEnd;
+
+        // Search backwards from selection start to find '[' and forwards to find '](...)' 
+        int searchFrom = Math.max(0, selStart - 200);
+        int searchTo = Math.min(fullText.length(), selEnd + 200);
+        String region = fullText.substring(searchFrom, searchTo);
+
+        // Look for markdown link pattern [text](url) that overlaps the selection
+        int idx = 0;
+        while (idx < region.length()) {
+            int bracketOpen = region.indexOf('[', idx);
+            if (bracketOpen < 0) break;
+
+            int bracketClose = region.indexOf(']', bracketOpen + 1);
+            if (bracketClose < 0) break;
+
+            // Check for ](
+            if (bracketClose + 1 < region.length() && region.charAt(bracketClose + 1) == '(') {
+                int parenClose = region.indexOf(')', bracketClose + 2);
+                if (parenClose >= 0) {
+                    int absStart = searchFrom + bracketOpen;
+                    int absEnd = searchFrom + parenClose + 1;
+
+                    // Check if selection overlaps this link
+                    if (selStart < absEnd && selEnd > absStart) {
+                        linkText = region.substring(bracketOpen + 1, bracketClose);
+                        linkUri = region.substring(bracketClose + 2, parenClose);
+                        replaceStart = absStart;
+                        replaceEnd = absEnd;
+                        break;
+                    }
+                }
+            }
+            idx = bracketOpen + 1;
+        }
+
+        LinkDialog dialog = new LinkDialog(frame, linkText, linkUri);
+        dialog.setVisible(true);
+        if (dialog.isConfirmed()) {
+            String markdown = "[" + dialog.getLinkText() + "](" + dialog.getLinkUri() + ")";
+            editorPane.setSelectionStart(replaceStart);
+            editorPane.setSelectionEnd(replaceEnd);
+            editorPane.replaceSelection(markdown);
+        }
+    }
+
+    /**
+     * Shows the Image dialog. If the selection is or overlaps an existing markdown image,
+     * the dialog is pre-populated with that image's alt text and path, and the entire
+     * image markdown is replaced on save. Otherwise uses selected text as alt text.
+     */
+    private void showImageDialog() {
+        String selectedText = editorPane.getSelectedText();
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        String fullText = editorPane.getText();
+
+        String altText = selectedText != null ? selectedText : "";
+        String imgPath = "";
+        int replaceStart = selStart;
+        int replaceEnd = selEnd;
+
+        // Search for ![alt](path) pattern overlapping the selection
+        int searchFrom = Math.max(0, selStart - 200);
+        int searchTo = Math.min(fullText.length(), selEnd + 200);
+        String region = fullText.substring(searchFrom, searchTo);
+
+        int idx = 0;
+        while (idx < region.length()) {
+            int bangBracket = region.indexOf("![", idx);
+            if (bangBracket < 0) break;
+
+            int bracketClose = region.indexOf(']', bangBracket + 2);
+            if (bracketClose < 0) break;
+
+            if (bracketClose + 1 < region.length() && region.charAt(bracketClose + 1) == '(') {
+                int parenClose = region.indexOf(')', bracketClose + 2);
+                if (parenClose >= 0) {
+                    int absStart = searchFrom + bangBracket;
+                    int absEnd = searchFrom + parenClose + 1;
+
+                    // Check if selection/cursor overlaps this image
+                    if (selStart <= absEnd && selEnd >= absStart) {
+                        altText = region.substring(bangBracket + 2, bracketClose);
+                        imgPath = region.substring(bracketClose + 2, parenClose);
+                        replaceStart = absStart;
+                        replaceEnd = absEnd;
+                        break;
+                    }
+                }
+            }
+            idx = bangBracket + 1;
+        }
+
+        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, currentFile);
+        dialog.setVisible(true);
+        if (dialog.isConfirmed()) {
+            String markdown = "![" + dialog.getAltText() + "](" + dialog.getImagePath() + ")";
+            editorPane.setSelectionStart(replaceStart);
+            editorPane.setSelectionEnd(replaceEnd);
+            editorPane.replaceSelection(markdown);
+        }
+    }
+
+    /**
+     * Shows the Table dialog. If a markdown table (or part of one) is selected,
+     * the table content is parsed and shown in the spreadsheet for editing.
+     * On save, inserts or replaces the markdown table.
+     */
+    private void showTableDialog() {
+        String selectedText = editorPane.getSelectedText();
+        String fullText = editorPane.getText();
+        int replaceStart = editorPane.getSelectionStart();
+        int replaceEnd = editorPane.getSelectionEnd();
+        String tableText = selectedText;
+
+        // Check if the cursor/selection is within a table by examining the current line
+        boolean inTable = false;
+        if (selectedText != null && selectedText.contains("|")) {
+            inTable = true;
+        } else {
+            // Check if the line at the cursor position contains a pipe
+            int lineStart = fullText.lastIndexOf('\n', replaceStart - 1) + 1;
+            int lineEnd = fullText.indexOf('\n', replaceStart);
+            if (lineEnd < 0) lineEnd = fullText.length();
+            String currentLine = fullText.substring(lineStart, lineEnd);
+            if (currentLine.contains("|")) {
+                inTable = true;
+            }
+        }
+
+        if (inTable) {
+            // Expand selection to cover the full table
+            int lineStart = fullText.lastIndexOf('\n', replaceStart - 1) + 1;
+            int lineEnd = replaceEnd;
+            // Make sure lineEnd is at end of a line
+            int eol = fullText.indexOf('\n', lineEnd);
+            if (eol >= 0) lineEnd = eol;
+            else lineEnd = fullText.length();
+
+            // Expand backwards to find start of table
+            while (lineStart > 0) {
+                int prevLineStart = fullText.lastIndexOf('\n', lineStart - 2) + 1;
+                String prevLine = fullText.substring(prevLineStart, lineStart - 1).trim();
+                if (prevLine.contains("|")) {
+                    lineStart = prevLineStart;
+                } else {
+                    break;
+                }
+            }
+            // Expand forwards to find end of table
+            while (lineEnd < fullText.length()) {
+                int nextLineEnd = fullText.indexOf('\n', lineEnd + 1);
+                if (nextLineEnd < 0) nextLineEnd = fullText.length();
+                String nextLine = fullText.substring(lineEnd, nextLineEnd).trim();
+                if (nextLine.contains("|")) {
+                    lineEnd = nextLineEnd;
+                } else {
+                    break;
+                }
+            }
+            tableText = fullText.substring(lineStart, lineEnd);
+            replaceStart = lineStart;
+            replaceEnd = lineEnd;
+        }
+
+        TableDialog dialog = new TableDialog(frame, tableText);
+        dialog.setVisible(true);
+        if (dialog.isConfirmed()) {
+            String markdown = dialog.getMarkdownTable();
+            editorPane.setSelectionStart(replaceStart);
+            editorPane.setSelectionEnd(replaceEnd);
+            editorPane.replaceSelection(markdown);
         }
     }
 
@@ -313,15 +702,21 @@ public class Main {
      * Appends a .md extension if none is provided.
      */
     private void saveFileAs() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("Markdown Files", "md", "markdown"));
-        if (chooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
-            currentFile = chooser.getSelectedFile();
+        FileDialog dialog = new FileDialog(frame, "Save As", FileDialog.SAVE);
+        if (currentFile != null) {
+            dialog.setDirectory(currentFile.getParent());
+            dialog.setFile(currentFile.getName());
+        } else {
+            dialog.setFile("untitled.md");
+        }
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            currentFile = new File(dialog.getDirectory(), dialog.getFile());
             if (!currentFile.getName().contains(".")) {
                 currentFile = new File(currentFile.getAbsolutePath() + ".md");
             }
             writeFile(currentFile);
-            frame.setTitle("PurplePlatypus - " + currentFile.getName());
+            updateTitle();
         }
     }
 
@@ -333,10 +728,80 @@ public class Main {
     private void writeFile(File file) {
         try {
             Files.write(file.toPath(), editorPane.getText().getBytes(StandardCharsets.UTF_8));
+            dirty = false;
+            updateTitle();
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(frame, "Error saving file: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /**
+     * Marks the document as modified and updates the window title to show an indicator.
+     */
+    private void markDirty() {
+        if (!dirty) {
+            dirty = true;
+            updateTitle();
+        }
+    }
+
+    /**
+     * Updates the window title, appending a bullet character when the document has unsaved changes.
+     */
+    private void updateTitle() {
+        String title = "PurplePlatypus";
+        if (currentFile != null) {
+            title += " - " + currentFile.getName();
+        }
+        if (dirty) {
+            title += " \u2022 Modified";
+        }
+        frame.setTitle(title);
+    }
+
+    /**
+     * Prompts the user to save unsaved changes before closing. Returns {@code true}
+     * if the window is safe to close (saved, discarded, or not dirty), or {@code false}
+     * if the user cancelled.
+     */
+    private boolean confirmClose() {
+        if (!dirty) return true;
+
+        String filename = currentFile != null ? currentFile.getName() : "Untitled";
+        int choice = JOptionPane.showOptionDialog(frame,
+                "\"" + filename + "\" has unsaved changes. Do you want to save before closing?",
+                "Unsaved Changes",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.WARNING_MESSAGE,
+                null,
+                new String[]{"Save", "Don't Save", "Cancel"},
+                "Save");
+
+        if (choice == 0) {
+            // Save
+            saveFile();
+            return !dirty; // returns false if save was cancelled (e.g. Save As cancelled)
+        } else if (choice == 1) {
+            // Don't Save
+            return true;
+        } else {
+            // Cancel or closed dialog
+            return false;
+        }
+    }
+
+    /**
+     * Attempts to exit the application, prompting each dirty window to save first.
+     * If any window cancels, the exit is aborted.
+     */
+    private void exitApplication() {
+        for (Main instance : new ArrayList<>(openInstances)) {
+            if (!instance.confirmClose()) {
+                return; // User cancelled, abort exit
+            }
+        }
+        System.exit(0);
     }
 
     /**
@@ -345,7 +810,105 @@ public class Main {
      * @param args command-line arguments (not used)
      */
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(Main::new);
+        System.setProperty("apple.laf.useScreenMenuBar", "true");
+        System.setProperty("apple.awt.application.name", "PurplePlatypus");
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            // Fall back to default cross-platform L&F
+        }
+
+        // Register macOS application menu handlers once, targeting the active window
+        if (Desktop.isDesktopSupported()) {
+            Desktop desktop = Desktop.getDesktop();
+            if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
+                desktop.setAboutHandler(e -> {
+                    Main active = getActiveInstance();
+                    if (active != null) active.showAboutDialog();
+                });
+            }
+            if (desktop.isSupported(Desktop.Action.APP_PREFERENCES)) {
+                desktop.setPreferencesHandler(e -> {
+                    Main active = getActiveInstance();
+                    if (active != null) active.showPreferencesDialog();
+                });
+            }
+            if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
+                desktop.setQuitHandler((e, response) -> {
+                    for (Main instance : new ArrayList<>(openInstances)) {
+                        if (!instance.confirmClose()) {
+                            response.cancelQuit();
+                            return;
+                        }
+                    }
+                    response.performQuit();
+                });
+            }
+            if (desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) {
+                desktop.setOpenFileHandler(e -> {
+                    for (File file : e.getFiles()) {
+                        SwingUtilities.invokeLater(() -> openFileInWindow(file));
+                    }
+                });
+            }
+        }
+
+        // Open file from command-line argument, or create empty window
+        SwingUtilities.invokeLater(() -> {
+            if (args.length > 0) {
+                File file = new File(args[0]);
+                if (file.exists()) {
+                    openFileInWindow(file);
+                } else {
+                    new Main();
+                }
+            } else {
+                new Main();
+            }
+        });
+    }
+
+    /**
+     * Opens a file in a new window or into the current empty window.
+     * Used by command-line arguments and macOS open file handler.
+     */
+    private static void openFileInWindow(File file) {
+        try {
+            String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            // Find an empty, unmodified window to reuse
+            for (Main instance : openInstances) {
+                if (!instance.dirty && instance.currentFile == null) {
+                    instance.loadFileContent(file, content);
+                    return;
+                }
+            }
+            // Otherwise open a new window
+            Main newWindow = new Main();
+            newWindow.loadFileContent(file, content);
+        } catch (IOException ex) {
+            // Silently fail for open-file events
+        }
+    }
+
+    /**
+     * Returns the Main instance whose frame is currently focused,
+     * or the first open instance if none is focused.
+     */
+    private static Main getActiveInstance() {
+        for (Window w : Window.getWindows()) {
+            if (w instanceof JFrame && w.isDisplayable()) {
+                for (Main instance : openInstances) {
+                    if (instance.frame == w) {
+                        if (w.isFocused()) return instance;
+                    }
+                }
+            }
+        }
+        // Fallback: return first open instance
+        for (Main instance : openInstances) {
+            if (instance.frame.isDisplayable()) return instance;
+        }
+        return null;
     }
 
     private FindDialog findDialog;

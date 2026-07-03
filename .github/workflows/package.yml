@@ -1,0 +1,307 @@
+name: Build Native Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. 1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  package:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            arch: arm64
+            icon: src/main/resources/app_icon.icns
+            doc_icon: src/main/resources/doc_icon.icns
+            pkg_type: dmg
+            label: macos-arm64
+          - os: macos-13
+            arch: x64
+            icon: src/main/resources/app_icon.icns
+            doc_icon: src/main/resources/doc_icon.icns
+            pkg_type: dmg
+            label: macos-x64
+          - os: windows-latest
+            arch: x64
+            icon: src/main/resources/app_icon.ico
+            doc_icon: src/main/resources/doc_icon.ico
+            pkg_type: msi
+            label: windows-x64
+          - os: windows-11-arm
+            arch: arm64
+            icon: src/main/resources/app_icon.ico
+            doc_icon: src/main/resources/doc_icon.ico
+            pkg_type: msi
+            label: windows-arm64
+          - os: ubuntu-22.04
+            arch: x64
+            icon: src/main/resources/app_icon_256.png
+            doc_icon: src/main/resources/doc_icon_256.png
+            pkg_type: deb
+            label: linux-x64-deb
+          - os: ubuntu-22.04
+            arch: x64
+            icon: src/main/resources/app_icon_256.png
+            doc_icon: src/main/resources/doc_icon_256.png
+            pkg_type: rpm
+            label: linux-x64-rpm
+          - os: ubuntu-24.04-arm
+            arch: arm64
+            icon: src/main/resources/app_icon_256.png
+            doc_icon: src/main/resources/doc_icon_256.png
+            pkg_type: deb
+            label: linux-arm64-deb
+          - os: ubuntu-24.04-arm
+            arch: arm64
+            icon: src/main/resources/app_icon_256.png
+            doc_icon: src/main/resources/doc_icon_256.png
+            pkg_type: rpm
+            label: linux-arm64-rpm
+
+    runs-on: ${{ matrix.os }}
+    name: Package (${{ matrix.label }})
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Normalize version
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          echo "APP_VERSION=${VERSION#v}" >> $GITHUB_ENV
+
+      - name: Import Developer ID certificate (macOS)
+        if: runner.os == 'macOS'
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASSWORD=build-keychain-password
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          echo "$CERTIFICATE_BASE64" | base64 --decode -o $RUNNER_TEMP/cert.p12
+          security import $RUNNER_TEMP/cert.p12 -k $KEYCHAIN_PATH -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+      - name: Build fat JAR
+        run: |
+          mvn clean package -DskipTests=true
+          mkdir -p lib
+          cp target/PurplePlatypus-*.jar lib/
+
+      - name: Install RPM tools (Linux RPM)
+        if: matrix.pkg_type == 'rpm'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Create file associations config
+        shell: bash
+        run: |
+          cat > fa-md.properties <<EOF
+          mime-type=text/markdown
+          extension=md
+          icon=${{ matrix.doc_icon }}
+          description=Markdown Document
+          EOF
+
+          cat > fa-markdown.properties <<EOF
+          mime-type=text/markdown
+          extension=markdown
+          icon=${{ matrix.doc_icon }}
+          description=Markdown Document
+          EOF
+
+      - name: Run jpackage
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            # Build app-image first so we can sign before creating DMG
+            jpackage \
+              --input lib \
+              --main-jar PurplePlatypus-1.0-SNAPSHOT.jar \
+              --main-class com.glowingcat.Main \
+              --name PurplePlatypus \
+              --app-version "${{ env.APP_VERSION }}" \
+              --vendor "Glowing Cat" \
+              --copyright "(C) 2026 Glowing Cat" \
+              --description "A lightweight desktop Markdown editor with live preview" \
+              --icon "${{ matrix.icon }}" \
+              --file-associations fa-md.properties \
+              --file-associations fa-markdown.properties \
+              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
+              --type app-image
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            # Build app-image first to remove ALSA-linked native libs
+            jpackage \
+              --input lib \
+              --main-jar PurplePlatypus-1.0-SNAPSHOT.jar \
+              --main-class com.glowingcat.Main \
+              --name PurplePlatypus \
+              --app-version "${{ env.APP_VERSION }}" \
+              --vendor "Glowing Cat" \
+              --copyright "(C) 2026 Glowing Cat" \
+              --description "A lightweight desktop Markdown editor with live preview" \
+              --icon "${{ matrix.icon }}" \
+              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
+              --java-options "-Dawt.useSystemAAFontSettings=on" \
+              --type app-image
+
+            # Remove native sound libraries to eliminate libasound2 dependency
+            find PurplePlatypus -name "libjsound*.so" -delete
+
+            # Package from the app-image
+            jpackage \
+              --app-image PurplePlatypus \
+              --name PurplePlatypus \
+              --app-version "${{ env.APP_VERSION }}" \
+              --vendor "Glowing Cat" \
+              --copyright "(C) 2026 Glowing Cat" \
+              --description "A lightweight desktop Markdown editor with live preview" \
+              --icon "${{ matrix.icon }}" \
+              --file-associations fa-md.properties \
+              --file-associations fa-markdown.properties \
+              --linux-app-category editors \
+              --linux-menu-group "Office;TextEditor;" \
+              --type ${{ matrix.pkg_type }}
+          else
+            jpackage \
+              --input lib \
+              --main-jar PurplePlatypus-1.0-SNAPSHOT.jar \
+              --main-class com.glowingcat.Main \
+              --name PurplePlatypus \
+              --app-version "${{ env.APP_VERSION }}" \
+              --vendor "Glowing Cat" \
+              --copyright "(C) 2026 Glowing Cat" \
+              --description "A lightweight desktop Markdown editor with live preview" \
+              --icon "${{ matrix.icon }}" \
+              --file-associations fa-md.properties \
+              --file-associations fa-markdown.properties \
+              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
+              --win-menu \
+              --win-shortcut \
+              --type ${{ matrix.pkg_type }}
+          fi
+
+      - name: Sign and notarize (macOS)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          KEY_FILE=$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8
+          echo "${{ secrets.APPLE_API_KEY }}" > "$KEY_FILE"
+          IDENTITY="Developer ID Application: ${{ secrets.APPLE_SIGNING_IDENTITY }}"
+
+          # Sign all nested dylibs and executables first
+          find PurplePlatypus.app -type f \( -name "*.dylib" -o -name "*.jnilib" -o -perm +111 \) | while read f; do
+            codesign --force --options runtime --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
+          done
+
+          # Sign the app bundle
+          codesign --force --options runtime --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain PurplePlatypus.app
+
+          # Verify signature
+          codesign --verify --deep --strict PurplePlatypus.app
+
+          # Create DMG
+          DMG_DIR=dmg_contents
+          mkdir -p "$DMG_DIR"
+          cp -R PurplePlatypus.app "$DMG_DIR/"
+          ln -s /Applications "$DMG_DIR/Applications"
+
+          hdiutil create -volname PurplePlatypus -srcfolder "$DMG_DIR" -ov -format UDRW /tmp/purpleplatypus-rw.dmg
+          hdiutil attach /tmp/purpleplatypus-rw.dmg -mountpoint /tmp/dmg-vol
+          SetFile -a C /tmp/dmg-vol || true
+          hdiutil detach /tmp/dmg-vol
+          hdiutil convert /tmp/purpleplatypus-rw.dmg -format UDZO -o PurplePlatypus-${APP_VERSION}.dmg
+
+          # Sign the DMG
+          codesign --force --timestamp --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain PurplePlatypus-${APP_VERSION}.dmg
+
+          # Notarize
+          xcrun notarytool submit PurplePlatypus-${APP_VERSION}.dmg \
+            --key "$KEY_FILE" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER" \
+            --wait | tee notarize_output.txt
+
+          # Fetch log if notarization failed
+          if grep -q "Invalid" notarize_output.txt; then
+            SUBMISSION_ID=$(grep "id:" notarize_output.txt | head -1 | awk '{print $2}')
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --key "$KEY_FILE" \
+              --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_ISSUER" || true
+            exit 1
+          fi
+
+          # Staple
+          xcrun stapler staple PurplePlatypus-${APP_VERSION}.dmg
+
+      - name: Azure login (Windows)
+        if: runner.os == 'Windows'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign installer (Windows)
+        if: runner.os == 'Windows'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_SIGNING_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}
+          files-folder-filter: msi
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Rename package with architecture
+        shell: bash
+        run: |
+          for f in *.dmg; do [ -f "$f" ] && mv "$f" "${f%.dmg}-${{ matrix.arch }}.dmg" || true; done
+          for f in *.msi; do [ -f "$f" ] && mv "$f" "${f%.msi}-${{ matrix.arch }}.msi" || true; done
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: PurplePlatypus-${{ matrix.label }}
+          path: |
+            *.dmg
+            *.msi
+            *.deb
+            *.rpm
+
+      - name: Attach to release
+        if: inputs.version != ''
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.version }}
+          name: PurplePlatypus ${{ inputs.version }}
+          files: |
+            *.dmg
+            *.msi
+            *.deb
+            *.rpm
