@@ -64,6 +64,19 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.glowingcat.Main</mainClass>
+                    <arguments/>
+                    <jvmArgs>
+                        <jvmArg>--enable-native-access=ALL-UNNAMED</jvmArg>
+                        <jvmArg>--add-modules=javafx.controls,javafx.web,javafx.swing</jvmArg>
+                    </jvmArgs>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.5.3</version>
