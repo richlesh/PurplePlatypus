@@ -65,9 +65,12 @@ public class PreviewPanel extends JPanel {
             WebView webView = new WebView();
             webEngine = webView.getEngine();
             webEngine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
-                if (newUrl != null && !newUrl.isEmpty() && !newUrl.startsWith("data:")
-                        && tempHtmlFile != null && !newUrl.equals(tempHtmlFile.toURI().toString())) {
-                    Platform.runLater(() -> webEngine.load(tempHtmlFile.toURI().toString()));
+                if (newUrl != null && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
+                    Platform.runLater(() -> {
+                        if (tempHtmlFile != null) {
+                            webEngine.load(tempHtmlFile.toURI().toString());
+                        }
+                    });
                     try {
                         java.awt.Desktop.getDesktop().browse(new java.net.URI(newUrl));
                     } catch (Exception ex) {
