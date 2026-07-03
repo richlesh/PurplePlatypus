@@ -37,6 +37,16 @@ public class EditorWindow {
     private final PreviewPanel previewPanel;
     private final RSyntaxTextArea editorPane;
     private final UndoManager undoManager = new UndoManager();
+    private AIChatPanel aiChatPanel;
+    private JSplitPane editorPreviewSplit;
+    private JSplitPane mainSplit;
+    private JLabel filePathLabel;
+    private JToggleButton previewToggle;
+    private JToggleButton aiToggle;
+    private boolean previewVisible = true;
+    private boolean aiVisible = true;
+    private int lastPreviewDivider = -1;
+    private int lastAiDivider = -1;
     private Preferences preferences;
     private File currentFile;
     private boolean dirty = false;
@@ -63,6 +73,7 @@ public class EditorWindow {
             @Override
             public void windowClosing(WindowEvent e) {
                 if (confirmClose()) {
+                    saveWindowState();
                     frame.dispose();
                 }
             }
@@ -83,7 +94,7 @@ public class EditorWindow {
                 }
             }
         });
-        frame.setSize(1200, 700);
+        frame.setSize(preferences.getWindowWidth(), preferences.getWindowHeight());
 
         // Application icon
         java.net.URL iconUrl = getClass().getClassLoader().getResource("app_icon_256.png");
@@ -94,6 +105,7 @@ public class EditorWindow {
         buildMenuBar();
         buildLayout();
         wireListeners();
+        restoreWindowState();
 
         // Set initial content
         editorPane.setText("# Welcome to PurplePlatypus\n\nStart typing your markdown here.\n\n"
@@ -220,10 +232,20 @@ public class EditorWindow {
         strikethroughItem.setEnabled(false);
         strikethroughItem.addActionListener(e -> wrapSelection("~~", "~~"));
 
+        JMenuItem superscriptItem = new JMenuItem("Superscript");
+        superscriptItem.setEnabled(false);
+        superscriptItem.addActionListener(e -> wrapSelection("<sup>", "</sup>"));
+
+        JMenuItem subscriptItem = new JMenuItem("Subscript");
+        subscriptItem.setEnabled(false);
+        subscriptItem.addActionListener(e -> wrapSelection("<sub>", "</sub>"));
+
         markdownMenu.add(boldItem);
         markdownMenu.add(italicItem);
         markdownMenu.add(underlineItem);
         markdownMenu.add(strikethroughItem);
+        markdownMenu.add(superscriptItem);
+        markdownMenu.add(subscriptItem);
         markdownMenu.addSeparator();
 
         JMenuItem linkItem = new JMenuItem("Link...");
@@ -275,6 +297,32 @@ public class EditorWindow {
         markdownMenu.add(blockCodeItem);
         markdownMenu.add(inlineMathItem);
         markdownMenu.add(blockMathItem);
+        markdownMenu.addSeparator();
+
+        JMenuItem h1Item = new JMenuItem("Heading 1");
+        h1Item.addActionListener(e -> prefixCurrentLine("# "));
+        JMenuItem h2Item = new JMenuItem("Heading 2");
+        h2Item.addActionListener(e -> prefixCurrentLine("## "));
+        JMenuItem h3Item = new JMenuItem("Heading 3");
+        h3Item.addActionListener(e -> prefixCurrentLine("### "));
+        JMenuItem h4Item = new JMenuItem("Heading 4");
+        h4Item.addActionListener(e -> prefixCurrentLine("#### "));
+        JMenuItem h5Item = new JMenuItem("Heading 5");
+        h5Item.addActionListener(e -> prefixCurrentLine("##### "));
+        JMenuItem h6Item = new JMenuItem("Heading 6");
+        h6Item.addActionListener(e -> prefixCurrentLine("###### "));
+        JMenuItem hrItem = new JMenuItem("Horizontal Rule");
+        hrItem.addActionListener(e -> insertHorizontalRule());
+
+        markdownMenu.add(h1Item);
+        markdownMenu.add(h2Item);
+        markdownMenu.add(h3Item);
+        markdownMenu.add(h4Item);
+        markdownMenu.add(h5Item);
+        markdownMenu.add(h6Item);
+        markdownMenu.addSeparator();
+        markdownMenu.add(hrItem);
+
         menuBar.add(markdownMenu);
 
         frame.setJMenuBar(menuBar);
@@ -286,14 +334,150 @@ public class EditorWindow {
             italicItem.setEnabled(hasSelection);
             underlineItem.setEnabled(hasSelection);
             strikethroughItem.setEnabled(hasSelection);
+            superscriptItem.setEnabled(hasSelection);
+            subscriptItem.setEnabled(hasSelection);
         });
     }
 
     private void buildLayout() {
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorPanel, previewPanel);
-        splitPane.setDividerLocation(600);
-        splitPane.setResizeWeight(0.5);
-        frame.add(splitPane, BorderLayout.CENTER);
+        // --- Toolbar / status bar at top ---
+        JPanel toolbar = new JPanel(new BorderLayout());
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY),
+            BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+        filePathLabel = new JLabel(" ");
+        filePathLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        toolbar.add(filePathLabel, BorderLayout.CENTER);
+
+        JPanel togglePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        togglePanel.setOpaque(false);
+
+        // Preview toggle button using eye.png
+        ImageIcon eyeIconFull = null;
+        var eyeUrl = getClass().getClassLoader().getResource("eye.png");
+        if (eyeUrl != null) {
+            eyeIconFull = new ImageIcon(new ImageIcon(eyeUrl).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+        }
+        previewToggle = new JToggleButton(eyeIconFull, true);
+        previewToggle.setToolTipText("Show/Hide Preview");
+        previewToggle.setFocusPainted(false);
+        previewToggle.setBorderPainted(false);
+        previewToggle.setContentAreaFilled(false);
+        previewToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        previewToggle.addActionListener(e -> togglePreview());
+        togglePanel.add(previewToggle);
+
+        // AI toggle button using AI.png
+        ImageIcon aiIconFull = null;
+        var aiUrl = getClass().getClassLoader().getResource("AI.png");
+        if (aiUrl != null) {
+            aiIconFull = new ImageIcon(new ImageIcon(aiUrl).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+        }
+        aiToggle = new JToggleButton(aiIconFull, true);
+        aiToggle.setToolTipText("Show/Hide AI Assistant");
+        aiToggle.setFocusPainted(false);
+        aiToggle.setBorderPainted(false);
+        aiToggle.setContentAreaFilled(false);
+        aiToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        aiToggle.addActionListener(e -> toggleAI());
+        togglePanel.add(aiToggle);
+
+        toolbar.add(togglePanel, BorderLayout.EAST);
+        frame.add(toolbar, BorderLayout.NORTH);
+
+        // --- Main content area ---
+        editorPreviewSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorPanel, previewPanel);
+        editorPreviewSplit.setDividerLocation(600);
+        editorPreviewSplit.setResizeWeight(0.5);
+
+        aiChatPanel = new AIChatPanel(editorPane, preferences);
+        mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorPreviewSplit, aiChatPanel);
+        mainSplit.setResizeWeight(1.0);
+        mainSplit.setDividerLocation(frame.getWidth() - 400);
+
+        frame.add(mainSplit, BorderLayout.CENTER);
+    }
+
+    private void togglePreview() {
+        previewVisible = previewToggle.isSelected();
+        if (previewVisible) {
+            editorPreviewSplit.setRightComponent(previewPanel);
+            editorPreviewSplit.setDividerSize(UIManager.getInt("SplitPane.dividerSize"));
+            if (lastPreviewDivider > 0) {
+                editorPreviewSplit.setDividerLocation(lastPreviewDivider);
+            } else {
+                editorPreviewSplit.setDividerLocation(editorPreviewSplit.getWidth() / 2);
+            }
+        } else {
+            lastPreviewDivider = editorPreviewSplit.getDividerLocation();
+            editorPreviewSplit.setRightComponent(null);
+            editorPreviewSplit.setDividerSize(0);
+        }
+        editorPreviewSplit.revalidate();
+        editorPreviewSplit.repaint();
+    }
+
+    private void toggleAI() {
+        aiVisible = aiToggle.isSelected();
+        if (aiVisible) {
+            mainSplit.setRightComponent(aiChatPanel);
+            mainSplit.setDividerSize(UIManager.getInt("SplitPane.dividerSize"));
+            if (lastAiDivider > 0) {
+                mainSplit.setDividerLocation(lastAiDivider);
+            } else {
+                mainSplit.setDividerLocation(mainSplit.getWidth() - 380);
+            }
+        } else {
+            lastAiDivider = mainSplit.getDividerLocation();
+            mainSplit.setRightComponent(null);
+            mainSplit.setDividerSize(0);
+        }
+        mainSplit.revalidate();
+        mainSplit.repaint();
+    }
+
+    private void saveWindowState() {
+        preferences.setWindowWidth(frame.getWidth());
+        preferences.setWindowHeight(frame.getHeight());
+        if (previewVisible) {
+            preferences.setEditorPreviewDivider(editorPreviewSplit.getDividerLocation());
+        } else if (lastPreviewDivider > 0) {
+            preferences.setEditorPreviewDivider(lastPreviewDivider);
+        }
+        if (aiVisible) {
+            preferences.setMainDivider(mainSplit.getDividerLocation());
+        } else if (lastAiDivider > 0) {
+            preferences.setMainDivider(lastAiDivider);
+        }
+        preferences.setPreviewVisible(previewVisible);
+        preferences.setAiVisible(aiVisible);
+        preferences.save();
+    }
+
+    private void restoreWindowState() {
+        // Restore divider positions after the frame is visible and laid out
+        SwingUtilities.invokeLater(() -> {
+            editorPreviewSplit.setDividerLocation(preferences.getEditorPreviewDivider());
+            mainSplit.setDividerLocation(preferences.getMainDivider());
+
+            // Restore pane visibility
+            if (!preferences.isPreviewVisible()) {
+                previewToggle.setSelected(false);
+                previewVisible = false;
+                lastPreviewDivider = preferences.getEditorPreviewDivider();
+                editorPreviewSplit.setRightComponent(null);
+                editorPreviewSplit.setDividerSize(0);
+            }
+            if (!preferences.isAiVisible()) {
+                aiToggle.setSelected(false);
+                aiVisible = false;
+                lastAiDivider = preferences.getMainDivider();
+                mainSplit.setRightComponent(null);
+                mainSplit.setDividerSize(0);
+            }
+        });
     }
 
     private void wireListeners() {
@@ -399,6 +583,14 @@ public class EditorWindow {
         if (currentFile != null) title += " - " + currentFile.getName();
         if (dirty) title += " \u2022 Modified";
         frame.setTitle(title);
+        // Update toolbar file path
+        if (filePathLabel != null) {
+            if (currentFile != null) {
+                filePathLabel.setText(currentFile.getAbsolutePath());
+            } else {
+                filePathLabel.setText("Untitled");
+            }
+        }
     }
 
     public boolean confirmClose() {
@@ -430,6 +622,41 @@ public class EditorWindow {
         editorPane.replaceSelection(prefix + selected + suffix);
         editorPane.setSelectionStart(start);
         editorPane.setSelectionEnd(start + prefix.length() + selected.length() + suffix.length());
+    }
+
+    /**
+     * Replaces the current line's content with a heading prefix followed by the line text
+     * (stripping any existing heading prefix first).
+     */
+    private void prefixCurrentLine(String prefix) {
+        String fullText = editorPane.getText();
+        int caret = editorPane.getCaretPosition();
+        int lineStart = fullText.lastIndexOf('\n', caret - 1) + 1;
+        int lineEnd = fullText.indexOf('\n', caret);
+        if (lineEnd < 0) lineEnd = fullText.length();
+
+        String line = fullText.substring(lineStart, lineEnd);
+        // Strip existing heading prefix
+        String stripped = line.replaceFirst("^#{1,6}\\s*", "");
+        String result = prefix + stripped;
+
+        editorPane.setSelectionStart(lineStart);
+        editorPane.setSelectionEnd(lineEnd);
+        editorPane.replaceSelection(result);
+        editorPane.setCaretPosition(lineStart + result.length());
+    }
+
+    /**
+     * Inserts a horizontal rule (---) on its own line below the current line.
+     */
+    private void insertHorizontalRule() {
+        String fullText = editorPane.getText();
+        int caret = editorPane.getCaretPosition();
+        int lineEnd = fullText.indexOf('\n', caret);
+        if (lineEnd < 0) lineEnd = fullText.length();
+
+        editorPane.setCaretPosition(lineEnd);
+        editorPane.replaceSelection("\n\n---\n");
     }
 
     /**
@@ -701,6 +928,7 @@ public class EditorWindow {
             dialog.applyTo(preferences);
             preferences.save();
             editorPanel.applyPreferences(preferences);
+            if (aiChatPanel != null) aiChatPanel.updateFont();
             updatePreview();
         }
     }

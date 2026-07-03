@@ -1,28 +1,52 @@
 # PurplePlatypus
 
-A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type.
+A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
 ## Features
 
 - **Split-pane editor** — Write Markdown on the left, see the rendered HTML preview on the right
 - **Live preview** — The preview updates in real time as you type, with no manual refresh needed
+- **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
+- **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, DeepSeek, Alibaba, or local Ollama models
 - **Multi-window** — Open multiple editor windows with File > New
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
+- **Toolbar** — Status bar showing the full file path with toggle buttons to show/hide the preview and AI panels
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
 - **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt` files, and save your work
 - **Dirty checking** — Prompts to save unsaved changes when closing a window or quitting the application
 - **Undo/Redo** — Full multi-level undo and redo support
 - **Clipboard** — Cut, Copy, and Paste via the Edit menu
-- **Markdown formatting** — Bold, Italic, Underline, and Strikethrough via the Markdown menu (enabled when text is selected)
+- **Markdown formatting** — Bold, Italic, Underline, Strikethrough, Superscript, and Subscript via the Markdown menu (enabled when text is selected)
+- **Headings** — Insert Heading 1 through Heading 6 via the Markdown menu (replaces any existing heading prefix)
+- **Horizontal Rule** — Insert a `---` separator via the Markdown menu
+- **Links and Images** — Insert or edit markdown links and images via dialogs
+- **Tables** — Insert or edit GFM-style markdown tables via a visual dialog
+- **Lists** — Convert lines to ordered, unordered, or task lists
+- **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, and Block Math
 - **Find** — Search with options for Match Case, Wrap Around, Search Backwards, and Find in Selection (remembers the original selection for repeated searches)
 - **Find All** — Opens a results window showing matching lines with highlighted text; click a match to jump to it in the editor
 - **Count** — Quickly count the number of matches in the document or selection
 - **Replace** — Find and replace with Replace, Replace and Find, and Replace All operations
-- **Keyboard shortcuts** — ⌘/Ctrl+N (New), ⌘/Ctrl+O (Open), ⌘/Ctrl+W (Close), ⌘/Ctrl+S (Save), ⌘/Ctrl+Shift+S (Save As), ⌘/Ctrl+Z (Undo), ⌘/Ctrl+Y (Redo), ⌘/Ctrl+X (Cut), ⌘/Ctrl+C (Copy), ⌘/Ctrl+V (Paste), ⌘/Ctrl+F (Find), ⌘/Ctrl+H (Replace), ⌘/Ctrl+B (Bold), ⌘/Ctrl+I (Italic), ⌘/Ctrl+U (Underline)
-- **Markdown support** — Headings, bold, italic, lists, code blocks, blockquotes, links, and more via the CommonMark specification
+- **Keyboard shortcuts** — ⌘/Ctrl+N (New), ⌘/Ctrl+O (Open), ⌘/Ctrl+W (Close), ⌘/Ctrl+S (Save), ⌘/Ctrl+Shift+S (Save As), ⌘/Ctrl+Z (Undo), ⌘/Ctrl+Y (Redo), ⌘/Ctrl+X (Cut), ⌘/Ctrl+C (Copy), ⌘/Ctrl+V (Paste), ⌘/Ctrl+F (Find), ⌘/Ctrl+H (Replace), ⌘/Ctrl+B (Bold), ⌘/Ctrl+I (Italic), ⌘/Ctrl+U (Underline), ⌘/Ctrl+L (Link), ⌘/Ctrl+G (Image), ⌘/Ctrl+T (Table)
+- **Markdown support** — Headings, bold, italic, strikethrough, superscript, subscript, lists, code blocks, blockquotes, links, images, tables, math, and more via the CommonMark specification with GFM extensions
 - **Styled preview** — Clean, readable HTML output with custom CSS styling
-- **Preferences** — Configurable font family and size for both editor and preview panes
+- **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors
+- **Window state persistence** — Window size, divider positions, and panel visibility are remembered between sessions
+
+## AI Assistant
+
+The built-in AI chat panel helps you write and improve markdown content:
+
+- Draft new content (paragraphs, sections, lists, tables)
+- Improve existing text (grammar, clarity, tone, structure)
+- Add markdown formatting and suggest document organization
+- Generate tables from descriptions
+- Help with technical writing, blog posts, documentation, and READMEs
+
+When the AI suggests a complete document replacement, you're given Allow/Reject buttons to accept or decline the changes.
+
+Configure your LLM provider in Preferences (vendor, model, and API key).
 
 ## Requirements
 
@@ -46,5 +70,8 @@ Or run `com.glowingcat.Main` directly from your IDE.
 ## Tech Stack
 
 - **Java Swing** — GUI framework
-- **commonmark-java** — Markdown parsing and HTML rendering
+- **commonmark-java** — Markdown parsing and HTML rendering (with GFM tables, strikethrough, and task list extensions)
+- **RSyntaxTextArea** — Syntax-aware text editor component
+- **JavaFX WebView** — HTML preview rendering
 - **Gson** — JSON serialization for user preferences
+- **java.net.http** — HTTP client for LLM API calls

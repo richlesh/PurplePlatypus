@@ -14,6 +14,9 @@ package com.glowingcat;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -50,6 +53,85 @@ public class Preferences {
     /** Font size for code in the HTML preview pane. */
     private int previewCodeFontSize = 13;
 
+    // --- LLM / AI Chat settings ---
+
+    /** LLM vendor name (OpenAI, Anthropic, Google, DeepSeek, Alibaba, Ollama). */
+    private String llmVendor = "OpenAI";
+
+    /** LLM model identifier. */
+    private String llmModel = "gpt-4o";
+
+    /** LLM API key (null means not configured). */
+    private String llmApiKey = null;
+
+    /** Font family for the AI chat panel. */
+    private String aiFontFamily = detectAIFont();
+
+    /** Font size for the AI chat panel. */
+    private int aiFontSize = 14;
+
+    /** Background color for user prompt chat bubbles (hex string for Gson). */
+    private String userPromptColor = "#00AA00";
+
+    /** Background color for AI response chat bubbles (hex string for Gson). */
+    private String aiResponseColor = "#3399FF";
+
+    // --- Window state (not shown in preferences dialog) ---
+
+    /** Window width. */
+    private int windowWidth = 1200;
+
+    /** Window height. */
+    private int windowHeight = 700;
+
+    /** Editor/preview split pane divider location. */
+    private int editorPreviewDivider = 600;
+
+    /** Main split pane divider (content vs AI panel). */
+    private int mainDivider = 800;
+
+    /** Whether the preview pane is visible. */
+    private boolean previewVisible = true;
+
+    /** Whether the AI chat pane is visible. */
+    private boolean aiVisible = true;
+
+    private static String detectAIFont() {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        String[] candidates;
+        if (os.contains("linux")) candidates = new String[]{"DejaVu Sans", "Arial", "Helvetica", "SansSerif"};
+        else if (os.contains("win")) candidates = new String[]{"Calibri", "Arial", "Helvetica", "SansSerif"};
+        else candidates = new String[]{"Arial", "Helvetica", "SansSerif"};
+        for (String name : candidates) {
+            Font f = new Font(name, Font.PLAIN, 14);
+            if (!f.getFamily().equals("Dialog")) return name;
+        }
+        return "SansSerif";
+    }
+
+    // --- LLM Getters/Setters ---
+
+    public String getLlmVendor() { return llmVendor; }
+    public void setLlmVendor(String llmVendor) { this.llmVendor = llmVendor; }
+    public String getLlmModel() { return llmModel; }
+    public void setLlmModel(String llmModel) { this.llmModel = llmModel; }
+    public String getLlmApiKey() { return llmApiKey; }
+    public void setLlmApiKey(String llmApiKey) { this.llmApiKey = llmApiKey; }
+    public String getAiFontFamily() { return aiFontFamily; }
+    public void setAiFontFamily(String aiFontFamily) { this.aiFontFamily = aiFontFamily; }
+    public int getAiFontSize() { return aiFontSize; }
+    public void setAiFontSize(int aiFontSize) { this.aiFontSize = aiFontSize; }
+
+    public Color getUserPromptColorObj() { return Color.decode(userPromptColor); }
+    public void setUserPromptColor(Color color) { this.userPromptColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
+    public String getUserPromptColor() { return userPromptColor; }
+    public void setUserPromptColor(String hex) { this.userPromptColor = hex; }
+
+    public Color getAiResponseColorObj() { return Color.decode(aiResponseColor); }
+    public void setAiResponseColor(Color color) { this.aiResponseColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
+    public String getAiResponseColor() { return aiResponseColor; }
+    public void setAiResponseColor(String hex) { this.aiResponseColor = hex; }
+
     public String getEditorFontFamily() { return editorFontFamily; }
     public void setEditorFontFamily(String editorFontFamily) { this.editorFontFamily = editorFontFamily; }
     public int getEditorFontSize() { return editorFontSize; }
@@ -62,6 +144,21 @@ public class Preferences {
     public void setPreviewCodeFontFamily(String previewCodeFontFamily) { this.previewCodeFontFamily = previewCodeFontFamily; }
     public int getPreviewCodeFontSize() { return previewCodeFontSize; }
     public void setPreviewCodeFontSize(int previewCodeFontSize) { this.previewCodeFontSize = previewCodeFontSize; }
+
+    // --- Window state getters/setters ---
+
+    public int getWindowWidth() { return windowWidth; }
+    public void setWindowWidth(int windowWidth) { this.windowWidth = windowWidth; }
+    public int getWindowHeight() { return windowHeight; }
+    public void setWindowHeight(int windowHeight) { this.windowHeight = windowHeight; }
+    public int getEditorPreviewDivider() { return editorPreviewDivider; }
+    public void setEditorPreviewDivider(int editorPreviewDivider) { this.editorPreviewDivider = editorPreviewDivider; }
+    public int getMainDivider() { return mainDivider; }
+    public void setMainDivider(int mainDivider) { this.mainDivider = mainDivider; }
+    public boolean isPreviewVisible() { return previewVisible; }
+    public void setPreviewVisible(boolean previewVisible) { this.previewVisible = previewVisible; }
+    public boolean isAiVisible() { return aiVisible; }
+    public void setAiVisible(boolean aiVisible) { this.aiVisible = aiVisible; }
 
     private static Path getPrefsPath() {
         return Paths.get(System.getProperty("user.home"), PREFS_FILENAME);
