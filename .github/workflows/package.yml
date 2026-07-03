@@ -136,6 +136,9 @@ jobs:
           mvn clean package -DskipTests=true $MAVEN_OPTS
           mkdir -p lib
           cp target/PurplePlatypus-*.jar lib/
+          # Determine the actual jar filename for jpackage
+          JARFILE=$(ls lib/PurplePlatypus-*.jar | head -1 | xargs basename)
+          echo "JARFILE=$JARFILE" >> $GITHUB_ENV
 
       - name: Install RPM tools (Linux RPM)
         if: matrix.pkg_type == 'rpm'
@@ -172,7 +175,7 @@ jobs:
             # Build app-image first so we can sign before creating DMG
             jpackage \
               --input lib \
-              --main-jar PurplePlatypus-1.0-SNAPSHOT.jar \
+              --main-jar ${{ env.JARFILE }} \
               --main-class com.glowingcat.Main \
               --name PurplePlatypus \
               --app-version "${{ env.APP_VERSION }}" \
@@ -189,7 +192,7 @@ jobs:
             # Build app-image first to remove ALSA-linked native libs
             jpackage \
               --input lib \
-              --main-jar PurplePlatypus-1.0-SNAPSHOT.jar \
+              --main-jar ${{ env.JARFILE }} \
               --main-class com.glowingcat.Main \
               --name PurplePlatypus \
               --app-version "${{ env.APP_VERSION }}" \
@@ -222,7 +225,7 @@ jobs:
           else
             jpackage \
               --input lib \
-              --main-jar PurplePlatypus-1.0-SNAPSHOT.jar \
+              --main-jar ${{ env.JARFILE }} \
               --main-class com.glowingcat.Main \
               --name PurplePlatypus \
               --app-version "${{ env.APP_VERSION }}" \
