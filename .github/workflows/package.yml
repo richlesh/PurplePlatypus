@@ -84,8 +84,9 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: liberica
           java-version: '21'
+          java-package: jdk+fx
           cache: maven
 
       - name: Normalize version
