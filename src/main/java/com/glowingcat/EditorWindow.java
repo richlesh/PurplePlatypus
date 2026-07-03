@@ -285,6 +285,7 @@ public class EditorWindow {
         subscriptItem.addActionListener(e -> wrapSelection("<sub>", "</sub>"));
 
         JMenuItem insItem = new JMenuItem("Underline (Insert)");
+        insItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, shortcutMask));
         insItem.setEnabled(false);
         insItem.addActionListener(e -> wrapSelection("++", "++"));
 
@@ -313,15 +314,19 @@ public class EditorWindow {
         markdownMenu.add(tableItem);
 
         JMenuItem footnoteItem = new JMenuItem("Footnote");
+        footnoteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         footnoteItem.addActionListener(e -> insertFootnote());
         markdownMenu.add(footnoteItem);
         markdownMenu.addSeparator();
 
         JMenuItem orderedListItem = new JMenuItem("Ordered List");
+        orderedListItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         orderedListItem.addActionListener(e -> convertToList("ordered"));
         JMenuItem unorderedListItem = new JMenuItem("Unordered List");
+        unorderedListItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         unorderedListItem.addActionListener(e -> convertToList("unordered"));
         JMenuItem taskListItem = new JMenuItem("Task List");
+        taskListItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         taskListItem.addActionListener(e -> convertToList("task"));
 
         markdownMenu.add(orderedListItem);
@@ -371,6 +376,7 @@ public class EditorWindow {
         h6Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_6, shortcutMask));
         h6Item.addActionListener(e -> prefixCurrentLine("###### "));
         JMenuItem hrItem = new JMenuItem("Horizontal Rule");
+        hrItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_MINUS, shortcutMask));
         hrItem.addActionListener(e -> insertHorizontalRule());
 
         markdownMenu.add(h1Item);
