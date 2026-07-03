@@ -254,6 +254,12 @@ jobs:
               --type ${{ matrix.pkg_type }}
           fi
 
+      - name: Patch Info.plist with UTI declarations (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          chmod +x packaging/macos-post-image.sh
+          ./packaging/macos-post-image.sh
+
       - name: Sign and notarize (macOS)
         if: runner.os == 'macOS'
         env:
