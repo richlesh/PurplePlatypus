@@ -15,6 +15,7 @@ package com.glowingcat;
 import org.commonmark.Extension;
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.ext.task.list.items.TaskListItemsExtension;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -22,7 +23,6 @@ import org.commonmark.renderer.html.HtmlRenderer;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.text.Element;
 import javax.swing.undo.UndoManager;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
@@ -32,9 +32,6 @@ import javafx.scene.web.WebView;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.geom.Rectangle2D;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -60,7 +57,7 @@ public class Main {
     private static final List<Main> openInstances = new ArrayList<>();
 
     private JFrame frame;
-    private JTextArea editorPane;
+    private org.fife.ui.rsyntaxtextarea.RSyntaxTextArea editorPane;
     private WebEngine webEngine;
     private JFXPanel jfxPanel;
     private File currentFile;
@@ -77,7 +74,8 @@ public class Main {
     public Main() {
         List<Extension> extensions = Arrays.asList(
                 TablesExtension.create(),
-                StrikethroughExtension.create()
+                StrikethroughExtension.create(),
+                TaskListItemsExtension.create()
         );
         parser = Parser.builder().extensions(extensions).build();
         renderer = HtmlRenderer.builder().extensions(extensions).build();
@@ -280,15 +278,33 @@ public class Main {
         markdownMenu.add(linkItem);
         markdownMenu.add(imageItem);
         markdownMenu.add(tableItem);
+        markdownMenu.addSeparator();
+
+        JMenuItem orderedListItem = new JMenuItem("Ordered List");
+        orderedListItem.addActionListener(e -> convertToList("ordered"));
+
+        JMenuItem unorderedListItem = new JMenuItem("Unordered List");
+        unorderedListItem.addActionListener(e -> convertToList("unordered"));
+
+        JMenuItem taskListItem = new JMenuItem("Task List");
+        taskListItem.addActionListener(e -> convertToList("task"));
+
+        markdownMenu.add(orderedListItem);
+        markdownMenu.add(unorderedListItem);
+        markdownMenu.add(taskListItem);
         menuBar.add(markdownMenu);
 
         frame.setJMenuBar(menuBar);
 
-        // Editor pane (left) - plain text area for markdown source
-        editorPane = new JTextArea();
+        // Editor pane (left) - RSyntaxTextArea with Markdown highlighting
+        editorPane = new org.fife.ui.rsyntaxtextarea.RSyntaxTextArea();
+        editorPane.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_MARKDOWN);
         editorPane.setFont(new Font(preferences.getEditorFontFamily(), Font.PLAIN, preferences.getEditorFontSize()));
         editorPane.setLineWrap(true);
         editorPane.setWrapStyleWord(true);
+        editorPane.setDragEnabled(false);
+        editorPane.setCodeFoldingEnabled(false);
+        editorPane.setAntiAliasingEnabled(true);
         editorPane.getDocument().addUndoableEditListener(undoManager);
 
         // Enable/disable Markdown menu items based on text selection
@@ -300,12 +316,9 @@ public class Main {
             strikethroughItem.setEnabled(hasSelection);
         });
 
-        JScrollPane editorScroll = new JScrollPane(editorPane);
+        org.fife.ui.rtextarea.RTextScrollPane editorScroll = new org.fife.ui.rtextarea.RTextScrollPane(editorPane);
+        editorScroll.setLineNumbersEnabled(true);
         editorScroll.setBorder(BorderFactory.createTitledBorder("Markdown Source"));
-
-        // Line number panel
-        LineNumberPanel lineNumbers = new LineNumberPanel(editorPane);
-        editorScroll.setRowHeaderView(lineNumbers);
 
         // Preview pane (right) - JavaFX WebView for HTML5/CSS3 rendering
         jfxPanel = new JFXPanel();
@@ -456,11 +469,19 @@ public class Main {
                 + "pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }"
                 + "blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }"
                 + "table { border-collapse: collapse; margin: 12px auto; }"
-                + "th, td { border: 1px solid #ddd; padding: 6px 12px; text-align: left; }"
+                + "th, td { border: 1px solid #ddd; padding: 6px 12px; }"
+                + "td[align=left], th[align=left] { text-align: left; }"
+                + "td[align=center], th[align=center] { text-align: center; }"
+                + "td[align=right], th[align=right] { text-align: right; }"
                 + "th { background-color: #f0f0f0; font-weight: bold; }"
                 + "tr:nth-child(even) { background-color: #f9f9f9; }"
                 + "img { max-width: 75%; display: block; margin: 12px auto; }"
                 + "a { color: #0366d6; }"
+                + "li { margin: 0; padding: 0; }"
+                + "li p { margin: 0; display: inline; }"
+                + "ul, ol { padding-left: 24px; }"
+                + "input[type=checkbox] { margin-right: 6px; vertical-align: middle; }"
+                + "li:has(> input[type=checkbox]) { list-style-type: none; }"
                 + "</style></head><body>" + bodyHtml + "</body></html>";
     }
 
@@ -537,6 +558,88 @@ public class Main {
         // Re-select the wrapped text (including markers)
         editorPane.setSelectionStart(start);
         editorPane.setSelectionEnd(start + prefix.length() + selected.length() + suffix.length());
+    }
+
+    /**
+     * Converts selected lines to the specified list type. If lines are already
+     * in a list, the list markers are changed to the new type preserving indentation.
+     *
+     * @param type "ordered", "unordered", or "task"
+     */
+    private void convertToList(String type) {
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        String fullText = editorPane.getText();
+
+        // Expand selection to full lines
+        int lineStart = fullText.lastIndexOf('\n', selStart - 1) + 1;
+        int lineEnd = fullText.indexOf('\n', selEnd);
+        if (lineEnd < 0) lineEnd = fullText.length();
+
+        String selectedBlock = fullText.substring(lineStart, lineEnd);
+        String[] lines = selectedBlock.split("\n", -1);
+
+        StringBuilder sb = new StringBuilder();
+        int counter = 1;
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                sb.append("\n");
+                continue;
+            }
+
+            // Detect if already a list item and extract content + indentation
+            String content;
+            String indent;
+
+            // Match task list: "- [ ] text" or "- [x] text"
+            java.util.regex.Matcher taskMatcher = java.util.regex.Pattern.compile(
+                    "^(\\s*)[-*+]\\s+\\[[ xX]\\]\\s+(.*)$").matcher(line);
+            // Match ordered list: "1. text" or "  1. text"
+            java.util.regex.Matcher orderedMatcher = java.util.regex.Pattern.compile(
+                    "^(\\s*)\\d+\\.\\s+(.*)$").matcher(line);
+            // Match unordered list: "- text" or "* text" or "  - text"
+            java.util.regex.Matcher unorderedMatcher = java.util.regex.Pattern.compile(
+                    "^(\\s*)[-*+]\\s+(.*)$").matcher(line);
+
+            if (taskMatcher.matches()) {
+                indent = taskMatcher.group(1);
+                content = taskMatcher.group(2);
+            } else if (orderedMatcher.matches()) {
+                indent = orderedMatcher.group(1);
+                content = orderedMatcher.group(2);
+            } else if (unorderedMatcher.matches()) {
+                indent = unorderedMatcher.group(1);
+                content = unorderedMatcher.group(2);
+            } else {
+                content = trimmed;
+                int leadingSpaces = line.length() - line.stripLeading().length();
+                indent = " ".repeat(leadingSpaces);
+            }
+
+            switch (type) {
+                case "ordered":
+                    sb.append(indent).append(counter++).append(". ").append(content).append("\n");
+                    break;
+                case "unordered":
+                    sb.append(indent).append("- ").append(content).append("\n");
+                    break;
+                case "task":
+                    sb.append(indent).append("- [ ] ").append(content).append("\n");
+                    break;
+            }
+        }
+
+        // Remove trailing newline if original didn't end with one
+        String result = sb.toString();
+        if (!selectedBlock.endsWith("\n") && result.endsWith("\n")) {
+            result = result.substring(0, result.length() - 1);
+        }
+
+        editorPane.setSelectionStart(lineStart);
+        editorPane.setSelectionEnd(lineEnd);
+        editorPane.replaceSelection(result);
     }
 
     /**
@@ -724,6 +827,16 @@ public class Main {
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
             String markdown = dialog.getMarkdownTable();
+            // Don't add trailing newline if there's already a blank line after the table
+            if (replaceEnd < fullText.length()) {
+                String after = fullText.substring(replaceEnd);
+                if (after.startsWith("\n") || after.startsWith("\r\n")) {
+                    // There's already a newline after the table, strip trailing newline from markdown
+                    if (markdown.endsWith("\n")) {
+                        markdown = markdown.substring(0, markdown.length() - 1);
+                    }
+                }
+            }
             editorPane.setSelectionStart(replaceStart);
             editorPane.setSelectionEnd(replaceEnd);
             editorPane.replaceSelection(markdown);
@@ -1032,124 +1145,5 @@ public class Main {
         }
         replaceDialog.setVisible(true);
         replaceDialog.toFront();
-    }
-
-    /**
-     * A custom component that displays line numbers in a gutter alongside a JTextArea.
-     * <p>
-     * Automatically updates its width as the line count changes and repaints
-     * when the document is modified or the font changes.
-     */
-    private static class LineNumberPanel extends JComponent implements DocumentListener, PropertyChangeListener {
-        private final JTextArea textArea;
-        private int lastDigits;
-
-        /**
-         * Creates a line number panel attached to the given text area.
-         * Registers itself as a document listener and font property listener.
-         *
-         * @param textArea the text area to display line numbers for
-         */
-        public LineNumberPanel(JTextArea textArea) {
-            this.textArea = textArea;
-            setFont(textArea.getFont());
-            setBackground(new Color(240, 240, 240));
-            setForeground(new Color(128, 128, 128));
-            textArea.getDocument().addDocumentListener(this);
-            textArea.addPropertyChangeListener("font", this);
-            updateWidth();
-        }
-
-        /**
-         * Recalculates the preferred width of the panel based on the number of
-         * digits needed to display the highest line number (minimum 3 digits).
-         */
-        private void updateWidth() {
-            int lines = textArea.getLineCount();
-            int digits = Math.max(String.valueOf(lines).length(), 3);
-            if (digits != lastDigits) {
-                lastDigits = digits;
-                FontMetrics fm = getFontMetrics(getFont());
-                int width = fm.charWidth('0') * digits + 16;
-                setPreferredSize(new Dimension(width, 0));
-                revalidate();
-            }
-        }
-
-        /**
-         * Paints the line numbers for all visible lines within the current clip bounds.
-         * Numbers are right-aligned with anti-aliased text rendering.
-         *
-         * @param g the graphics context
-         */
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            g2.setColor(getBackground());
-            g2.fillRect(0, 0, getWidth(), getHeight());
-
-            g2.setFont(getFont());
-            g2.setColor(getForeground());
-            FontMetrics fm = g2.getFontMetrics();
-
-            Rectangle clip = g2.getClipBounds();
-            Element root = textArea.getDocument().getDefaultRootElement();
-            int lineCount = root.getElementCount();
-
-            int startOffset = textArea.viewToModel2D(new Point(0, clip.y));
-            int endOffset = textArea.viewToModel2D(new Point(0, clip.y + clip.height));
-            int startLine = root.getElementIndex(startOffset);
-            int endLine = root.getElementIndex(endOffset);
-
-            for (int line = startLine; line <= endLine && line < lineCount; line++) {
-                try {
-                    Rectangle2D rect = textArea.modelToView2D(root.getElement(line).getStartOffset());
-                    if (rect == null) continue;
-                    int y = (int) rect.getY() + fm.getAscent();
-                    String lineNum = String.valueOf(line + 1);
-                    int x = getWidth() - fm.stringWidth(lineNum) - 8;
-                    g2.drawString(lineNum, x, y);
-                } catch (Exception ex) {
-                    // Skip lines that can't be mapped to a view position
-                }
-            }
-            g2.dispose();
-        }
-
-        /** {@inheritDoc} */
-        @Override
-        public void insertUpdate(DocumentEvent e) {
-            updateWidth();
-            repaint();
-        }
-
-        /** {@inheritDoc} */
-        @Override
-        public void removeUpdate(DocumentEvent e) {
-            updateWidth();
-            repaint();
-        }
-
-        /** {@inheritDoc} */
-        @Override
-        public void changedUpdate(DocumentEvent e) {
-            repaint();
-        }
-
-        /**
-         * Responds to font property changes on the text area by updating
-         * this panel's font and recalculating its width.
-         *
-         * @param evt the property change event
-         */
-        @Override
-        public void propertyChange(PropertyChangeEvent evt) {
-            setFont(textArea.getFont());
-            updateWidth();
-            repaint();
-        }
     }
 }
