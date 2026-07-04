@@ -9,12 +9,13 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
 - **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, DeepSeek, Alibaba, or local Ollama models
 - **Multi-window** — Open multiple editor windows with File > New
+- **Cross-platform** — Runs on macOS (ARM64), Windows (x64, ARM64), and Linux (x64, ARM64)
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
 - **Toolbar** — Status bar showing the full file path with toggle buttons to show/hide the preview and AI panels
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
 - **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt`/`.textbundle` files, and save your work
-- **TextBundle support** — Open and export `.textbundle` packages with images in the `assets/` subfolder
+- **TextBundle support** — Open and export `.textbundle` packages with images in the `assets/` subfolder; `.textbundle` directories appear as selectable files in the Open dialog on all platforms
 - **Dirty checking** — Prompts to save unsaved changes when closing a window or quitting the application
 - **Undo/Redo** — Full multi-level undo and redo support
 - **Clipboard** — Cut, Copy, and Paste via the Edit menu
@@ -35,6 +36,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Keyboard shortcuts** — ⌘/Ctrl+N (New), ⌘/Ctrl+O (Open), ⌘/Ctrl+W (Close), ⌘/Ctrl+S (Save), ⌘/Ctrl+Shift+S (Save As), ⌘/Ctrl+P (Print), ⌘/Ctrl+Z (Undo), ⌘/Ctrl+Y (Redo), ⌘/Ctrl+X (Cut), ⌘/Ctrl+C (Copy), ⌘/Ctrl+V (Paste), ⌘/Ctrl+F (Find), ⌘/Ctrl+R (Replace), ⌘/Ctrl+B (Bold), ⌘/Ctrl+I (Italic), ⌘/Ctrl+U (Underline), ⌘/Ctrl+L (Link), ⌘/Ctrl+G (Image), ⌘/Ctrl+T (Table)
 - **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins (underline), and YAML front matter
 - **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
+- **Preview fallback** — On platforms where JavaFX WebView is unavailable (e.g. Windows ARM64), the preview gracefully falls back to a Swing-based HTML renderer with reduced functionality
 - **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors
 - **Window state persistence** — Window size, divider positions, and panel visibility are remembered between sessions
 
@@ -58,6 +60,16 @@ Configure your LLM provider in Preferences (vendor, model, and API key).
 - **PDF** — Print-to-file via the system's PDF output
 - **TextBundle** — Standard `.textbundle` package with `text.md`, `info.json`, and images copied into `assets/` (preserving subfolder hierarchy)
 - **RTF** — Rich Text Format with headings, bold, italic, strikethrough, code, lists, and block quotes
+
+## Platform Support
+
+| Platform | Preview | Status |
+|----------|---------|--------|
+| macOS ARM64 | JavaFX WebView | Full support |
+| Windows x64 | JavaFX WebView | Full support |
+| Windows ARM64 | Swing JEditorPane | Reduced (no MathJax/advanced CSS) |
+| Linux x64 | JavaFX WebView | Full support |
+| Linux ARM64 | JavaFX WebView | Full support |
 
 ## Requirements
 
@@ -83,6 +95,6 @@ Or run `com.glowingcat.Main` directly from your IDE.
 - **Java Swing** — GUI framework
 - **commonmark-java** — Markdown parsing and HTML rendering (with GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins, and YAML front matter extensions)
 - **RSyntaxTextArea** — Syntax-aware text editor component
-- **JavaFX WebView** — HTML preview rendering with MathJax
+- **JavaFX WebView** — HTML preview rendering with MathJax (with JEditorPane fallback)
 - **Gson** — JSON serialization for user preferences
 - **java.net.http** — HTTP client for LLM API calls
