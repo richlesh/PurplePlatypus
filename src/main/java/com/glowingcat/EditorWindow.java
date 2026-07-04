@@ -74,6 +74,7 @@ public class EditorWindow {
             public void windowClosing(WindowEvent e) {
                 if (confirmClose()) {
                     saveWindowState();
+                    previewPanel.dispose();
                     frame.dispose();
                 }
             }
@@ -680,15 +681,22 @@ public class EditorWindow {
     }
 
     private void printPreview() {
-        javafx.application.Platform.runLater(() -> {
-            javafx.scene.web.WebEngine engine = previewPanel.getWebEngine();
-            if (engine == null) return;
-            javafx.print.PrinterJob fxJob = javafx.print.PrinterJob.createPrinterJob();
-            if (fxJob != null && fxJob.showPrintDialog(null)) {
-                engine.print(fxJob);
-                fxJob.endJob();
+        String html = previewPanel.getStyledHtml(getRenderedHtml(), currentFile, preferences);
+        try {
+            // Write HTML to temp file and print using the system's native print dialog
+            File tempFile = File.createTempFile("purpleplatypus_print", ".html");
+            tempFile.deleteOnExit();
+            Files.writeString(tempFile.toPath(), html, StandardCharsets.UTF_8);
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.PRINT)) {
+                Desktop.getDesktop().print(tempFile);
+            } else {
+                // Fallback: open in system browser for user to print from there
+                Desktop.getDesktop().browse(tempFile.toURI());
             }
-        });
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(frame, "Error printing: " + ex.getMessage(),
+                    "Print Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void exportHtml() {
@@ -735,30 +743,22 @@ public class EditorWindow {
             if (!outFile.getName().contains(".")) {
                 outFile = new File(outFile.getAbsolutePath() + ".pdf");
             }
-            final File pdfFile = outFile;
-            javafx.application.Platform.runLater(() -> {
-                javafx.scene.web.WebEngine engine = previewPanel.getWebEngine();
-                if (engine == null) return;
-                javafx.print.PrinterJob fxJob = javafx.print.PrinterJob.createPrinterJob();
-                if (fxJob != null) {
-                    // Configure to print to PDF via the job attributes
-                    javafx.print.JobSettings settings = fxJob.getJobSettings();
-                    settings.setJobName(pdfFile.getName());
-                    // Use a virtual PDF printer if available, otherwise use native print-to-file
-                    fxJob.getJobSettings().setOutputFile(pdfFile.getAbsolutePath());
-                    engine.print(fxJob);
-                    fxJob.endJob();
-                    SwingUtilities.invokeLater(() -> {
-                        if (pdfFile.exists()) {
-                            // Success - no message needed
-                        } else {
-                            JOptionPane.showMessageDialog(frame,
-                                    "PDF export may require a PDF printer to be installed on your system.",
-                                    "Export PDF", JOptionPane.INFORMATION_MESSAGE);
-                        }
-                    });
-                }
-            });
+            // Write HTML to temp file and use the system print-to-PDF approach
+            String html = previewPanel.getStyledHtml(getRenderedHtml(), currentFile, preferences);
+            try {
+                File tempFile = File.createTempFile("purpleplatypus_export", ".html");
+                tempFile.deleteOnExit();
+                Files.writeString(tempFile.toPath(), html, StandardCharsets.UTF_8);
+                // Open in system browser for the user to "Save as PDF" via print dialog
+                Desktop.getDesktop().browse(tempFile.toURI());
+                JOptionPane.showMessageDialog(frame,
+                        "The HTML has been opened in your default browser.\n"
+                        + "Use your browser's Print function and select \"Save as PDF\" to export.",
+                        "Export PDF", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error exporting PDF: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -1087,6 +1087,7 @@ public class EditorWindow {
         for (EditorWindow instance : new ArrayList<>(openInstances)) {
             if (!instance.confirmClose()) return;
         }
+        CefAppManager.shutdown();
         System.exit(0);
     }
 

@@ -68,19 +68,9 @@
             <version>0.24.0</version>
         </dependency>
         <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
-            <version>24</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-web</artifactId>
-            <version>24</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-swing</artifactId>
-            <version>24</version>
+            <groupId>me.friwi</groupId>
+            <artifactId>jcefmaven</artifactId>
+            <version>146.0.10</version>
         </dependency>
         <dependency>
             <groupId>com.fifesoft</groupId>
@@ -110,8 +100,9 @@
                     <mainClass>com.glowingcat.Main</mainClass>
                     <arguments/>
                     <jvmArgs>
-                        <jvmArg>--enable-native-access=ALL-UNNAMED</jvmArg>
-                        <jvmArg>--add-modules=javafx.controls,javafx.web,javafx.swing</jvmArg>
+                        <jvmArg>--add-opens=java.desktop/sun.awt=ALL-UNNAMED</jvmArg>
+                        <jvmArg>--add-opens=java.desktop/sun.lwawt=ALL-UNNAMED</jvmArg>
+                        <jvmArg>--add-opens=java.desktop/sun.lwawt.macosx=ALL-UNNAMED</jvmArg>
                     </jvmArgs>
                 </configuration>
             </plugin>

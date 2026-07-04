@@ -6,12 +6,9 @@
  * Main.java
  *
  * Entry point for the PurplePlatypus application. Sets up system properties,
- * look and feel, JavaFX initialization, and macOS Desktop handlers.
+ * look and feel, JCEF initialization, and macOS Desktop handlers.
  */
 package com.glowingcat;
-
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -40,9 +37,8 @@ public class Main {
             // Fall back to default cross-platform L&F
         }
 
-        // Initialize JavaFX toolkit and prevent it from exiting when windows close
-        new JFXPanel();
-        Platform.setImplicitExit(false);
+        // Initialize JCEF (Chromium Embedded Framework) for HTML preview
+        CefAppManager.initialize();
 
         // Register macOS application menu handlers
         if (Desktop.isDesktopSupported()) {
@@ -67,6 +63,7 @@ public class Main {
                             return;
                         }
                     }
+                    CefAppManager.shutdown();
                     response.performQuit();
                 });
             }

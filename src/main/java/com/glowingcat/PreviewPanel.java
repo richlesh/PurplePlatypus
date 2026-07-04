@@ -3,6 +3,14 @@
  */
 package com.glowingcat;
 
+import org.cef.CefClient;
+import org.cef.browser.CefBrowser;
+import org.cef.browser.CefFrame;
+import org.cef.handler.CefRequestHandlerAdapter;
+import org.cef.handler.CefResourceRequestHandlerAdapter;
+import org.cef.handler.CefResourceRequestHandler;
+import org.cef.network.CefRequest;
+import org.cef.callback.CefCallback;
 import org.commonmark.Extension;
 import org.commonmark.ext.autolink.AutolinkExtension;
 import org.commonmark.ext.footnotes.FootnotesExtension;
@@ -18,27 +26,24 @@ import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 
 import javax.swing.*;
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
-import javafx.scene.Scene;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
 import java.awt.*;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * A panel that renders Markdown as HTML using JavaFX WebView.
+ * A panel that renders Markdown as HTML using JCEF (Chromium Embedded Framework).
  */
 public class PreviewPanel extends JPanel {
 
-    private final JFXPanel jfxPanel;
-    private WebEngine webEngine;
+    private CefBrowser browser;
     private final Parser parser;
     private final HtmlRenderer renderer;
     private String lastHtml = "";
-    private java.io.File tempHtmlFile;
+    private File tempHtmlFile;
+    private boolean browserReady = false;
 
     public PreviewPanel() {
         super(new BorderLayout());
@@ -58,42 +63,54 @@ public class PreviewPanel extends JPanel {
         parser = Parser.builder().extensions(extensions).build();
         renderer = HtmlRenderer.builder().extensions(extensions).build();
 
-        jfxPanel = new JFXPanel();
-        add(jfxPanel, BorderLayout.CENTER);
+        initBrowser();
+    }
 
-        Platform.runLater(() -> {
-            WebView webView = new WebView();
-            webEngine = webView.getEngine();
-            webEngine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
-                if (newUrl != null && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
-                    Platform.runLater(() -> {
-                        if (tempHtmlFile != null) {
-                            webEngine.load(tempHtmlFile.toURI().toString());
-                        }
-                    });
+    private void initBrowser() {
+        CefClient client = CefAppManager.getClient();
+        if (client == null) {
+            // JCEF not yet initialized; show a placeholder
+            add(new JLabel("Initializing preview...", SwingConstants.CENTER), BorderLayout.CENTER);
+            return;
+        }
+
+        // Intercept external link navigation — open in system browser
+        client.addRequestHandler(new CefRequestHandlerAdapter() {
+            @Override
+            public boolean onBeforeBrowse(CefBrowser b, CefFrame frame, CefRequest request,
+                                          boolean userGesture, boolean isRedirect) {
+                String url = request.getURL();
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
                     try {
-                        java.awt.Desktop.getDesktop().browse(new java.net.URI(newUrl));
+                        java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
                     } catch (Exception ex) {
                         // Silently fail
                     }
+                    return true; // Cancel navigation in embedded browser
                 }
-            });
-            Scene scene = new Scene(webView);
-            jfxPanel.setScene(scene);
+                return false;
+            }
         });
+
+        browser = client.createBrowser("about:blank", false, false);
+        browserReady = true;
+        Component browserUI = browser.getUIComponent();
+        add(browserUI, BorderLayout.CENTER);
     }
 
     /**
-     * Returns the JavaFX WebEngine used for rendering, or null if not yet initialized.
+     * Returns the CefBrowser instance for printing, or null if not initialized.
      */
-    public WebEngine getWebEngine() {
-        return webEngine;
+    public CefBrowser getBrowser() {
+        return browser;
     }
 
     /**
      * Updates the preview with the given markdown text.
      */
     public void updatePreview(String markdown, File currentFile, Preferences preferences) {
+        if (!browserReady || browser == null) return;
+
         // Pre-process: encode spaces in image/link URLs
         java.util.regex.Pattern mdLinkPattern = java.util.regex.Pattern.compile(
                 "(!?\\[[^\\]]*\\]\\()([^)]+)(\\))");
@@ -146,21 +163,17 @@ public class PreviewPanel extends JPanel {
         String styledHtml = getStyledHtml(html, currentFile, preferences);
         lastHtml = styledHtml;
 
-        Platform.runLater(() -> {
-            if (webEngine != null) {
-                try {
-                    if (tempHtmlFile == null) {
-                        tempHtmlFile = java.io.File.createTempFile("purpleplatypus_preview", ".html");
-                        tempHtmlFile.deleteOnExit();
-                    }
-                    java.nio.file.Files.writeString(tempHtmlFile.toPath(), styledHtml, java.nio.charset.StandardCharsets.UTF_8);
-                    webEngine.load(tempHtmlFile.toURI().toString());
-                } catch (Exception ex) {
-                    // Fallback to loadContent if temp file fails
-                    webEngine.loadContent(styledHtml);
-                }
+        try {
+            if (tempHtmlFile == null) {
+                tempHtmlFile = File.createTempFile("purpleplatypus_preview", ".html");
+                tempHtmlFile.deleteOnExit();
             }
-        });
+            Files.writeString(tempHtmlFile.toPath(), styledHtml, StandardCharsets.UTF_8);
+            browser.loadURL(tempHtmlFile.toURI().toString());
+        } catch (Exception ex) {
+            // Fallback to loading HTML as data URI
+            browser.loadURL("data:text/html;charset=utf-8," + java.net.URLEncoder.encode(styledHtml, StandardCharsets.UTF_8));
+        }
     }
 
     /**
@@ -214,5 +227,16 @@ public class PreviewPanel extends JPanel {
                 + "</script>"
                 + "<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>"
                 + "</head><body>" + bodyHtml + "</body></html>";
+    }
+
+    /**
+     * Disposes the browser when the panel is no longer needed.
+     */
+    public void dispose() {
+        if (browser != null) {
+            browser.close(true);
+            browser = null;
+            browserReady = false;
+        }
     }
 }
