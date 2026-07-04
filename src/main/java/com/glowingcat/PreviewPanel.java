@@ -230,8 +230,17 @@ public class PreviewPanel extends JPanel {
             });
         } else if (editorPane != null) {
             // Fallback: render in JEditorPane (limited CSS support, no MathJax)
+            // Rewrite img tags with explicit pixel width (70% of panel) since
+            // JEditorPane doesn't support CSS max-width percentages
+            String fallbackHtml = styledHtml;
+            int imgWidth = (int) (editorPane.getWidth() * 0.70);
+            if (imgWidth > 100) {
+                fallbackHtml = fallbackHtml.replaceAll(
+                        "(<img\\b[^>]*?)(/?>)",
+                        "$1 width=\"" + imgWidth + "\"$2");
+            }
             int caretPos = editorPane.getCaretPosition();
-            editorPane.setText(styledHtml);
+            editorPane.setText(fallbackHtml);
             try {
                 editorPane.setCaretPosition(Math.min(caretPos, editorPane.getDocument().getLength()));
             } catch (Exception ex) {
