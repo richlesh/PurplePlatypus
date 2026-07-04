@@ -28,6 +28,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * A non-modal Find dialog with Find Next, Find All, Count,
@@ -59,6 +62,9 @@ public class FindDialog extends JDialog {
 
     /** Checkbox to wrap around to the start/end of the search region. */
     protected JCheckBox wrapAroundBox;
+
+    /** Checkbox to enable regular expression matching. */
+    protected JCheckBox regexBox;
 
     /** Start offset of the remembered selection for "Find in selection". */
     protected int selectionStart = -1;
@@ -141,6 +147,7 @@ public class FindDialog extends JDialog {
         matchCaseBox = new JCheckBox("Match Case");
         wrapAroundBox = new JCheckBox("Wrap Around");
         wrapAroundBox.setSelected(true);
+        regexBox = new JCheckBox("Regular Expression");
 
         // When "Find in selection" is checked, capture the current selection
         findInSelectionBox.addActionListener(e -> {
@@ -166,6 +173,7 @@ public class FindDialog extends JDialog {
         optionsPanel.add(searchBackwardsBox);
         optionsPanel.add(matchCaseBox);
         optionsPanel.add(wrapAroundBox);
+        optionsPanel.add(regexBox);
         return optionsPanel;
     }
 
@@ -241,6 +249,7 @@ public class FindDialog extends JDialog {
         boolean matchCase = matchCaseBox.isSelected();
         boolean backwards = searchBackwardsBox.isSelected();
         boolean wrapAround = wrapAroundBox.isSelected();
+        boolean useRegex = regexBox.isSelected();
 
         int[] bounds = new int[2];
         getSearchBounds(bounds);
@@ -248,43 +257,118 @@ public class FindDialog extends JDialog {
         int regionEnd = bounds[1];
 
         String searchIn = content.substring(regionStart, regionEnd);
-        String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
-        String compareText = matchCase ? searchText : searchText.toLowerCase();
 
-        int caretPos = textArea.getCaretPosition() - regionStart;
-        int index;
+        if (useRegex) {
+            Pattern pattern;
+            try {
+                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                pattern = Pattern.compile(searchText, flags);
+            } catch (PatternSyntaxException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
+                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-        if (backwards) {
-            int fromIndex = caretPos - 1;
-            if (textArea.getSelectionStart() != textArea.getSelectionEnd()) {
-                fromIndex = textArea.getSelectionStart() - regionStart - 1;
-            }
-            fromIndex = Math.max(0, fromIndex);
-            index = compareIn.lastIndexOf(compareText, fromIndex);
-            if (index < 0 && wrapAround) {
-                index = compareIn.lastIndexOf(compareText);
-            }
-        } else {
-            int fromIndex = caretPos;
-            if (textArea.getSelectionStart() != textArea.getSelectionEnd()) {
+            int fromIndex;
+            if (backwards) {
+                fromIndex = textArea.getSelectionStart() - regionStart;
+                if (textArea.getSelectionStart() == textArea.getSelectionEnd()) {
+                    fromIndex = textArea.getCaretPosition() - regionStart;
+                }
+            } else {
                 fromIndex = textArea.getSelectionEnd() - regionStart;
+                if (textArea.getSelectionStart() == textArea.getSelectionEnd()) {
+                    fromIndex = textArea.getCaretPosition() - regionStart;
+                }
             }
-            fromIndex = Math.max(0, Math.min(fromIndex, compareIn.length()));
-            index = compareIn.indexOf(compareText, fromIndex);
-            if (index < 0 && wrapAround) {
-                index = compareIn.indexOf(compareText);
-            }
-        }
+            fromIndex = Math.max(0, Math.min(fromIndex, searchIn.length()));
 
-        if (index >= 0) {
-            int start = index + regionStart;
-            int end = start + searchText.length();
-            textArea.setSelectionStart(start);
-            textArea.setSelectionEnd(end);
-            textArea.requestFocusInWindow();
+            Matcher matcher = pattern.matcher(searchIn);
+            int matchStart = -1, matchEnd = -1;
+
+            if (backwards) {
+                // Find last match before fromIndex
+                int lastStart = -1, lastEnd = -1;
+                while (matcher.find()) {
+                    if (matcher.start() < fromIndex) {
+                        lastStart = matcher.start();
+                        lastEnd = matcher.end();
+                    } else {
+                        break;
+                    }
+                }
+                if (lastStart >= 0) {
+                    matchStart = lastStart;
+                    matchEnd = lastEnd;
+                } else if (wrapAround) {
+                    matcher.reset();
+                    while (matcher.find()) {
+                        lastStart = matcher.start();
+                        lastEnd = matcher.end();
+                    }
+                    if (lastStart >= 0) {
+                        matchStart = lastStart;
+                        matchEnd = lastEnd;
+                    }
+                }
+            } else {
+                if (matcher.find(fromIndex)) {
+                    matchStart = matcher.start();
+                    matchEnd = matcher.end();
+                } else if (wrapAround && matcher.find(0)) {
+                    matchStart = matcher.start();
+                    matchEnd = matcher.end();
+                }
+            }
+
+            if (matchStart >= 0) {
+                textArea.setSelectionStart(matchStart + regionStart);
+                textArea.setSelectionEnd(matchEnd + regionStart);
+                textArea.requestFocusInWindow();
+            } else {
+                JOptionPane.showMessageDialog(this, "Text not found.",
+                        "Find", JOptionPane.INFORMATION_MESSAGE);
+            }
         } else {
-            JOptionPane.showMessageDialog(this, "Text not found.",
-                    "Find", JOptionPane.INFORMATION_MESSAGE);
+            // Plain text search (original logic)
+            String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
+            String compareText = matchCase ? searchText : searchText.toLowerCase();
+
+            int caretPos = textArea.getCaretPosition() - regionStart;
+            int index;
+
+            if (backwards) {
+                int fromIndex = caretPos - 1;
+                if (textArea.getSelectionStart() != textArea.getSelectionEnd()) {
+                    fromIndex = textArea.getSelectionStart() - regionStart - 1;
+                }
+                fromIndex = Math.max(0, fromIndex);
+                index = compareIn.lastIndexOf(compareText, fromIndex);
+                if (index < 0 && wrapAround) {
+                    index = compareIn.lastIndexOf(compareText);
+                }
+            } else {
+                int fromIndex = caretPos;
+                if (textArea.getSelectionStart() != textArea.getSelectionEnd()) {
+                    fromIndex = textArea.getSelectionEnd() - regionStart;
+                }
+                fromIndex = Math.max(0, Math.min(fromIndex, compareIn.length()));
+                index = compareIn.indexOf(compareText, fromIndex);
+                if (index < 0 && wrapAround) {
+                    index = compareIn.indexOf(compareText);
+                }
+            }
+
+            if (index >= 0) {
+                int start = index + regionStart;
+                int end = start + searchText.length();
+                textArea.setSelectionStart(start);
+                textArea.setSelectionEnd(end);
+                textArea.requestFocusInWindow();
+            } else {
+                JOptionPane.showMessageDialog(this, "Text not found.",
+                        "Find", JOptionPane.INFORMATION_MESSAGE);
+            }
         }
     }
 
@@ -299,6 +383,7 @@ public class FindDialog extends JDialog {
 
         String content = textArea.getText();
         boolean matchCase = matchCaseBox.isSelected();
+        boolean useRegex = regexBox.isSelected();
 
         int[] bounds = new int[2];
         getSearchBounds(bounds);
@@ -306,14 +391,31 @@ public class FindDialog extends JDialog {
         int regionEnd = bounds[1];
 
         String searchIn = content.substring(regionStart, regionEnd);
-        String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
-        String compareText = matchCase ? searchText : searchText.toLowerCase();
 
         List<int[]> matches = new ArrayList<>();
-        int idx = 0;
-        while ((idx = compareIn.indexOf(compareText, idx)) >= 0) {
-            matches.add(new int[]{idx + regionStart, idx + regionStart + searchText.length()});
-            idx += compareText.length();
+
+        if (useRegex) {
+            Pattern pattern;
+            try {
+                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                pattern = Pattern.compile(searchText, flags);
+            } catch (PatternSyntaxException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
+                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            Matcher matcher = pattern.matcher(searchIn);
+            while (matcher.find()) {
+                matches.add(new int[]{matcher.start() + regionStart, matcher.end() + regionStart});
+            }
+        } else {
+            String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
+            String compareText = matchCase ? searchText : searchText.toLowerCase();
+            int idx = 0;
+            while ((idx = compareIn.indexOf(compareText, idx)) >= 0) {
+                matches.add(new int[]{idx + regionStart, idx + regionStart + searchText.length()});
+                idx += compareText.length();
+            }
         }
 
         if (matches.isEmpty()) {
@@ -476,6 +578,7 @@ public class FindDialog extends JDialog {
 
         String content = textArea.getText();
         boolean matchCase = matchCaseBox.isSelected();
+        boolean useRegex = regexBox.isSelected();
 
         int[] bounds = new int[2];
         getSearchBounds(bounds);
@@ -483,14 +586,31 @@ public class FindDialog extends JDialog {
         int regionEnd = bounds[1];
 
         String searchIn = content.substring(regionStart, regionEnd);
-        String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
-        String compareText = matchCase ? searchText : searchText.toLowerCase();
 
         int count = 0;
-        int idx = 0;
-        while ((idx = compareIn.indexOf(compareText, idx)) >= 0) {
-            count++;
-            idx += compareText.length();
+
+        if (useRegex) {
+            Pattern pattern;
+            try {
+                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                pattern = Pattern.compile(searchText, flags);
+            } catch (PatternSyntaxException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
+                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            Matcher matcher = pattern.matcher(searchIn);
+            while (matcher.find()) {
+                count++;
+            }
+        } else {
+            String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
+            String compareText = matchCase ? searchText : searchText.toLowerCase();
+            int idx = 0;
+            while ((idx = compareIn.indexOf(compareText, idx)) >= 0) {
+                count++;
+                idx += compareText.length();
+            }
         }
 
         JOptionPane.showMessageDialog(this,

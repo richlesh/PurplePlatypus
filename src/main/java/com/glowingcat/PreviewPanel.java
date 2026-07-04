@@ -267,7 +267,7 @@ public class PreviewPanel extends JPanel {
             }
         }
 
-        return "<html><head>" + baseTag + "<style>"
+        return "<html><head><meta charset=\"utf-8\">" + baseTag + "<style>"
                 + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; padding: 10px; line-height: 1.6; overflow-x: hidden; }"
                 + "h1, h2, h3 { color: #333; }"
                 + "code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"

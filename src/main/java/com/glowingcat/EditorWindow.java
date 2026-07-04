@@ -572,8 +572,6 @@ public class EditorWindow {
         if (now - lastOpenTime < 1000) return;
         lastOpenTime = now;
 
-        if (dirty && !confirmClose()) return;
-
         JFileChooser chooser = new JFileChooser() {
             @Override
             public boolean isTraversable(File f) {
@@ -612,7 +610,7 @@ public class EditorWindow {
                 if (textMd.exists()) {
                     try {
                         String content = new String(Files.readAllBytes(textMd.toPath()), StandardCharsets.UTF_8);
-                        loadFileContent(textMd, content);
+                        openFileInTarget(textMd, content);
                     } catch (IOException ex) {
                         JOptionPane.showMessageDialog(frame, "Error reading TextBundle: " + ex.getMessage(),
                                 "Error", JOptionPane.ERROR_MESSAGE);
@@ -621,7 +619,7 @@ public class EditorWindow {
             } else if (file.isFile()) {
                 try {
                     String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-                    loadFileContent(file, content);
+                    openFileInTarget(file, content);
                 } catch (IOException ex) {
                     JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
                             "Error", JOptionPane.ERROR_MESSAGE);
@@ -629,6 +627,18 @@ public class EditorWindow {
             }
         }
         lastOpenTime = System.currentTimeMillis();
+    }
+
+    /**
+     * Opens the file in this window if it has no document, otherwise in a new window.
+     */
+    private void openFileInTarget(File file, String content) {
+        if (currentFile == null && !dirty) {
+            loadFileContent(file, content);
+        } else {
+            EditorWindow newWindow = new EditorWindow();
+            newWindow.loadFileContent(file, content);
+        }
     }
 
     public void loadFileContent(File file, String content) {
@@ -1451,6 +1461,7 @@ public class EditorWindow {
             }
             String content = new String(Files.readAllBytes(actualFile.toPath()), StandardCharsets.UTF_8);
             final File fileToOpen = actualFile;
+            // Always open in a new window unless an empty untitled window exists
             for (EditorWindow instance : openInstances) {
                 if (!instance.dirty && instance.currentFile == null) {
                     instance.loadFileContent(fileToOpen, content);

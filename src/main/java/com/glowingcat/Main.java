@@ -40,6 +40,12 @@ public class Main {
             // Fall back to default cross-platform L&F
         }
 
+        // Remove extra left padding in Windows menus (reserved for icons/checkmarks)
+        UIManager.put("MenuItem.checkIconGap", 0);
+        UIManager.put("MenuItem.afterCheckIconGap", 0);
+        UIManager.put("MenuItem.checkIcon", null);
+        UIManager.put("MenuItem.minimumTextOffset", 0);
+
         // Initialize JavaFX toolkit and prevent it from exiting when windows close
         new JFXPanel();
         Platform.setImplicitExit(false);

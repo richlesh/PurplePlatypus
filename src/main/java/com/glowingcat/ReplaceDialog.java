@@ -14,6 +14,9 @@ package com.glowingcat;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * A Replace dialog that extends {@link FindDialog}, adding a replacement text field
@@ -124,23 +127,47 @@ public class ReplaceDialog extends FindDialog {
         if (selectedText == null) return false;
 
         boolean matchCase = matchCaseBox.isSelected();
-        boolean matches;
-        if (matchCase) {
-            matches = selectedText.equals(searchText);
-        } else {
-            matches = selectedText.equalsIgnoreCase(searchText);
-        }
+        boolean useRegex = regexBox.isSelected();
+        String replaceText = replaceField.getText();
 
-        if (matches) {
-            textArea.replaceSelection(replaceField.getText());
-            // Adjust remembered selection bounds if replacing within selection
-            if (findInSelectionBox.isSelected() && selectionStart >= 0) {
-                int lengthDiff = replaceField.getText().length() - searchText.length();
-                selectionEnd += lengthDiff;
+        if (useRegex) {
+            try {
+                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                Pattern pattern = Pattern.compile(searchText, flags);
+                Matcher matcher = pattern.matcher(selectedText);
+                if (matcher.matches()) {
+                    // Use replaceFirst to support capture group references ($1, $2, etc.)
+                    String replacement = matcher.replaceFirst(replaceText);
+                    textArea.replaceSelection(replacement);
+                    if (findInSelectionBox.isSelected() && selectionStart >= 0) {
+                        int lengthDiff = replacement.length() - selectedText.length();
+                        selectionEnd += lengthDiff;
+                    }
+                    return true;
+                }
+            } catch (PatternSyntaxException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
+                        "Regex Error", JOptionPane.ERROR_MESSAGE);
             }
-            return true;
+            return false;
+        } else {
+            boolean matches;
+            if (matchCase) {
+                matches = selectedText.equals(searchText);
+            } else {
+                matches = selectedText.equalsIgnoreCase(searchText);
+            }
+
+            if (matches) {
+                textArea.replaceSelection(replaceText);
+                if (findInSelectionBox.isSelected() && selectionStart >= 0) {
+                    int lengthDiff = replaceText.length() - searchText.length();
+                    selectionEnd += lengthDiff;
+                }
+                return true;
+            }
+            return false;
         }
-        return false;
     }
 
     /**
@@ -166,6 +193,7 @@ public class ReplaceDialog extends FindDialog {
         String replaceText = replaceField.getText();
         String content = textArea.getText();
         boolean matchCase = matchCaseBox.isSelected();
+        boolean useRegex = regexBox.isSelected();
 
         int[] bounds = new int[2];
         getSearchBounds(bounds);
@@ -173,43 +201,79 @@ public class ReplaceDialog extends FindDialog {
         int regionEnd = bounds[1];
 
         String searchIn = content.substring(regionStart, regionEnd);
-        String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
-        String compareText = matchCase ? searchText : searchText.toLowerCase();
 
-        // Build the replaced string
-        StringBuilder result = new StringBuilder();
-        int count = 0;
-        int idx = 0;
-        while (true) {
-            int found = compareIn.indexOf(compareText, idx);
-            if (found < 0) {
-                result.append(searchIn.substring(idx));
-                break;
+        if (useRegex) {
+            Pattern pattern;
+            try {
+                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                pattern = Pattern.compile(searchText, flags);
+            } catch (PatternSyntaxException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
+                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                return;
             }
-            result.append(searchIn, idx, found);
-            result.append(replaceText);
-            count++;
-            idx = found + searchText.length();
-        }
 
-        if (count == 0) {
-            JOptionPane.showMessageDialog(this, "Text not found.",
+            Matcher matcher = pattern.matcher(searchIn);
+            int count = 0;
+            // Count matches first
+            while (matcher.find()) count++;
+            if (count == 0) {
+                JOptionPane.showMessageDialog(this, "Text not found.",
+                        "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            // Perform replacement (supports $1, $2 capture group references)
+            matcher.reset();
+            String result = matcher.replaceAll(replaceText);
+
+            String newContent = content.substring(0, regionStart) + result + content.substring(regionEnd);
+            textArea.setText(newContent);
+            textArea.setCaretPosition(regionStart);
+
+            if (findInSelectionBox.isSelected() && selectionStart >= 0) {
+                selectionEnd = regionStart + result.length();
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    count + " replacement" + (count != 1 ? "s" : "") + " made.",
                     "Replace All", JOptionPane.INFORMATION_MESSAGE);
-            return;
+        } else {
+            String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
+            String compareText = matchCase ? searchText : searchText.toLowerCase();
+
+            StringBuilder result = new StringBuilder();
+            int count = 0;
+            int idx = 0;
+            while (true) {
+                int found = compareIn.indexOf(compareText, idx);
+                if (found < 0) {
+                    result.append(searchIn.substring(idx));
+                    break;
+                }
+                result.append(searchIn, idx, found);
+                result.append(replaceText);
+                count++;
+                idx = found + searchText.length();
+            }
+
+            if (count == 0) {
+                JOptionPane.showMessageDialog(this, "Text not found.",
+                        "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            String newContent = content.substring(0, regionStart) + result + content.substring(regionEnd);
+            textArea.setText(newContent);
+            textArea.setCaretPosition(regionStart);
+
+            if (findInSelectionBox.isSelected() && selectionStart >= 0) {
+                selectionEnd = regionStart + result.length();
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    count + " replacement" + (count != 1 ? "s" : "") + " made.",
+                    "Replace All", JOptionPane.INFORMATION_MESSAGE);
         }
-
-        // Replace the region in the text area
-        String newContent = content.substring(0, regionStart) + result + content.substring(regionEnd);
-        textArea.setText(newContent);
-        textArea.setCaretPosition(regionStart);
-
-        // Update selection bounds if searching in selection
-        if (findInSelectionBox.isSelected() && selectionStart >= 0) {
-            selectionEnd = regionStart + result.length();
-        }
-
-        JOptionPane.showMessageDialog(this,
-                count + " replacement" + (count != 1 ? "s" : "") + " made.",
-                "Replace All", JOptionPane.INFORMATION_MESSAGE);
     }
 }

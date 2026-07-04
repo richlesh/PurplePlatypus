@@ -36,6 +36,7 @@ public class AIChatPanel extends JPanel {
     private Timer pulseTimer;
     private volatile Thread currentThread;
     private float pulseAlpha = 0f;
+    private Runnable statusUpdater;
     private int promptCount = 0;
 
     public AIChatPanel(RSyntaxTextArea editorPane, Preferences preferences) {
@@ -107,7 +108,7 @@ public class AIChatPanel extends JPanel {
         statusBar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 10));
         statusBar.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
 
-        Runnable statusUpdater = () -> {
+        statusUpdater = () -> {
             int sp = systemPrompt.length();
             int doc = editorPane.getText().length();
             statusBar.setText(String.format("System: %,d chars    Document: %,d chars", sp, doc));
@@ -160,6 +161,8 @@ public class AIChatPanel extends JPanel {
         if (promptCount % 10 == 0 && !LicenseDialog.isLicensed(preferences)) {
             SplashScreen.show();
         }
+
+        statusUpdater.run();
 
         String context = "Current markdown document:\n```markdown\n" + editorPane.getText() + "\n```";
 
@@ -388,18 +391,40 @@ public class AIChatPanel extends JPanel {
     }
 
     private void processResponse(String response) {
-        int codeStart = response.indexOf("```markdown\n");
-        if (codeStart < 0) codeStart = response.indexOf("```md\n");
-        if (codeStart < 0) codeStart = response.indexOf("```\n");
+        // Normalize line endings to \n
+        String normalized = response.replace("\r\n", "\n").replace("\r", "\n");
+
+        int codeStart = normalized.indexOf("```markdown\n");
+        if (codeStart < 0) codeStart = normalized.indexOf("```md\n");
+        if (codeStart < 0) codeStart = normalized.indexOf("```markdown ");
+        if (codeStart < 0) codeStart = normalized.indexOf("```md ");
 
         if (codeStart >= 0) {
-            int blockStart = response.indexOf("\n", codeStart) + 1;
-            int blockEnd = response.indexOf("\n```", blockStart);
+            int blockStart = normalized.indexOf("\n", codeStart) + 1;
+            // Find closing fence: look for ``` at the start of a line
+            int blockEnd = -1;
+            int searchFrom = blockStart;
+            while (searchFrom < normalized.length()) {
+                int candidate = normalized.indexOf("\n```", searchFrom);
+                if (candidate < 0) break;
+                // Verify it's a closing fence (only whitespace after ```)
+                int afterFence = candidate + 4;
+                if (afterFence >= normalized.length()
+                        || normalized.charAt(afterFence) == '\n'
+                        || normalized.substring(afterFence).stripLeading().isEmpty()
+                        || normalized.substring(afterFence, Math.min(afterFence + 10, normalized.length())).trim().isEmpty()) {
+                    blockEnd = candidate;
+                    break;
+                }
+                searchFrom = candidate + 1;
+            }
             if (blockEnd > blockStart) {
-                String newMarkdown = response.substring(blockStart, blockEnd);
-                String explanation = response.substring(0, codeStart).trim();
-                if (blockEnd + 4 < response.length()) {
-                    String after = response.substring(blockEnd + 4).trim();
+                String newMarkdown = normalized.substring(blockStart, blockEnd);
+                String explanation = normalized.substring(0, codeStart).trim();
+                int fenceEndPos = normalized.indexOf("\n", blockEnd + 1);
+                if (fenceEndPos < 0) fenceEndPos = blockEnd + 4;
+                if (fenceEndPos < normalized.length()) {
+                    String after = normalized.substring(fenceEndPos).trim();
                     if (!after.isEmpty()) explanation += (explanation.isEmpty() ? "" : "\n") + after;
                 }
                 addCodeApprovalBubble(explanation, newMarkdown);
@@ -429,7 +454,7 @@ public class AIChatPanel extends JPanel {
         }
 
         StringBuilder body = new StringBuilder();
-        body.append("{\"model\":\"").append(model).append("\",\"messages\":[");
+        body.append("{\"model\":\"").append(model).append("\",\"max_tokens\":128000,\"messages\":[");
         for (int i = 0; i < messages.size(); i++) {
             if (i > 0) body.append(",");
             body.append("{\"role\":\"").append(messages.get(i).get("role"))
@@ -461,7 +486,7 @@ public class AIChatPanel extends JPanel {
 
     private String callAnthropic(String apiKey, String model) throws Exception {
         StringBuilder body = new StringBuilder();
-        body.append("{\"model\":\"").append(model).append("\",\"max_tokens\":8192,");
+        body.append("{\"model\":\"").append(model).append("\",\"max_tokens\":128000,");
         String sys = messages.stream()
             .filter(m -> "system".equals(m.get("role")))
             .map(m -> m.get("content"))
@@ -504,10 +529,13 @@ public class AIChatPanel extends JPanel {
             + "- Suggest document structure and organization\n"
             + "- Help with technical writing, blog posts, documentation, READMEs\n"
             + "- Convert between formats (plain text to markdown, restructure content)\n\n"
-            + "When you want to provide a complete replacement of the document, wrap it in a ```markdown code block. "
-            + "The user will be given the option to accept or reject the changes.\n\n"
-            + "For smaller suggestions or explanations, just respond in plain text with markdown formatting. "
-            + "You have access to the user's current document content.\n\n"
+            + "IMPORTANT RESPONSE FORMAT RULES:\n"
+            + "- When the user asks you to modify, add to, rewrite, or generate content for the document, "
+            + "ALWAYS respond with the COMPLETE updated document wrapped in a ```markdown code block. "
+            + "Include ALL existing content plus your changes. The user will be given Accept/Reject buttons.\n"
+            + "- For questions, explanations, or discussions that don't require document changes, "
+            + "respond in plain text without a code block.\n\n"
+            + "The current document content is provided with each user message.\n\n"
             + "Supported markdown features: headings, bold, italic, strikethrough, underline (<u>), "
             + "ordered/unordered/task lists, block quotes, code blocks, inline code, "
             + "links, images, tables (GFM), inline math ($...$), block math ($$...$$).";
@@ -517,7 +545,6 @@ public class AIChatPanel extends JPanel {
         StyledDocument doc = pane.getStyledDocument();
         String fontName = preferences.getAiFontFamily();
         int fontSize = preferences.getAiFontSize();
-        String codeFontName = preferences.getEditorFontFamily();
 
         Style normal = doc.addStyle("normal", null);
         StyleConstants.setFontFamily(normal, fontName);
@@ -530,7 +557,13 @@ public class AIChatPanel extends JPanel {
         StyleConstants.setItalic(italic, true);
 
         Style code = doc.addStyle("code", normal);
-        StyleConstants.setFontFamily(code, codeFontName);
+        StyleConstants.setFontFamily(code, preferences.getPreviewCodeFontFamily());
+        StyleConstants.setFontSize(code, preferences.getPreviewCodeFontSize());
+
+        Style codeBlock = doc.addStyle("codeBlock", null);
+        StyleConstants.setFontFamily(codeBlock, preferences.getPreviewCodeFontFamily());
+        StyleConstants.setFontSize(codeBlock, preferences.getPreviewCodeFontSize());
+        StyleConstants.setBackground(codeBlock, new Color(240, 240, 240));
 
         Style header = doc.addStyle("header", normal);
         StyleConstants.setBold(header, true);
@@ -544,7 +577,7 @@ public class AIChatPanel extends JPanel {
                 continue;
             }
             if (inCodeBlock) {
-                insertText(doc, line + "\n", code);
+                insertText(doc, line + "\n", codeBlock);
                 continue;
             }
             if (line.startsWith("### ")) { insertText(doc, line.substring(4) + "\n", header); continue; }

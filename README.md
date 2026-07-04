@@ -98,3 +98,9 @@ Or run `com.glowingcat.Main` directly from your IDE.
 - **JavaFX WebView** — HTML preview rendering with MathJax (with JEditorPane fallback)
 - **Gson** — JSON serialization for user preferences
 - **java.net.http** — HTTP client for LLM API calls
+
+---
+
+## License
+
+GPL 3.0
