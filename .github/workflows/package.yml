@@ -218,6 +218,10 @@ jobs:
             # Remove native sound libraries to eliminate libasound2 dependency
             find PurplePlatypus -name "libjsound*.so" -delete
 
+            # Remove bundled libjpeg to eliminate libjpeg-turbo8 dependency
+            # (unavailable on Ubuntu 24.04 ARM64; the JFX runtime doesn't need it from the system)
+            find PurplePlatypus -name "libjpeg.so*" -delete
+
             # Package from the app-image
             jpackage \
               --app-image PurplePlatypus \
@@ -232,7 +236,6 @@ jobs:
               --file-associations fa-textbundle.properties \
               --linux-app-category editors \
               --linux-menu-group "Office;TextEditor;" \
-              --linux-package-deps "" \
               --type ${{ matrix.pkg_type }}
           else
             jpackage \
