@@ -70,7 +70,8 @@ for ((i=0; i<DOC_TYPES_COUNT; i++)); do
     if echo "$EXTENSIONS" | grep -q "md"; then
         $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSItemContentTypes array" "$INFO_PLIST" 2>/dev/null || true
         $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSItemContentTypes:0 string net.daringfireball.markdown" "$INFO_PLIST" 2>/dev/null || true
-        $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSHandlerRank string Default" "$INFO_PLIST" 2>/dev/null || true
+        $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSHandlerRank string Owner" "$INFO_PLIST" 2>/dev/null || true
+        $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:CFBundleTypeRole string Editor" "$INFO_PLIST" 2>/dev/null || true
         echo "  Patched CFBundleDocumentTypes[$i] (markdown) with LSItemContentTypes"
     fi
 
@@ -79,7 +80,8 @@ for ((i=0; i<DOC_TYPES_COUNT; i++)); do
         $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSItemContentTypes array" "$INFO_PLIST" 2>/dev/null || true
         $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSItemContentTypes:0 string org.textbundle.package" "$INFO_PLIST" 2>/dev/null || true
         $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSTypeIsPackage bool true" "$INFO_PLIST" 2>/dev/null || true
-        $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSHandlerRank string Default" "$INFO_PLIST" 2>/dev/null || true
+        $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:LSHandlerRank string Owner" "$INFO_PLIST" 2>/dev/null || true
+        $PLISTBUDDY -c "Add :CFBundleDocumentTypes:${i}:CFBundleTypeRole string Editor" "$INFO_PLIST" 2>/dev/null || true
         echo "  Patched CFBundleDocumentTypes[$i] (textbundle) with LSItemContentTypes + LSTypeIsPackage"
     fi
 done
