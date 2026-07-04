@@ -404,7 +404,7 @@ public class AIChatPanel extends JPanel {
         float max = Math.max(rf, Math.max(gf, bf));
         float min = Math.min(rf, Math.min(gf, bf));
         float lightness = (max + min) / 2f;
-        return lightness > 0.70f ? Color.BLACK : Color.WHITE;
+        return lightness > 0.65f ? Color.BLACK : Color.WHITE;
     }
 
     private void processResponse(String response) {
