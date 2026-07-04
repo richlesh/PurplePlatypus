@@ -574,7 +574,16 @@ public class EditorWindow {
 
         if (dirty && !confirmClose()) return;
 
-        JFileChooser chooser = new JFileChooser();
+        JFileChooser chooser = new JFileChooser() {
+            @Override
+            public boolean isTraversable(File f) {
+                if (f != null && f.isDirectory()
+                        && f.getName().toLowerCase().endsWith(".textbundle")) {
+                    return false;
+                }
+                return super.isTraversable(f);
+            }
+        };
         chooser.setDialogTitle("Open");
         chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
         chooser.setAcceptAllFileFilterUsed(false);
