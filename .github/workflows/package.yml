@@ -249,6 +249,20 @@ jobs:
               --linux-menu-group "Office;TextEditor;" \
               --linux-package-deps "xdg-utils" \
               --type ${{ matrix.pkg_type }}
+
+            # Fix deb dependencies: jpackage ignores --linux-package-deps when
+            # using --app-image, so rewrite the control file to remove auto-detected
+            # system library deps that aren't needed (app bundles its own runtime)
+            if [ "${{ matrix.pkg_type }}" = "deb" ]; then
+              DEB_FILE=$(ls purpleplatypus_*.deb 2>/dev/null || ls purpleplatypus*.deb 2>/dev/null)
+              if [ -n "$DEB_FILE" ]; then
+                TMPDIR=$(mktemp -d)
+                dpkg-deb -R "$DEB_FILE" "$TMPDIR"
+                sed -i 's/^Depends:.*/Depends: xdg-utils/' "$TMPDIR/DEBIAN/control"
+                dpkg-deb -b "$TMPDIR" "$DEB_FILE"
+                rm -rf "$TMPDIR"
+              fi
+            fi
           else
             jpackage \
               --input lib \
