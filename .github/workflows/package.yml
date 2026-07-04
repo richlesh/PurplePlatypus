@@ -140,10 +140,6 @@ jobs:
         if: matrix.pkg_type == 'rpm'
         run: sudo apt-get update && sudo apt-get install -y rpm
 
-      - name: Install patchelf (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y patchelf
-
       - name: Install WiX Toolset (Windows)
         if: runner.os == 'Windows'
         shell: bash
@@ -225,13 +221,6 @@ jobs:
             # Remove bundled libjpeg to eliminate libjpeg-turbo8 dependency
             # (unavailable on Ubuntu 24.04 ARM64; the JFX runtime doesn't need it from the system)
             find PurplePlatypus -name "libjpeg*" -delete
-
-            # Strip RPATH/RUNPATH and libjpeg NEEDED entries from all bundled .so files
-            # to prevent jpackage from generating dependencies on system libraries
-            find PurplePlatypus -name "*.so" -o -name "*.so.*" | while read f; do
-              patchelf --remove-rpath "$f" 2>/dev/null || true
-              patchelf --remove-needed libjpeg.so.8 "$f" 2>/dev/null || true
-            done
 
             # Package from the app-image
             jpackage \
