@@ -1,44 +1,42 @@
+---
+title: "Markdown Feature Demo"
+author: "PurplePlatypus User"
+date: 2025-01-15
+tags: [markdown, demo, documentation]
+description: "A comprehensive showcase of Markdown features."
+---
+
 # Markdown Feature Demo
 
-A complete showcase of everything you can do in **PurplePlatypus**.
+Welcome to a comprehensive demonstration of **Markdown** features supported by PurplePlatypus.
 
 ---
 
-## Headings
+## 1. Headings
 
-# Heading 1
-## Heading 2
-### Heading 3
-#### Heading 4
-##### Heading 5
-###### Heading 6
-
----
-
-## Text Formatting
-
-- **Bold text**
-- *Italic text*
-- ***Bold and italic***
-- ~~Strikethrough~~
-- <u>Underlined text</u>
-- `Inline code`
-
-You can combine them: **bold with *nested italic* inside**.
+# H1 Heading
+## H2 Heading
+### H3 Heading
+#### H4 Heading
+##### H5 Heading
+###### H6 Heading
 
 ---
 
-## Blockquotes
+## 2. Text Formatting
 
-> This is a blockquote.
->
-> It can span multiple lines and contain **formatting**.
->
-> > Nested blockquotes are supported too.
+- **Bold text** using double asterisks
+- *Italic text* using single asterisks
+- ***Bold and italic*** combined
+- ~~Strikethrough text~~ using tildes
+- <u>Underlined text</u> using HTML tags
+- `Inline code` using backticks
+- Regular text with a line break  
+  (two spaces at the end of the previous line)
 
 ---
 
-## Lists
+## 3. Lists
 
 ### Unordered List
 
@@ -46,6 +44,7 @@ You can combine them: **bold with *nested italic* inside**.
 - Second item
   - Nested item
   - Another nested item
+    - Deeply nested item
 - Third item
 
 ### Ordered List
@@ -58,46 +57,62 @@ You can combine them: **bold with *nested italic* inside**.
 
 ### Task List
 
-- [x] Write the document
+- [x] Write the introduction
 - [x] Add examples
-- [ ] Review changes
-- [ ] Publish
+- [ ] Review the document
+- [ ] Publish it
 
 ---
 
-## Links and Images
+## 4. Links and Images
 
-[Visit an example link](https://example.com)
+Visit [PurplePlatypus on GitHub](https://github.com) for more info.
 
-![Alt text for an image](https://via.placeholder.com/150)
+You can also use reference-style links like [this one][ref-link].
+
+[ref-link]: https://example.com "Example Website"
+
+![Placeholder Image](src/main/resources/app_icon_256.png)
 
 ---
 
-## Code Blocks
+## 5. Blockquotes
 
-Inline code: `const x = 42;`
+> This is a blockquote.
+>
+> It can span multiple lines and paragraphs.
+>
+> > Nested blockquotes are also supported.
+>
+> — *Someone Famous*
 
-Fenced code block with syntax highlighting:
+---
 
+## 6. Code Blocks
+
+Inline: use `printf()` to output text.
+
+### Fenced code block with syntax highlighting
+
+```python
+def greet(name):
+    """Say hello to someone."""
+    print(f"Hello, {name}!")
 ```
-function greet(name) {
-  console.log(Hello, ${name}!);
-}
-```
 
 ---
 
-## Tables
+## 7. Tables
 
-A basic table:
+| Feature        | Supported | Notes                       |
+|----------------|:---------:|-----------------------------|
+| Headings       | ✅        | Six levels (H1–H6)          |
+| Bold / Italic  | ✅        | Standard markdown syntax    |
+| Tables         | ✅        | GitHub Flavored Markdown    |
+| Math           | ✅        | Inline and block            |
+| Task lists     | ✅        | Interactive checkboxes      |
 
-| Name    | Role      | Active |
-| ------- | --------- | ------ |
-| Alice   | Developer | Yes    |
-| Bob     | Designer  | No     |
-| Charlie | Manager   | Yes    |
-
-Tables support column alignment — left, center, and right:
+Aligned columns
 
 | Left Aligned | Center Aligned | Right Aligned |
 | :----------- | :------------: | ------------: |
@@ -116,7 +131,7 @@ Cells can also contain **formatting**, `code`, and [links](https://example.com):
 
 ---
 
-## Images
+## 8. Images
 
 Image Support
 
@@ -128,9 +143,7 @@ Image Style Attributes
 
 ---
 
-## Math Notation
-
-## Math (LaTeX)
+## 9. Math Notation (LaTeX)
 
 You can write inline math using single dollar signs, like $E = mc^2$ or the golden ratio $\varphi = \frac{1 + \sqrt{5}}{2}$.
 
@@ -164,16 +177,31 @@ Greek letters and subscripts can be mixed inline too, such as $\alpha_1, \beta_2
 
 ---
 
-## Footnotes
+## 10. Footnotes
 
 This is a line with a footnote[^1]
-
 
 [^1]: Here is the footnote.
 
 ---
 
-## Export Formats
+## 11. Horizontal Rules
+
+Use three or more dashes, asterisks, or underscores:
+
+---
+
+## 12. Escaping Characters
+
+Use a backslash to escape special characters: \*, \`, \#.
+
+---
+
+## 13. HTML in Markdown
+
+You can embed <u>HTML tags</u> directly, like <sub>subscript</sub> and <sup>superscript</sup>
+
+## 14. Export Formats
 
 PurplePlatypus lets you export your document to several formats, so you can
 share your work wherever it needs to go.

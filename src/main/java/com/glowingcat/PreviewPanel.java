@@ -44,6 +44,12 @@ public class PreviewPanel extends JPanel {
     private JEditorPane editorPane;
     private JScrollPane scrollPane;
 
+    // Scroll listener for synchronized scrolling
+    private java.util.function.DoubleConsumer scrollListener;
+
+    // Strong reference to prevent GC of the JavaScript bridge object
+    private ScrollBridge scrollBridge;
+
     public PreviewPanel() {
         super(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("Preview"));
@@ -99,6 +105,15 @@ public class PreviewPanel extends JPanel {
                     });
                     javafx.scene.Scene scene = new javafx.scene.Scene(webView);
                     jfxPanel.setScene(scene);
+
+                    // Register Java bridge for scroll callbacks from JavaScript
+                    webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+                        if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                            netscape.javascript.JSObject win = (netscape.javascript.JSObject) webEngine.executeScript("window");
+                            scrollBridge = new ScrollBridge();
+                            win.setMember("java", scrollBridge);
+                        }
+                    });
                 } catch (Throwable t) {
                     // WebView creation failed on the FX thread — switch to fallback
                     SwingUtilities.invokeLater(() -> {
@@ -299,6 +314,60 @@ public class PreviewPanel extends JPanel {
                 + "};"
                 + "</script>"
                 + "<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>"
+                + "<script>window.addEventListener('scroll', function() {"
+                + "  var ratio = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);"
+                + "  if(window.java) window.java.onScroll(ratio);"
+                + "});</script>"
                 + "</head><body>" + bodyHtml + "</body></html>";
+    }
+
+    /**
+     * Scrolls the preview to a given ratio (0.0 = top, 1.0 = bottom).
+     * Uses JavaScript for WebView or JScrollPane for the fallback renderer.
+     */
+    public void scrollToRatio(double ratio) {
+        if (useWebView && webEngine != null) {
+            javafx.application.Platform.runLater(() -> {
+                webEngine.executeScript(
+                    "window.scrollTo(0, (document.body.scrollHeight - window.innerHeight) * " + ratio + ");");
+            });
+        } else if (scrollPane != null) {
+            JScrollBar vBar = scrollPane.getVerticalScrollBar();
+            int max = vBar.getMaximum() - vBar.getVisibleAmount();
+            if (max > 0) {
+                vBar.setValue((int) (max * ratio));
+            }
+        }
+    }
+
+    /**
+     * Sets a listener that will be called with the scroll ratio (0.0-1.0)
+     * when the user scrolls the preview pane.
+     */
+    public void setScrollListener(java.util.function.DoubleConsumer listener) {
+        this.scrollListener = listener;
+
+        // For the fallback JEditorPane, listen to its scroll bar
+        if (!useWebView && scrollPane != null) {
+            scrollPane.getVerticalScrollBar().addAdjustmentListener(e -> {
+                if (scrollListener == null) return;
+                JScrollBar vBar = scrollPane.getVerticalScrollBar();
+                int max = vBar.getMaximum() - vBar.getVisibleAmount();
+                if (max > 0) {
+                    scrollListener.accept((double) vBar.getValue() / max);
+                }
+            });
+        }
+    }
+
+    /**
+     * Bridge object exposed to JavaScript as window.java for scroll event callbacks.
+     */
+    public class ScrollBridge {
+        public void onScroll(double ratio) {
+            if (scrollListener != null) {
+                SwingUtilities.invokeLater(() -> scrollListener.accept(ratio));
+            }
+        }
     }
 }

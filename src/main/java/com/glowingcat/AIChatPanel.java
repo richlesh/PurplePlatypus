@@ -226,7 +226,6 @@ public class AIChatPanel extends JPanel {
         row.setOpaque(false);
         row.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         row.add(bubble, BorderLayout.CENTER);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
 
         chatPanel.add(row);
         chatPanel.revalidate();
@@ -278,7 +277,6 @@ public class AIChatPanel extends JPanel {
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         btnRow.setOpaque(false);
         btnRow.setBorder(BorderFactory.createEmptyBorder(2, 14, 6, 6));
-        btnRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         JLabel prompt = new JLabel("Apply changes to document?");
         prompt.setFont(new Font(preferences.getAiFontFamily(), Font.BOLD, preferences.getAiFontSize()));
         JButton allowBtn = new JButton("Allow");
@@ -401,22 +399,25 @@ public class AIChatPanel extends JPanel {
 
         if (codeStart >= 0) {
             int blockStart = normalized.indexOf("\n", codeStart) + 1;
-            // Find closing fence: look for ``` at the start of a line
+            // Find the LAST closing fence (```): the outer markdown block's closing fence
+            // is always the last one, since inner code blocks are nested within it
             int blockEnd = -1;
             int searchFrom = blockStart;
             while (searchFrom < normalized.length()) {
                 int candidate = normalized.indexOf("\n```", searchFrom);
                 if (candidate < 0) break;
-                // Verify it's a closing fence (only whitespace after ```)
                 int afterFence = candidate + 4;
-                if (afterFence >= normalized.length()
-                        || normalized.charAt(afterFence) == '\n'
-                        || normalized.substring(afterFence).stripLeading().isEmpty()
-                        || normalized.substring(afterFence, Math.min(afterFence + 10, normalized.length())).trim().isEmpty()) {
+                // Check that after ``` there's only whitespace or end of string
+                // (not a language identifier like "python" which would be an opening fence)
+                if (afterFence >= normalized.length()) {
                     blockEnd = candidate;
-                    break;
+                } else {
+                    char nextChar = normalized.charAt(afterFence);
+                    if (nextChar == '\n' || normalized.substring(afterFence).trim().isEmpty()) {
+                        blockEnd = candidate;
+                    }
                 }
-                searchFrom = candidate + 1;
+                searchFrom = candidate + 4;
             }
             if (blockEnd > blockStart) {
                 String newMarkdown = normalized.substring(blockStart, blockEnd);

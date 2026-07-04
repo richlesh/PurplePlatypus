@@ -43,8 +43,11 @@ public class EditorWindow {
     private JLabel filePathLabel;
     private JToggleButton previewToggle;
     private JToggleButton aiToggle;
+    private JToggleButton syncScrollToggle;
     private boolean previewVisible = true;
     private boolean aiVisible = true;
+    private boolean syncScrollEnabled = false;
+    private boolean syncScrolling = false;
     private int lastPreviewDivider = -1;
     private int lastAiDivider = -1;
     private Preferences preferences;
@@ -419,6 +422,26 @@ public class EditorWindow {
         JPanel togglePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         togglePanel.setOpaque(false);
 
+        // Synchronized scrolling toggle button
+        ImageIcon syncIconFull = null;
+        var syncUrl = getClass().getClassLoader().getResource("sync_scrolling.png");
+        if (syncUrl != null) {
+            syncIconFull = new ImageIcon(new ImageIcon(syncUrl).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+        }
+        syncScrollToggle = new JToggleButton(syncIconFull, false);
+        syncScrollToggle.setToolTipText("Synchronized Scrolling");
+        syncScrollToggle.setFocusPainted(false);
+        syncScrollToggle.setBorderPainted(false);
+        syncScrollToggle.setContentAreaFilled(false);
+        syncScrollToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        syncScrollToggle.addActionListener(e -> {
+            syncScrollEnabled = syncScrollToggle.isSelected();
+            syncScrollToggle.setBackground(syncScrollEnabled ? new Color(180, 130, 255) : null);
+            syncScrollToggle.setContentAreaFilled(syncScrollEnabled);
+            syncScrollToggle.setOpaque(syncScrollEnabled);
+        });
+        togglePanel.add(syncScrollToggle);
+
         // Preview toggle button using eye.png
         ImageIcon eyeIconFull = null;
         var eyeUrl = getClass().getClassLoader().getResource("eye.png");
@@ -429,7 +452,9 @@ public class EditorWindow {
         previewToggle.setToolTipText("Show/Hide Preview");
         previewToggle.setFocusPainted(false);
         previewToggle.setBorderPainted(false);
-        previewToggle.setContentAreaFilled(false);
+        previewToggle.setContentAreaFilled(true);
+        previewToggle.setOpaque(true);
+        previewToggle.setBackground(new Color(180, 130, 255));
         previewToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         previewToggle.addActionListener(e -> togglePreview());
         togglePanel.add(previewToggle);
@@ -444,7 +469,9 @@ public class EditorWindow {
         aiToggle.setToolTipText("Show/Hide AI Assistant");
         aiToggle.setFocusPainted(false);
         aiToggle.setBorderPainted(false);
-        aiToggle.setContentAreaFilled(false);
+        aiToggle.setContentAreaFilled(true);
+        aiToggle.setOpaque(true);
+        aiToggle.setBackground(new Color(180, 130, 255));
         aiToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         aiToggle.addActionListener(e -> toggleAI());
         togglePanel.add(aiToggle);
@@ -482,6 +509,9 @@ public class EditorWindow {
         }
         editorPreviewSplit.revalidate();
         editorPreviewSplit.repaint();
+        previewToggle.setBackground(previewVisible ? new Color(180, 130, 255) : null);
+        previewToggle.setContentAreaFilled(previewVisible);
+        previewToggle.setOpaque(previewVisible);
     }
 
     private void toggleAI() {
@@ -501,6 +531,9 @@ public class EditorWindow {
         }
         mainSplit.revalidate();
         mainSplit.repaint();
+        aiToggle.setBackground(aiVisible ? new Color(180, 130, 255) : null);
+        aiToggle.setContentAreaFilled(aiVisible);
+        aiToggle.setOpaque(aiVisible);
     }
 
     private void saveWindowState() {
@@ -554,6 +587,28 @@ public class EditorWindow {
             public void removeUpdate(DocumentEvent e) { updatePreview(); markDirty(); }
             @Override
             public void changedUpdate(DocumentEvent e) { updatePreview(); markDirty(); }
+        });
+
+        // Synchronized scrolling: editor scroll drives preview scroll
+        JScrollBar editorVScroll = editorPanel.getScrollPane().getVerticalScrollBar();
+        editorVScroll.addAdjustmentListener(e -> {
+            if (!syncScrollEnabled || !previewVisible || syncScrolling) return;
+            if (editorVScroll.getMaximum() <= editorVScroll.getVisibleAmount()) return;
+            double ratio = (double) e.getValue() / (editorVScroll.getMaximum() - editorVScroll.getVisibleAmount());
+            syncScrolling = true;
+            previewPanel.scrollToRatio(ratio);
+            SwingUtilities.invokeLater(() -> syncScrolling = false);
+        });
+
+        // Synchronized scrolling: preview scroll drives editor scroll
+        previewPanel.setScrollListener(ratio -> {
+            if (!syncScrollEnabled || syncScrolling) return;
+            syncScrolling = true;
+            int max = editorVScroll.getMaximum() - editorVScroll.getVisibleAmount();
+            if (max > 0) {
+                editorVScroll.setValue((int) (max * ratio));
+            }
+            SwingUtilities.invokeLater(() -> syncScrolling = false);
         });
     }
 
