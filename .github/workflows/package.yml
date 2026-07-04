@@ -226,10 +226,11 @@ jobs:
             # (unavailable on Ubuntu 24.04 ARM64; the JFX runtime doesn't need it from the system)
             find PurplePlatypus -name "libjpeg*" -delete
 
-            # Strip RPATH/RUNPATH from all bundled .so files to prevent jpackage
-            # from generating dependencies on system libraries that aren't needed
+            # Strip RPATH/RUNPATH and libjpeg NEEDED entries from all bundled .so files
+            # to prevent jpackage from generating dependencies on system libraries
             find PurplePlatypus -name "*.so" -o -name "*.so.*" | while read f; do
               patchelf --remove-rpath "$f" 2>/dev/null || true
+              patchelf --remove-needed libjpeg.so.8 "$f" 2>/dev/null || true
             done
 
             # Package from the app-image
