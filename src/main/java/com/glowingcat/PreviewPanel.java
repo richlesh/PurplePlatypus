@@ -18,27 +18,31 @@ import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 
 import javax.swing.*;
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
-import javafx.scene.Scene;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
 import java.awt.*;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * A panel that renders Markdown as HTML using JavaFX WebView.
+ * A panel that renders Markdown as HTML using JavaFX WebView when available,
+ * falling back to Swing's JEditorPane on platforms where WebView is not supported
+ * (e.g. Windows ARM64).
  */
 public class PreviewPanel extends JPanel {
 
-    private final JFXPanel jfxPanel;
-    private WebEngine webEngine;
     private final Parser parser;
     private final HtmlRenderer renderer;
     private String lastHtml = "";
     private java.io.File tempHtmlFile;
+
+    // JavaFX WebView (primary renderer)
+    private javafx.embed.swing.JFXPanel jfxPanel;
+    private javafx.scene.web.WebEngine webEngine;
+    private boolean useWebView = false;
+
+    // Swing fallback renderer
+    private JEditorPane editorPane;
+    private JScrollPane scrollPane;
 
     public PreviewPanel() {
         super(new BorderLayout());
@@ -58,35 +62,91 @@ public class PreviewPanel extends JPanel {
         parser = Parser.builder().extensions(extensions).build();
         renderer = HtmlRenderer.builder().extensions(extensions).build();
 
-        jfxPanel = new JFXPanel();
-        add(jfxPanel, BorderLayout.CENTER);
-
-        Platform.runLater(() -> {
-            WebView webView = new WebView();
-            webEngine = webView.getEngine();
-            webEngine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
-                if (newUrl != null && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
-                    Platform.runLater(() -> {
-                        if (tempHtmlFile != null) {
-                            webEngine.load(tempHtmlFile.toURI().toString());
-                        }
-                    });
-                    try {
-                        java.awt.Desktop.getDesktop().browse(new java.net.URI(newUrl));
-                    } catch (Exception ex) {
-                        // Silently fail
-                    }
-                }
-            });
-            Scene scene = new Scene(webView);
-            jfxPanel.setScene(scene);
-        });
+        // Try to initialize JavaFX WebView; fall back to JEditorPane if it fails
+        if (initWebView()) {
+            useWebView = true;
+        } else {
+            initFallback();
+        }
     }
 
     /**
-     * Returns the JavaFX WebEngine used for rendering, or null if not yet initialized.
+     * Attempts to initialize JavaFX WebView. Returns true on success, false if
+     * WebView is unavailable (e.g. Windows ARM64).
      */
-    public WebEngine getWebEngine() {
+    private boolean initWebView() {
+        try {
+            jfxPanel = new javafx.embed.swing.JFXPanel();
+            add(jfxPanel, BorderLayout.CENTER);
+
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    javafx.scene.web.WebView webView = new javafx.scene.web.WebView();
+                    webEngine = webView.getEngine();
+                    webEngine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
+                        if (newUrl != null && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
+                            javafx.application.Platform.runLater(() -> {
+                                if (tempHtmlFile != null) {
+                                    webEngine.load(tempHtmlFile.toURI().toString());
+                                }
+                            });
+                            try {
+                                java.awt.Desktop.getDesktop().browse(new java.net.URI(newUrl));
+                            } catch (Exception ex) {
+                                // Silently fail
+                            }
+                        }
+                    });
+                    javafx.scene.Scene scene = new javafx.scene.Scene(webView);
+                    jfxPanel.setScene(scene);
+                } catch (Throwable t) {
+                    // WebView creation failed on the FX thread — switch to fallback
+                    SwingUtilities.invokeLater(() -> {
+                        remove(jfxPanel);
+                        jfxPanel = null;
+                        useWebView = false;
+                        initFallback();
+                        revalidate();
+                        repaint();
+                    });
+                }
+            });
+            return true;
+        } catch (Throwable t) {
+            // JFXPanel or Platform init failed entirely
+            if (jfxPanel != null) {
+                remove(jfxPanel);
+                jfxPanel = null;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Initializes the Swing JEditorPane fallback renderer.
+     */
+    private void initFallback() {
+        editorPane = new JEditorPane();
+        editorPane.setContentType("text/html");
+        editorPane.setEditable(false);
+        editorPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        editorPane.addHyperlinkListener(e -> {
+            if (e.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED) {
+                try {
+                    java.awt.Desktop.getDesktop().browse(e.getURL().toURI());
+                } catch (Exception ex) {
+                    // Silently fail
+                }
+            }
+        });
+        scrollPane = new JScrollPane(editorPane);
+        add(scrollPane, BorderLayout.CENTER);
+    }
+
+    /**
+     * Returns the JavaFX WebEngine used for rendering, or null if using fallback.
+     */
+    public javafx.scene.web.WebEngine getWebEngine() {
         return webEngine;
     }
 
@@ -116,7 +176,6 @@ public class PreviewPanel extends JPanel {
         // Resolve relative image paths to absolute file:// URLs
         if (currentFile != null && currentFile.getParentFile() != null) {
             File baseDir = currentFile.getParentFile();
-            // For TextBundle: if baseDir is a .textbundle, also check assets/ subfolder
             File assetsDir = new File(baseDir, "assets");
             boolean isTextBundle = baseDir.getName().toLowerCase().endsWith(".textbundle");
             java.util.regex.Pattern imgPattern = java.util.regex.Pattern.compile(
@@ -129,7 +188,6 @@ public class PreviewPanel extends JPanel {
                         && !src.startsWith("data:") && !src.startsWith("file://")) {
                     String decodedSrc = src.replace("%20", " ");
                     File imgFile = new File(baseDir, decodedSrc);
-                    // If not found and we're in a TextBundle, try the assets/ subfolder
                     if (!imgFile.exists() && isTextBundle && assetsDir.exists()) {
                         File inAssets = new File(assetsDir, decodedSrc);
                         if (inAssets.exists()) imgFile = inAssets;
@@ -146,21 +204,31 @@ public class PreviewPanel extends JPanel {
         String styledHtml = getStyledHtml(html, currentFile, preferences);
         lastHtml = styledHtml;
 
-        Platform.runLater(() -> {
-            if (webEngine != null) {
-                try {
-                    if (tempHtmlFile == null) {
-                        tempHtmlFile = java.io.File.createTempFile("purpleplatypus_preview", ".html");
-                        tempHtmlFile.deleteOnExit();
+        if (useWebView) {
+            javafx.application.Platform.runLater(() -> {
+                if (webEngine != null) {
+                    try {
+                        if (tempHtmlFile == null) {
+                            tempHtmlFile = java.io.File.createTempFile("purpleplatypus_preview", ".html");
+                            tempHtmlFile.deleteOnExit();
+                        }
+                        java.nio.file.Files.writeString(tempHtmlFile.toPath(), styledHtml, java.nio.charset.StandardCharsets.UTF_8);
+                        webEngine.load(tempHtmlFile.toURI().toString());
+                    } catch (Exception ex) {
+                        webEngine.loadContent(styledHtml);
                     }
-                    java.nio.file.Files.writeString(tempHtmlFile.toPath(), styledHtml, java.nio.charset.StandardCharsets.UTF_8);
-                    webEngine.load(tempHtmlFile.toURI().toString());
-                } catch (Exception ex) {
-                    // Fallback to loadContent if temp file fails
-                    webEngine.loadContent(styledHtml);
                 }
+            });
+        } else if (editorPane != null) {
+            // Fallback: render in JEditorPane (limited CSS support, no MathJax)
+            int caretPos = editorPane.getCaretPosition();
+            editorPane.setText(styledHtml);
+            try {
+                editorPane.setCaretPosition(Math.min(caretPos, editorPane.getDocument().getLength()));
+            } catch (Exception ex) {
+                editorPane.setCaretPosition(0);
             }
-        });
+        }
     }
 
     /**
