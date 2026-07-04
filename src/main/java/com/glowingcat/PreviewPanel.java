@@ -141,6 +141,15 @@ public class PreviewPanel extends JPanel {
         });
         scrollPane = new JScrollPane(editorPane);
         add(scrollPane, BorderLayout.CENTER);
+
+        // Notify the user that preview functionality is reduced
+        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
+                SwingUtilities.getWindowAncestor(this),
+                "JavaFX WebView is not supported on this platform.\n"
+                + "The preview will use a basic HTML renderer with reduced functionality\n"
+                + "(no advanced CSS styling or MathJax support).",
+                "Preview — Reduced Functionality",
+                JOptionPane.INFORMATION_MESSAGE));
     }
 
     /**
