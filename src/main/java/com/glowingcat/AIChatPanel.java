@@ -215,7 +215,7 @@ public class AIChatPanel extends JPanel {
 
         JTextArea msg = new JTextArea(text);
         msg.setFont(new Font(preferences.getAiFontFamily(), Font.PLAIN, preferences.getAiFontSize()));
-        msg.setForeground(Color.WHITE);
+        msg.setForeground(textColorForBackground(uColor));
         msg.setOpaque(false);
         msg.setEditable(false);
         msg.setLineWrap(true);
@@ -256,6 +256,7 @@ public class AIChatPanel extends JPanel {
         msg.setOpaque(false);
         msg.setEditable(false);
         msg.setFont(new Font(preferences.getAiFontFamily(), Font.PLAIN, preferences.getAiFontSize()));
+        msg.setForeground(textColorForBackground(aiColor));
         renderStyledMessage(msg, text);
         bubble.add(msg, BorderLayout.CENTER);
 
@@ -272,6 +273,10 @@ public class AIChatPanel extends JPanel {
     private void addCodeApprovalBubble(String explanation, String newMarkdown) {
         if (!explanation.isEmpty()) {
             addAiBubble(explanation);
+        } else {
+            // Show a summary so the user always sees something
+            int lines = newMarkdown.split("\n").length;
+            addAiBubble("Here's the updated document (" + lines + " lines). Review and accept or reject the changes.");
         }
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -386,6 +391,20 @@ public class AIChatPanel extends JPanel {
             JScrollBar v = chatScroll.getVerticalScrollBar();
             v.setValue(v.getMaximum());
         });
+    }
+
+    /**
+     * Returns black or white text color based on the background color's lightness.
+     * If HSL lightness > 70%, returns black; otherwise returns white.
+     */
+    private static Color textColorForBackground(Color bg) {
+        float[] hsl = new float[3];
+        int r = bg.getRed(), g = bg.getGreen(), b = bg.getBlue();
+        float rf = r / 255f, gf = g / 255f, bf = b / 255f;
+        float max = Math.max(rf, Math.max(gf, bf));
+        float min = Math.min(rf, Math.min(gf, bf));
+        float lightness = (max + min) / 2f;
+        return lightness > 0.70f ? Color.BLACK : Color.WHITE;
     }
 
     private void processResponse(String response) {
@@ -550,6 +569,7 @@ public class AIChatPanel extends JPanel {
         Style normal = doc.addStyle("normal", null);
         StyleConstants.setFontFamily(normal, fontName);
         StyleConstants.setFontSize(normal, fontSize);
+        StyleConstants.setForeground(normal, pane.getForeground());
 
         Style bold = doc.addStyle("bold", normal);
         StyleConstants.setBold(bold, true);
@@ -564,7 +584,7 @@ public class AIChatPanel extends JPanel {
         Style codeBlock = doc.addStyle("codeBlock", null);
         StyleConstants.setFontFamily(codeBlock, preferences.getPreviewCodeFontFamily());
         StyleConstants.setFontSize(codeBlock, preferences.getPreviewCodeFontSize());
-        StyleConstants.setBackground(codeBlock, new Color(240, 240, 240));
+        StyleConstants.setForeground(codeBlock, pane.getForeground());
 
         Style header = doc.addStyle("header", normal);
         StyleConstants.setBold(header, true);

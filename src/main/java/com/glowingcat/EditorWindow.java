@@ -627,37 +627,15 @@ public class EditorWindow {
         if (now - lastOpenTime < 1000) return;
         lastOpenTime = now;
 
-        JFileChooser chooser = new JFileChooser() {
-            @Override
-            public boolean isTraversable(File f) {
-                if (f != null && f.isDirectory()
-                        && f.getName().toLowerCase().endsWith(".textbundle")) {
-                    return false;
-                }
-                return super.isTraversable(f);
-            }
-        };
-        chooser.setDialogTitle("Open");
-        chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-        chooser.setAcceptAllFileFilterUsed(false);
-        chooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                if (f.isDirectory()) {
-                    // Show .textbundle directories as selectable, allow navigating other dirs
-                    return true;
-                }
-                String lower = f.getName().toLowerCase();
-                return lower.endsWith(".md") || lower.endsWith(".markdown") || lower.endsWith(".txt");
-            }
-            @Override
-            public String getDescription() {
-                return "Markdown Files (*.md, *.markdown, *.txt, *.textbundle)";
-            }
+        FileDialog dialog = new FileDialog(frame, "Open", FileDialog.LOAD);
+        dialog.setFilenameFilter((dir, name) -> {
+            String lower = name.toLowerCase();
+            return lower.endsWith(".md") || lower.endsWith(".markdown")
+                    || lower.endsWith(".txt") || lower.endsWith(".textbundle");
         });
-
-        if (chooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
-            File file = chooser.getSelectedFile();
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File file = new File(dialog.getDirectory(), dialog.getFile());
             // Handle .textbundle directories
             if (file.isDirectory() && file.getName().toLowerCase().endsWith(".textbundle")) {
                 File textMd = new File(file, "text.md");

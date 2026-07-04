@@ -71,10 +71,10 @@ public class Preferences {
     private int aiFontSize = 14;
 
     /** Background color for user prompt chat bubbles (hex string for Gson). */
-    private String userPromptColor = "#00AA00";
+    private String userPromptColor = "#9B59B6";
 
     /** Background color for AI response chat bubbles (hex string for Gson). */
-    private String aiResponseColor = "#3399FF";
+    private String aiResponseColor = "#6C3483";
 
     // --- Window state (not shown in preferences dialog) ---
 

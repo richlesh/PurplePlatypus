@@ -4,7 +4,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 
 ## Features
 
-- **Split-pane editor** — Write Markdown on the left, see the rendered HTML preview on the right
+- **Split-pane editor** — Write Markdown on the left, see the rendered HTML preview on the right, with synchronized scrolling so the preview stays aligned with your position in the editor
 - **Live preview** — The preview updates in real time as you type, with no manual refresh needed
 - **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
 - **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, DeepSeek, Alibaba, or local Ollama models
