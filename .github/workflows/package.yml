@@ -232,6 +232,7 @@ jobs:
               --file-associations fa-textbundle.properties \
               --linux-app-category editors \
               --linux-menu-group "Office;TextEditor;" \
+              --linux-package-deps "" \
               --type ${{ matrix.pkg_type }}
           else
             jpackage \
