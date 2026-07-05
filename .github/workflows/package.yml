@@ -315,11 +315,12 @@ jobs:
           # Verify signature
           codesign --verify --deep --strict PurplePlatypus.app
 
-          # Create DMG
+          # Create DMG with Applications alias and volume icon
           DMG_DIR=dmg_contents
           mkdir -p "$DMG_DIR"
           cp -R PurplePlatypus.app "$DMG_DIR/"
           ln -s /Applications "$DMG_DIR/Applications"
+          cp src/main/resources/app_icon.icns "$DMG_DIR/.VolumeIcon.icns"
 
           hdiutil create -volname PurplePlatypus -srcfolder "$DMG_DIR" -ov -format UDRW /tmp/purpleplatypus-rw.dmg
           hdiutil attach /tmp/purpleplatypus-rw.dmg -mountpoint /tmp/dmg-vol
