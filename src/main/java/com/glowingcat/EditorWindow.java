@@ -205,10 +205,13 @@ public class EditorWindow {
         exportTextBundleItem.addActionListener(e -> exportTextBundle());
         JMenuItem exportRtfItem = new JMenuItem("RTF...");
         exportRtfItem.addActionListener(e -> exportRtf());
+        JMenuItem exportTextItem = new JMenuItem("Plain Text...");
+        exportTextItem.addActionListener(e -> exportPlainText());
         exportMenu.add(exportHtmlItem);
         exportMenu.add(exportPdfItem);
         exportMenu.add(exportTextBundleItem);
         exportMenu.add(exportRtfItem);
+        exportMenu.add(exportTextItem);
         fileMenu.add(exportMenu);
         if (isMac) {
             fileMenu.addSeparator();
@@ -925,6 +928,70 @@ public class EditorWindow {
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    private void exportPlainText() {
+        FileDialog dialog = new FileDialog(frame, "Export Plain Text", FileDialog.SAVE);
+        if (currentFile != null) {
+            dialog.setDirectory(currentFile.getParent());
+            String name = currentFile.getName();
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) name = name.substring(0, dot);
+            dialog.setFile(name + ".txt");
+        } else {
+            dialog.setFile("untitled.txt");
+        }
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File outFile = new File(dialog.getDirectory(), dialog.getFile());
+            if (!outFile.getName().contains(".")) {
+                outFile = new File(outFile.getAbsolutePath() + ".txt");
+            }
+            try {
+                // Strip markdown formatting to produce plain text
+                String plainText = markdownToPlainText(editorPane.getText());
+                Files.writeString(outFile.toPath(), plainText, StandardCharsets.UTF_8);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error exporting plain text: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Converts markdown text to plain text by stripping formatting markers.
+     */
+    private String markdownToPlainText(String markdown) {
+        String text = markdown;
+        // Remove heading markers
+        text = text.replaceAll("(?m)^#{1,6}\\s+", "");
+        // Remove bold/italic markers
+        text = text.replaceAll("\\*\\*\\*(.+?)\\*\\*\\*", "$1");
+        text = text.replaceAll("\\*\\*(.+?)\\*\\*", "$1");
+        text = text.replaceAll("\\*(.+?)\\*", "$1");
+        text = text.replaceAll("__(.+?)__", "$1");
+        text = text.replaceAll("_(.+?)_", "$1");
+        // Remove strikethrough
+        text = text.replaceAll("~~(.+?)~~", "$1");
+        // Remove inline code backticks
+        text = text.replaceAll("`([^`]+)`", "$1");
+        // Remove links: [text](url) -> text
+        text = text.replaceAll("\\[([^\\]]+)\\]\\([^)]+\\)", "$1");
+        // Remove images: ![alt](url) -> alt
+        text = text.replaceAll("!\\[([^\\]]*?)\\]\\([^)]+\\)", "$1");
+        // Remove fenced code block markers
+        text = text.replaceAll("(?m)^```.*$", "");
+        // Remove horizontal rules
+        text = text.replaceAll("(?m)^(---+|\\*\\*\\*+|___+)\\s*$", "");
+        // Remove HTML tags
+        text = text.replaceAll("<[^>]+>", "");
+        // Remove task list markers
+        text = text.replaceAll("(?m)^(\\s*)- \\[[xX ]\\] ", "$1");
+        // Remove unordered list markers
+        text = text.replaceAll("(?m)^(\\s*)[-*+] ", "$1");
+        // Remove blockquote markers
+        text = text.replaceAll("(?m)^>\\s?", "");
+        return text;
     }
 
     /**
