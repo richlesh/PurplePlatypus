@@ -436,27 +436,52 @@ jobs:
           }
           EOF
 
-      - name: Build fat JAR
-        run: mvn clean package -DskipTests=true
+      - name: Build app JAR (excluding JavaFX)
+        run: |
+          mvn clean package -DskipTests=true -Pexclude-javafx
+          mkdir -p staging
+          cp target/PurplePlatypus-*.jar staging/PurplePlatypus.jar
+
+      - name: Download JavaFX platform JARs
+        run: |
+          FX_VERSION=24
+          PLATFORMS="linux linux-aarch64 mac mac-aarch64 win win-aarch64"
+          MODULES="javafx-base javafx-controls javafx-graphics javafx-media javafx-swing javafx-web"
+          REPO=https://repo1.maven.org/maven2/org/openjfx
+
+          mkdir -p staging/javafx
+          for mod in $MODULES; do
+            for plat in $PLATFORMS; do
+              URL="$REPO/$mod/$FX_VERSION/$mod-$FX_VERSION-$plat.jar"
+              echo "Downloading $mod-$FX_VERSION-$plat.jar ..."
+              curl -fsSL -o "staging/javafx/$mod-$FX_VERSION-$plat.jar" "$URL" || echo "  (not available, skipping)"
+            done
+            # Also grab the main (classless) module jar
+            curl -fsSL -o "staging/javafx/$mod-$FX_VERSION.jar" "$REPO/$mod/$FX_VERSION/$mod-$FX_VERSION.jar" || true
+          done
 
       - name: Assemble cross-platform zip
         run: |
           DIST=purpleplatypus-${{ env.APP_VERSION }}-java
-          mkdir -p "$DIST/lib"
-          cp target/PurplePlatypus-*.jar "$DIST/lib/PurplePlatypus.jar"
+          mkdir -p "$DIST/lib" "$DIST/javafx"
+          cp staging/PurplePlatypus.jar "$DIST/lib/"
+          cp staging/javafx/*.jar "$DIST/javafx/"
           cp LICENSE "$DIST/"
           cp README.md "$DIST/"
 
-          # Create shell launcher
+          # Create shell launcher (macOS / Linux)
           cat > "$DIST/PurplePlatypus.sh" <<'LAUNCHER_SH'
           #!/usr/bin/env bash
-          # Launch PurplePlatypus using the system Java runtime.
-          # Requires Java 21+. JavaFX is bundled in the JAR.
+          # Launch PurplePlatypus — requires Java 21+
+          # JavaFX libraries are included in the javafx/ directory.
 
           SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+          FX_PATH="$SCRIPT_DIR/javafx"
 
           exec java \
             --enable-native-access=ALL-UNNAMED \
+            --module-path "$FX_PATH" \
+            --add-modules javafx.controls,javafx.web,javafx.swing \
             -jar "$SCRIPT_DIR/lib/PurplePlatypus.jar" "$@"
           LAUNCHER_SH
           chmod +x "$DIST/PurplePlatypus.sh"
@@ -464,13 +489,16 @@ jobs:
           # Create Windows batch launcher
           cat > "$DIST/PurplePlatypus.bat" <<'LAUNCHER_BAT'
           @echo off
-          REM Launch PurplePlatypus using the system Java runtime.
-          REM Requires Java 21+. JavaFX is bundled in the JAR.
+          REM Launch PurplePlatypus — requires Java 21+
+          REM JavaFX libraries are included in the javafx\ directory.
 
           set "SCRIPT_DIR=%~dp0"
+          set "FX_PATH=%SCRIPT_DIR%javafx"
 
           java ^
             --enable-native-access=ALL-UNNAMED ^
+            --module-path "%FX_PATH%" ^
+            --add-modules javafx.controls,javafx.web,javafx.swing ^
             -jar "%SCRIPT_DIR%lib\PurplePlatypus.jar" %*
           LAUNCHER_BAT
 

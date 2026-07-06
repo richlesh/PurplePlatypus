@@ -137,4 +137,41 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Activated by the java-zip CI build to exclude JavaFX from the shaded JAR.
+             JavaFX is instead provided externally on the module path. -->
+        <profile>
+            <id>exclude-javafx</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.5.3</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <configuration>
+                                    <transformers>
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <mainClass>com.glowingcat.Main</mainClass>
+                                        </transformer>
+                                    </transformers>
+                                    <artifactSet>
+                                        <excludes>
+                                            <exclude>org.openjfx:*</exclude>
+                                        </excludes>
+                                    </artifactSet>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
