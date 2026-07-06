@@ -603,6 +603,15 @@ public class EditorWindow {
             SwingUtilities.invokeLater(() -> syncScrolling = false);
         });
 
+        // Provide the editor's scroll ratio to the preview panel so it can restore
+        // position after content reloads during synchronized scrolling
+        previewPanel.setScrollRatioSupplier(() -> {
+            if (!syncScrollEnabled) return -1;
+            int max = editorVScroll.getMaximum() - editorVScroll.getVisibleAmount();
+            if (max <= 0) return 0;
+            return (double) editorVScroll.getValue() / max;
+        });
+
         // Synchronized scrolling: preview scroll drives editor scroll
         previewPanel.setScrollListener(ratio -> {
             if (!syncScrollEnabled || syncScrolling) return;
@@ -679,6 +688,7 @@ public class EditorWindow {
 
     public void loadFileContent(File file, String content) {
         currentFile = file;
+        previewPanel.forceFullReload();
         editorPane.setText(content);
         editorPane.setCaretPosition(0);
         undoManager.discardAllEdits();
@@ -1537,6 +1547,7 @@ public class EditorWindow {
             preferences.save();
             editorPanel.applyPreferences(preferences);
             if (aiChatPanel != null) aiChatPanel.updateFont();
+            previewPanel.forceFullReload();
             updatePreview();
         }
     }

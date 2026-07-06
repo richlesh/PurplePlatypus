@@ -47,6 +47,15 @@ public class PreviewPanel extends JPanel {
     // Scroll listener for synchronized scrolling
     private java.util.function.DoubleConsumer scrollListener;
 
+    // Scroll ratio to restore after a WebView content reload (synchronized scrolling)
+    private double pendingScrollRatio = -1;
+    private java.util.function.DoubleSupplier scrollRatioSupplier;
+
+    // Whether the WebView has completed its initial full page load
+    private boolean webViewInitialLoadDone = false;
+    // The last head/style content used, to detect when a full reload is needed
+    private String lastHeadHtml = "";
+
     // Strong reference to prevent GC of the JavaScript bridge object
     private ScrollBridge scrollBridge;
 
@@ -112,6 +121,15 @@ public class PreviewPanel extends JPanel {
                             netscape.javascript.JSObject win = (netscape.javascript.JSObject) webEngine.executeScript("window");
                             scrollBridge = new ScrollBridge();
                             win.setMember("java", scrollBridge);
+                            webViewInitialLoadDone = true;
+
+                            // Restore scroll position after content reload (synchronized scrolling)
+                            if (pendingScrollRatio >= 0) {
+                                double ratio = pendingScrollRatio;
+                                pendingScrollRatio = -1;
+                                webEngine.executeScript(
+                                    "window.scrollTo(0, (document.body.scrollHeight - window.innerHeight) * " + ratio + ");");
+                            }
                         }
                     });
                 } catch (Throwable t) {
@@ -175,6 +193,15 @@ public class PreviewPanel extends JPanel {
     }
 
     /**
+     * Forces the next updatePreview call to do a full page reload instead of an
+     * incremental body update. Call this when preferences (fonts, etc.) change
+     * or when a new file is opened (base URL changes).
+     */
+    public void forceFullReload() {
+        webViewInitialLoadDone = false;
+    }
+
+    /**
      * Updates the preview with the given markdown text.
      */
     public void updatePreview(String markdown, File currentFile, Preferences preferences) {
@@ -229,17 +256,38 @@ public class PreviewPanel extends JPanel {
         lastHtml = styledHtml;
 
         if (useWebView) {
+            final String bodyContent = html;
+            // Capture scroll ratio on the EDT before switching to the FX thread
+            final double scrollRatio = (scrollRatioSupplier != null) ? scrollRatioSupplier.getAsDouble() : -1;
             javafx.application.Platform.runLater(() -> {
                 if (webEngine != null) {
-                    try {
-                        if (tempHtmlFile == null) {
-                            tempHtmlFile = java.io.File.createTempFile("purpleplatypus_preview", ".html");
-                            tempHtmlFile.deleteOnExit();
+                    // After the initial page load, update only the body via JavaScript
+                    // to avoid resetting scroll position (which causes flashing)
+                    if (webViewInitialLoadDone) {
+                        String escaped = bodyContent
+                                .replace("\\", "\\\\")
+                                .replace("'", "\\'")
+                                .replace("\n", "\\n")
+                                .replace("\r", "\\r")
+                                .replace("</", "<\\/");
+                        webEngine.executeScript("document.body.innerHTML = '" + escaped + "';");
+                        // Re-typeset MathJax if present
+                        webEngine.executeScript(
+                            "if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();");
+                    } else {
+                        // First load: write the full page (head + body) to establish
+                        // styles, scripts, and the scroll event listener
+                        pendingScrollRatio = scrollRatio;
+                        try {
+                            if (tempHtmlFile == null) {
+                                tempHtmlFile = java.io.File.createTempFile("purpleplatypus_preview", ".html");
+                                tempHtmlFile.deleteOnExit();
+                            }
+                            java.nio.file.Files.writeString(tempHtmlFile.toPath(), styledHtml, java.nio.charset.StandardCharsets.UTF_8);
+                            webEngine.load(tempHtmlFile.toURI().toString());
+                        } catch (Exception ex) {
+                            webEngine.loadContent(styledHtml);
                         }
-                        java.nio.file.Files.writeString(tempHtmlFile.toPath(), styledHtml, java.nio.charset.StandardCharsets.UTF_8);
-                        webEngine.load(tempHtmlFile.toURI().toString());
-                    } catch (Exception ex) {
-                        webEngine.loadContent(styledHtml);
                     }
                 }
             });
@@ -286,7 +334,8 @@ public class PreviewPanel extends JPanel {
                 + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; padding: 10px; line-height: 1.6; overflow-x: hidden; }"
                 + "h1, h2, h3 { color: #333; }"
                 + "code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"
-                + "pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"
+                + "pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; line-height: 1.4; }"
+                + "pre code { background: none; padding: 0; border-radius: 0; }"
                 + "blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }"
                 + "table { border-collapse: collapse; margin: 12px auto; }"
                 + "th, td { border: 1px solid #ddd; padding: 6px 12px; }"
@@ -358,6 +407,14 @@ public class PreviewPanel extends JPanel {
                 }
             });
         }
+    }
+
+    /**
+     * Sets a supplier that provides the current editor scroll ratio (0.0-1.0).
+     * Used to restore the preview scroll position after content reloads.
+     */
+    public void setScrollRatioSupplier(java.util.function.DoubleSupplier supplier) {
+        this.scrollRatioSupplier = supplier;
     }
 
     /**
