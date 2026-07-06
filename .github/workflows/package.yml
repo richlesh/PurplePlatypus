@@ -451,13 +451,12 @@ jobs:
           cat > "$DIST/PurplePlatypus.sh" <<'LAUNCHER_SH'
           #!/usr/bin/env bash
           # Launch PurplePlatypus using the system Java runtime.
-          # Requires Java 21+ with JavaFX on the module path or classpath.
+          # Requires Java 21+. JavaFX is bundled in the JAR.
 
           SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
           exec java \
             --enable-native-access=ALL-UNNAMED \
-            --add-modules=javafx.controls,javafx.web,javafx.swing \
             -jar "$SCRIPT_DIR/lib/PurplePlatypus.jar" "$@"
           LAUNCHER_SH
           chmod +x "$DIST/PurplePlatypus.sh"
@@ -466,13 +465,12 @@ jobs:
           cat > "$DIST/PurplePlatypus.bat" <<'LAUNCHER_BAT'
           @echo off
           REM Launch PurplePlatypus using the system Java runtime.
-          REM Requires Java 21+ with JavaFX on the module path or classpath.
+          REM Requires Java 21+. JavaFX is bundled in the JAR.
 
           set "SCRIPT_DIR=%~dp0"
 
           java ^
             --enable-native-access=ALL-UNNAMED ^
-            --add-modules=javafx.controls,javafx.web,javafx.swing ^
             -jar "%SCRIPT_DIR%lib\PurplePlatypus.jar" %*
           LAUNCHER_BAT
 
