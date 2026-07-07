@@ -445,27 +445,38 @@ jobs:
       - name: Download JavaFX platform JARs
         run: |
           FX_VERSION=24
-          PLATFORMS="linux linux-aarch64 mac mac-aarch64 win win-aarch64"
           MODULES="javafx-base javafx-controls javafx-graphics javafx-media javafx-swing javafx-web"
           REPO=https://repo1.maven.org/maven2/org/openjfx
 
-          mkdir -p staging/javafx
-          for mod in $MODULES; do
-            for plat in $PLATFORMS; do
+          # Download platform-specific JARs into separate directories
+          declare -A PLAT_MAP=(
+            [mac]="mac"
+            [mac-aarch64]="mac-aarch64"
+            [linux]="linux"
+            [linux-aarch64]="linux-aarch64"
+            [win]="win"
+            [win-aarch64]="win-aarch64"
+          )
+
+          for plat in "${!PLAT_MAP[@]}"; do
+            dir="staging/javafx/$plat"
+            mkdir -p "$dir"
+            for mod in $MODULES; do
+              # Platform-specific classifier JAR (contains native libs)
               URL="$REPO/$mod/$FX_VERSION/$mod-$FX_VERSION-$plat.jar"
               echo "Downloading $mod-$FX_VERSION-$plat.jar ..."
-              curl -fsSL -o "staging/javafx/$mod-$FX_VERSION-$plat.jar" "$URL" || echo "  (not available, skipping)"
+              curl -fsSL -o "$dir/$mod-$FX_VERSION-$plat.jar" "$URL" || echo "  (not available, skipping)"
+              # Main module JAR (contains classes, same for all platforms)
+              curl -fsSL -o "$dir/$mod-$FX_VERSION.jar" "$REPO/$mod/$FX_VERSION/$mod-$FX_VERSION.jar" 2>/dev/null || true
             done
-            # Also grab the main (classless) module jar
-            curl -fsSL -o "staging/javafx/$mod-$FX_VERSION.jar" "$REPO/$mod/$FX_VERSION/$mod-$FX_VERSION.jar" || true
           done
 
       - name: Assemble cross-platform zip
         run: |
           DIST=purpleplatypus-${{ env.APP_VERSION }}-java
-          mkdir -p "$DIST/lib" "$DIST/javafx"
+          mkdir -p "$DIST/lib"
           cp staging/PurplePlatypus.jar "$DIST/lib/"
-          cp staging/javafx/*.jar "$DIST/javafx/"
+          cp -r staging/javafx "$DIST/javafx"
           cp LICENSE "$DIST/"
           cp README.md "$DIST/"
 
@@ -473,10 +484,31 @@ jobs:
           cat > "$DIST/PurplePlatypus.sh" <<'LAUNCHER_SH'
           #!/usr/bin/env bash
           # Launch PurplePlatypus — requires Java 21+
-          # JavaFX libraries are included in the javafx/ directory.
+          # JavaFX libraries for all platforms are in the javafx/ subdirectories.
 
           SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-          FX_PATH="$SCRIPT_DIR/javafx"
+
+          # Detect OS
+          case "$(uname -s)" in
+            Darwin*) OS="mac" ;;
+            Linux*)  OS="linux" ;;
+            *)       echo "Unsupported OS: $(uname -s)"; exit 1 ;;
+          esac
+
+          # Detect architecture
+          case "$(uname -m)" in
+            x86_64|amd64) ARCH="" ;;
+            aarch64|arm64) ARCH="-aarch64" ;;
+            *)            echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+          esac
+
+          FX_PATH="$SCRIPT_DIR/javafx/${OS}${ARCH}"
+
+          if [ ! -d "$FX_PATH" ]; then
+            echo "Error: JavaFX libraries not found for platform ${OS}${ARCH}"
+            echo "Expected directory: $FX_PATH"
+            exit 1
+          fi
 
           exec java \
             --enable-native-access=ALL-UNNAMED \
@@ -490,10 +522,24 @@ jobs:
           cat > "$DIST/PurplePlatypus.bat" <<'LAUNCHER_BAT'
           @echo off
           REM Launch PurplePlatypus — requires Java 21+
-          REM JavaFX libraries are included in the javafx\ directory.
+          REM JavaFX libraries for all platforms are in the javafx\ subdirectories.
 
           set "SCRIPT_DIR=%~dp0"
-          set "FX_PATH=%SCRIPT_DIR%javafx"
+
+          REM Detect architecture
+          if "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
+            set "FX_PLATFORM=win-aarch64"
+          ) else (
+            set "FX_PLATFORM=win"
+          )
+
+          set "FX_PATH=%SCRIPT_DIR%javafx\%FX_PLATFORM%"
+
+          if not exist "%FX_PATH%" (
+            echo Error: JavaFX libraries not found for platform %FX_PLATFORM%
+            echo Expected directory: %FX_PATH%
+            exit /b 1
+          )
 
           java ^
             --enable-native-access=ALL-UNNAMED ^
