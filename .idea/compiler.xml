@@ -10,7 +10,6 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="MarkdownPro" />
-        <module name="PurplePlatypus" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="17" />
