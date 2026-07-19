@@ -345,15 +345,19 @@ public class EditorWindow {
         blockQuoteItem.addActionListener(e -> prefixLines("> "));
 
         JMenuItem inlineCodeItem = new JMenuItem("Inline Code");
+        inlineCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask));
         inlineCodeItem.addActionListener(e -> wrapSelection("`", "`"));
 
         JMenuItem blockCodeItem = new JMenuItem("Block Code");
+        blockCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         blockCodeItem.addActionListener(e -> wrapBlock("```\n", "\n```"));
 
         JMenuItem inlineMathItem = new JMenuItem("Inline Math");
+        inlineMathItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         inlineMathItem.addActionListener(e -> wrapSelection("$", "$"));
 
         JMenuItem blockMathItem = new JMenuItem("Block Math");
+        blockMathItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         blockMathItem.addActionListener(e -> wrapBlock("$$\n", "\n$$"));
 
         markdownMenu.add(blockQuoteItem);
@@ -421,7 +425,7 @@ public class EditorWindow {
                 windowMenu.addSeparator();
 
                 JMenuItem previousItem = new JMenuItem("Previous");
-                previousItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
+                previousItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_COMMA, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
                 previousItem.addActionListener(ev -> {
                     int idx = openInstances.indexOf(EditorWindow.this);
                     if (idx >= 0 && openInstances.size() > 1) {
@@ -435,7 +439,7 @@ public class EditorWindow {
                 windowMenu.add(previousItem);
 
                 JMenuItem nextItem = new JMenuItem("Next");
-                nextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask));
+                nextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_PERIOD, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
                 nextItem.addActionListener(ev -> {
                     int idx = openInstances.indexOf(EditorWindow.this);
                     if (idx >= 0 && openInstances.size() > 1) {
