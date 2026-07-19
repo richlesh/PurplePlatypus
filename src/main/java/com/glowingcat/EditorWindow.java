@@ -198,14 +198,19 @@ public class EditorWindow {
 
         JMenu exportMenu = new JMenu("Export");
         JMenuItem exportHtmlItem = new JMenuItem("HTML...");
+        exportHtmlItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportHtmlItem.addActionListener(e -> exportHtml());
         JMenuItem exportPdfItem = new JMenuItem("PDF...");
+        exportPdfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_P, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportPdfItem.addActionListener(e -> exportPdf());
         JMenuItem exportTextBundleItem = new JMenuItem("TextBundle...");
+        exportTextBundleItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextBundleItem.addActionListener(e -> exportTextBundle());
         JMenuItem exportRtfItem = new JMenuItem("RTF...");
+        exportRtfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportRtfItem.addActionListener(e -> exportRtf());
         JMenuItem exportTextItem = new JMenuItem("Plain Text...");
+        exportTextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextItem.addActionListener(e -> exportPlainText());
         exportMenu.add(exportHtmlItem);
         exportMenu.add(exportPdfItem);
@@ -761,34 +766,50 @@ public class EditorWindow {
         lastOpenTime = now;
 
         FileDialog dialog = new FileDialog(frame, "Open", FileDialog.LOAD);
+        dialog.setMultipleMode(true);
         dialog.setFilenameFilter((dir, name) -> {
             String lower = name.toLowerCase();
             return lower.endsWith(".md") || lower.endsWith(".markdown")
                     || lower.endsWith(".txt") || lower.endsWith(".textbundle");
         });
         dialog.setVisible(true);
-        if (dialog.getFile() != null) {
-            File file = new File(dialog.getDirectory(), dialog.getFile());
-            // Handle .textbundle directories
-            if (file.isDirectory() && file.getName().toLowerCase().endsWith(".textbundle")) {
-                File textMd = new File(file, "text.md");
-                if (!textMd.exists()) textMd = new File(file, "text.markdown");
-                if (textMd.exists()) {
+        File[] files = dialog.getFiles();
+        if (files != null && files.length > 0) {
+            boolean first = true;
+            for (File file : files) {
+                // Handle .textbundle directories
+                if (file.isDirectory() && file.getName().toLowerCase().endsWith(".textbundle")) {
+                    File textMd = new File(file, "text.md");
+                    if (!textMd.exists()) textMd = new File(file, "text.markdown");
+                    if (textMd.exists()) {
+                        try {
+                            String content = new String(Files.readAllBytes(textMd.toPath()), StandardCharsets.UTF_8);
+                            if (first) {
+                                openFileInTarget(textMd, content);
+                                first = false;
+                            } else {
+                                EditorWindow newWindow = new EditorWindow();
+                                newWindow.loadFileContent(textMd, content);
+                            }
+                        } catch (IOException ex) {
+                            JOptionPane.showMessageDialog(frame, "Error reading TextBundle: " + ex.getMessage(),
+                                    "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                } else if (file.isFile()) {
                     try {
-                        String content = new String(Files.readAllBytes(textMd.toPath()), StandardCharsets.UTF_8);
-                        openFileInTarget(textMd, content);
+                        String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                        if (first) {
+                            openFileInTarget(file, content);
+                            first = false;
+                        } else {
+                            EditorWindow newWindow = new EditorWindow();
+                            newWindow.loadFileContent(file, content);
+                        }
                     } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(frame, "Error reading TextBundle: " + ex.getMessage(),
+                        JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
                                 "Error", JOptionPane.ERROR_MESSAGE);
                     }
-                }
-            } else if (file.isFile()) {
-                try {
-                    String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-                    openFileInTarget(file, content);
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
-                            "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         }
