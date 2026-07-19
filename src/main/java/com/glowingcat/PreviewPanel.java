@@ -98,12 +98,15 @@ public class PreviewPanel extends JPanel {
                 try {
                     javafx.scene.web.WebView webView = new javafx.scene.web.WebView();
                     webEngine = webView.getEngine();
+                    // Intercept external link navigation via JavaScript (see load worker
+                    // listener below) to avoid a full page reload that resets scroll position.
+                    // As a safety net, the locationProperty listener still catches any navigation
+                    // that slips through and cancels it by loading about:blank then restoring content.
                     webEngine.locationProperty().addListener((obs, oldUrl, newUrl) -> {
                         if (newUrl != null && (newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
+                            // Cancel the navigation by executing history.back() which avoids a full reload
                             javafx.application.Platform.runLater(() -> {
-                                if (tempHtmlFile != null) {
-                                    webEngine.load(tempHtmlFile.toURI().toString());
-                                }
+                                webEngine.executeScript("history.back();");
                             });
                             try {
                                 java.awt.Desktop.getDesktop().browse(new java.net.URI(newUrl));
@@ -366,6 +369,13 @@ public class PreviewPanel extends JPanel {
                 + "<script>window.addEventListener('scroll', function() {"
                 + "  var ratio = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);"
                 + "  if(window.java) window.java.onScroll(ratio);"
+                + "});"
+                + "document.addEventListener('click', function(e) {"
+                + "  var a = e.target.closest('a');"
+                + "  if(a && a.href && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {"
+                + "    e.preventDefault();"
+                + "    if(window.java) window.java.openLink(a.href);"
+                + "  }"
                 + "});</script>"
                 + "</head><body>" + bodyHtml + "</body></html>";
     }
@@ -418,12 +428,25 @@ public class PreviewPanel extends JPanel {
     }
 
     /**
-     * Bridge object exposed to JavaScript as window.java for scroll event callbacks.
+     * Bridge object exposed to JavaScript as window.java for scroll event callbacks
+     * and external link opening.
      */
     public class ScrollBridge {
         public void onScroll(double ratio) {
             if (scrollListener != null) {
                 SwingUtilities.invokeLater(() -> scrollListener.accept(ratio));
+            }
+        }
+
+        /**
+         * Called from JavaScript when the user clicks an external link.
+         * Opens the URL in the system browser without navigating the WebView.
+         */
+        public void openLink(String url) {
+            try {
+                java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
+            } catch (Exception ex) {
+                // Silently fail
             }
         }
     }
