@@ -396,6 +396,123 @@ public class EditorWindow {
 
         menuBar.add(markdownMenu);
 
+        // Window menu
+        JMenu windowMenu = new JMenu("Window");
+        windowMenu.addMenuListener(new javax.swing.event.MenuListener() {
+            @Override
+            public void menuSelected(javax.swing.event.MenuEvent e) {
+                windowMenu.removeAll();
+
+                JMenuItem minimizeItem = new JMenuItem("Minimize");
+                minimizeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask));
+                minimizeItem.addActionListener(ev -> frame.setState(Frame.ICONIFIED));
+                windowMenu.add(minimizeItem);
+
+                JMenuItem zoomItem = new JMenuItem("Zoom");
+                zoomItem.addActionListener(ev -> {
+                    if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) != 0) {
+                        frame.setExtendedState(Frame.NORMAL);
+                    } else {
+                        frame.setExtendedState(Frame.MAXIMIZED_BOTH);
+                    }
+                });
+                windowMenu.add(zoomItem);
+
+                windowMenu.addSeparator();
+
+                JMenuItem previousItem = new JMenuItem("Previous");
+                previousItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
+                previousItem.addActionListener(ev -> {
+                    int idx = openInstances.indexOf(EditorWindow.this);
+                    if (idx >= 0 && openInstances.size() > 1) {
+                        int prev = (idx - 1 + openInstances.size()) % openInstances.size();
+                        EditorWindow target = openInstances.get(prev);
+                        target.frame.toFront();
+                        target.frame.requestFocus();
+                    }
+                });
+                previousItem.setEnabled(openInstances.size() > 1);
+                windowMenu.add(previousItem);
+
+                JMenuItem nextItem = new JMenuItem("Next");
+                nextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask));
+                nextItem.addActionListener(ev -> {
+                    int idx = openInstances.indexOf(EditorWindow.this);
+                    if (idx >= 0 && openInstances.size() > 1) {
+                        int next = (idx + 1) % openInstances.size();
+                        EditorWindow target = openInstances.get(next);
+                        target.frame.toFront();
+                        target.frame.requestFocus();
+                    }
+                });
+                nextItem.setEnabled(openInstances.size() > 1);
+                windowMenu.add(nextItem);
+
+                windowMenu.addSeparator();
+
+                JMenuItem cascadeItem = new JMenuItem("Cascade All");
+                cascadeItem.addActionListener(ev -> {
+                    int x = 20, y = 20;
+                    for (EditorWindow instance : openInstances) {
+                        instance.frame.setExtendedState(Frame.NORMAL);
+                        instance.frame.setLocation(x, y);
+                        instance.frame.toFront();
+                        x += 30;
+                        y += 30;
+                    }
+                    frame.toFront();
+                    frame.requestFocus();
+                });
+                cascadeItem.setEnabled(openInstances.size() > 1);
+                windowMenu.add(cascadeItem);
+
+                JMenuItem tileItem = new JMenuItem("Tile All");
+                tileItem.addActionListener(ev -> {
+                    GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                    Rectangle screenBounds = ge.getMaximumWindowBounds();
+                    int count = openInstances.size();
+                    if (count == 0) return;
+                    int cols = (int) Math.ceil(Math.sqrt(count));
+                    int rows = (int) Math.ceil((double) count / cols);
+                    int tileWidth = screenBounds.width / cols;
+                    int tileHeight = screenBounds.height / rows;
+                    for (int i = 0; i < count; i++) {
+                        EditorWindow instance = openInstances.get(i);
+                        instance.frame.setExtendedState(Frame.NORMAL);
+                        int col = i % cols;
+                        int row = i / cols;
+                        instance.frame.setBounds(
+                            screenBounds.x + col * tileWidth,
+                            screenBounds.y + row * tileHeight,
+                            tileWidth, tileHeight
+                        );
+                    }
+                });
+                tileItem.setEnabled(openInstances.size() > 1);
+                windowMenu.add(tileItem);
+
+                windowMenu.addSeparator();
+
+                // Window list
+                for (EditorWindow instance : openInstances) {
+                    String title = instance.frame.getTitle();
+                    JCheckBoxMenuItem windowItem = new JCheckBoxMenuItem(title);
+                    windowItem.setSelected(instance == EditorWindow.this && frame.isFocused());
+                    windowItem.addActionListener(ev -> {
+                        instance.frame.toFront();
+                        instance.frame.requestFocus();
+                    });
+                    windowMenu.add(windowItem);
+                }
+            }
+
+            @Override
+            public void menuDeselected(javax.swing.event.MenuEvent e) {}
+            @Override
+            public void menuCanceled(javax.swing.event.MenuEvent e) {}
+        });
+        menuBar.add(windowMenu);
+
         frame.setJMenuBar(menuBar);
 
         // Enable/disable formatting items based on selection
