@@ -915,7 +915,7 @@ public class EditorWindow {
             if (!outFile.getName().contains(".")) {
                 outFile = new File(outFile.getAbsolutePath() + ".html");
             }
-            String html = previewPanel.getStyledHtml(getRenderedHtml(), null, preferences);
+            String html = previewPanel.getStyledHtml(getRenderedHtml(), null, preferences, true);
             try {
                 Files.writeString(outFile.toPath(), html, StandardCharsets.UTF_8);
             } catch (IOException ex) {

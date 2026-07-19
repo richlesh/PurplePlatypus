@@ -255,7 +255,7 @@ public class PreviewPanel extends JPanel {
             html = sb.toString();
         }
 
-        String styledHtml = getStyledHtml(html, currentFile, preferences);
+        String styledHtml = getStyledHtml(html, currentFile, preferences, false);
         lastHtml = styledHtml;
 
         if (useWebView) {
@@ -318,7 +318,7 @@ public class PreviewPanel extends JPanel {
     /**
      * Builds styled HTML from the given body content.
      */
-    public String getStyledHtml(String bodyHtml, File currentFile, Preferences preferences) {
+    public String getStyledHtml(String bodyHtml, File currentFile, Preferences preferences, boolean forExport) {
         String fontFamily = preferences != null ? preferences.getPreviewFontFamily() : "SansSerif";
         int fontSize = preferences != null ? preferences.getPreviewFontSize() : 14;
         String codeFontFamily = preferences != null ? preferences.getPreviewCodeFontFamily() : "Monospaced";
@@ -366,7 +366,8 @@ public class PreviewPanel extends JPanel {
                 + "};"
                 + "</script>"
                 + "<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>"
-                + "<script>window.addEventListener('scroll', function() {"
+                + (forExport ? "" :
+                   "<script>window.addEventListener('scroll', function() {"
                 + "  var ratio = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);"
                 + "  if(window.java) window.java.onScroll(ratio);"
                 + "});"
@@ -376,7 +377,7 @@ public class PreviewPanel extends JPanel {
                 + "    e.preventDefault();"
                 + "    if(window.java) window.java.openLink(a.href);"
                 + "  }"
-                + "});</script>"
+                + "});</script>")
                 + "</head><body>" + bodyHtml + "</body></html>";
     }
 
