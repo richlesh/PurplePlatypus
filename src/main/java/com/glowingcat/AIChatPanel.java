@@ -462,10 +462,17 @@ public class AIChatPanel extends JPanel {
         String baseUrl = switch (vendor) {
             case "Alibaba" -> "https://dashscope-us.aliyuncs.com/compatible-mode/v1";
             case "Anthropic" -> "https://api.anthropic.com/v1";
+            case "Cerebras" -> "https://api.cerebras.ai/v1";
             case "DeepSeek" -> "https://api.deepseek.com/v1";
             case "Google" -> "https://generativelanguage.googleapis.com/v1beta/openai";
+            case "Groq" -> "https://api.groq.com/openai/v1";
+            case "Meta" -> "https://api.meta.ai/v1";
+            case "Mistral" -> "https://api.mistral.ai/v1";
+            case "Moonshot AI" -> "https://api.moonshot.ai/v1";
             case "Ollama" -> "http://localhost:11434/v1";
             case "OpenAI" -> "https://api.openai.com/v1";
+            case "Perplexity" -> "https://api.perplexity.ai";
+            case "xAI" -> "https://api.x.ai/v1";
             default -> "https://api.openai.com/v1";
         };
 

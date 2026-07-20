@@ -5,7 +5,7 @@
 /**
  * PreferencesDialog.java
  *
- * A modal dialog for editing PurplePlatypus user preferences. Font settings on
+ * A modal dialog for editing PurplePlaftypus user preferences. Font settings on
  * the left, AI/LLM settings on the right.
  */
 package com.glowingcat;
@@ -45,10 +45,17 @@ public class PreferencesDialog extends JDialog {
     private static final String[][] VENDOR_DATA = {
         {"Alibaba", "https://www.alibabacloud.com/help/en/model-studio/get-api-key", "https://dashscope-us.aliyuncs.com/compatible-mode/v1"},
         {"Anthropic", "https://console.anthropic.com/settings/keys", "https://api.anthropic.com/v1"},
+        {"Cerebras", "https://cloud.cerebras.ai", "https://api.cerebras.ai/v1"},
         {"DeepSeek", "https://platform.deepseek.com/api_keys", "https://api.deepseek.com/v1"},
         {"Google", "https://aistudio.google.com/apikey", "https://generativelanguage.googleapis.com/v1beta/openai"},
+        {"Groq", "https://console.groq.com/keys", "https://api.groq.com/openai/v1"},
+        {"Meta", "https://developer.meta.com/ai/", "https://api.meta.ai/v1"},
+        {"Mistral", "https://console.mistral.ai/api-keys", "https://api.mistral.ai/v1"},
+        {"Moonshot AI", "https://platform.kimi.ai", "https://api.moonshot.ai/v1"},
         {"Ollama", "https://ollama.com", "http://localhost:11434/v1"},
         {"OpenAI", "https://platform.openai.com/api-keys", "https://api.openai.com/v1"},
+        {"Perplexity", "https://www.perplexity.ai/settings/api", "https://api.perplexity.ai"},
+        {"xAI", "https://console.x.ai", "https://api.x.ai/v1"},
     };
 
     public PreferencesDialog(JFrame owner, Preferences prefs) {
@@ -123,13 +130,13 @@ public class PreferencesDialog extends JDialog {
             String baseUrl = VENDOR_DATA[vi][2];
             llmModelCombo.removeAllItems();
             if (apiKey.isEmpty() && !"Ollama".equals(VENDOR_DATA[vi][0])) {
-                if (prefs.getLlmModel() != null) llmModelCombo.addItem(prefs.getLlmModel());
                 return;
             }
             new Thread(() -> {
                 try {
+                    String modelsUrl = baseUrl + ("Perplexity".equals(VENDOR_DATA[vi][0]) ? "/v1/models" : "/models");
                     HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
-                        .uri(URI.create(baseUrl + "/models"))
+                        .uri(URI.create(modelsUrl))
                         .header("Content-Type", "application/json")
                         .GET();
                     if ("Anthropic".equals(VENDOR_DATA[vi][0])) {
@@ -150,16 +157,22 @@ public class PreferencesDialog extends JDialog {
                         if (prefs.getLlmModel() != null) llmModelCombo.setSelectedItem(prefs.getLlmModel());
                     });
                 } catch (Exception ex) {
-                    SwingUtilities.invokeLater(() -> {
-                        if (prefs.getLlmModel() != null) llmModelCombo.addItem(prefs.getLlmModel());
-                    });
+                    // leave model combo empty on failure
                 }
             }).start();
         };
+        if (prefs.getLlmModel() != null) llmModelCombo.addItem(prefs.getLlmModel());
         fetchModels.run();
-        llmVendorCombo.addActionListener(e -> fetchModels.run());
+        llmVendorCombo.addActionListener(e -> {
+            llmApiKeyField.setText("");
+            llmModelCombo.removeAllItems();
+            fetchModels.run();
+        });
         llmApiKeyField.getDocument().addDocumentListener(new DocumentListener() {
-            private final Timer debounce = new Timer(500, e -> fetchModels.run());
+            private final Timer debounce = new Timer(500, e -> {
+                llmModelCombo.removeAllItems();
+                fetchModels.run();
+            });
             { debounce.setRepeats(false); }
             public void insertUpdate(DocumentEvent e) { debounce.restart(); }
             public void removeUpdate(DocumentEvent e) { debounce.restart(); }
@@ -284,7 +297,7 @@ public class PreferencesDialog extends JDialog {
         panel.add(llmApiKeyField, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
-        JLabel apiKeyLink = new JLabel("<html><a href=''>Get API key...</a></html>");
+        JLabel apiKeyLink = new JLabel("<html><nobr><a href=''>Get API key...</a></nobr></html>");
         apiKeyLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         apiKeyLink.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
