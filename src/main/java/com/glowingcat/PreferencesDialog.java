@@ -134,7 +134,8 @@ public class PreferencesDialog extends JDialog {
             }
             new Thread(() -> {
                 try {
-                    String modelsUrl = baseUrl + ("Perplexity".equals(VENDOR_DATA[vi][0]) ? "/v1/models" : "/models");
+                    String modelsUrl = "Perplexity".equals(VENDOR_DATA[vi][0])
+                        ? baseUrl + "/v1/models" : baseUrl + "/models";
                     HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                         .uri(URI.create(modelsUrl))
                         .header("Content-Type", "application/json")
@@ -150,7 +151,13 @@ public class PreferencesDialog extends JDialog {
                     String body = resp.body();
                     List<String> models = new ArrayList<>();
                     Matcher m = Pattern.compile("\"id\"\\s*:\\s*\"([^\"]+)\"").matcher(body);
-                    while (m.find()) models.add(m.group(1));
+                    while (m.find()) {
+                        String id = m.group(1);
+                        if ("Perplexity".equals(VENDOR_DATA[vi][0]) && id.contains("/")) {
+                            id = id.substring(id.indexOf('/') + 1);
+                        }
+                        models.add(id);
+                    }
                     SwingUtilities.invokeLater(() -> {
                         llmModelCombo.removeAllItems();
                         for (String mod : models) llmModelCombo.addItem(mod);
