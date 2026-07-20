@@ -261,7 +261,7 @@ public class FindDialog extends JDialog {
         if (useRegex) {
             Pattern pattern;
             try {
-                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                 pattern = Pattern.compile(searchText, flags);
             } catch (PatternSyntaxException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
@@ -397,7 +397,7 @@ public class FindDialog extends JDialog {
         if (useRegex) {
             Pattern pattern;
             try {
-                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                 pattern = Pattern.compile(searchText, flags);
             } catch (PatternSyntaxException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
@@ -592,7 +592,7 @@ public class FindDialog extends JDialog {
         if (useRegex) {
             Pattern pattern;
             try {
-                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                 pattern = Pattern.compile(searchText, flags);
             } catch (PatternSyntaxException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),

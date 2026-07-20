@@ -132,7 +132,7 @@ public class ReplaceDialog extends FindDialog {
 
         if (useRegex) {
             try {
-                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                 Pattern pattern = Pattern.compile(searchText, flags);
                 Matcher matcher = pattern.matcher(selectedText);
                 if (matcher.matches()) {
@@ -205,7 +205,7 @@ public class ReplaceDialog extends FindDialog {
         if (useRegex) {
             Pattern pattern;
             try {
-                int flags = matchCase ? 0 : Pattern.CASE_INSENSITIVE;
+                int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                 pattern = Pattern.compile(searchText, flags);
             } catch (PatternSyntaxException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
