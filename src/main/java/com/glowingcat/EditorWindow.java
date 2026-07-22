@@ -10,6 +10,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.undo.UndoManager;
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -144,6 +145,8 @@ public class EditorWindow {
             JMenuItem licenseItem = new JMenuItem("License Key...");
             licenseItem.addActionListener(e -> showLicenseDialog());
             JMenuItem quitItem = new JMenuItem("Quit PurplePlatypus");
+            quitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q,
+                    Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
             quitItem.addActionListener(e -> exitApplication());
             appMenu.add(aboutItem);
             appMenu.addSeparator();

@@ -6,7 +6,7 @@
  * Preferences.java
  *
  * Manages user preferences for the PurplePlatypus application. Preferences are
- * persisted as a JSON file ({@code .purpleplatypus.json}) in the user's home directory.
+ * persisted as a JSON file ({@code .purpleplatypus-settings.json}) in the user's home directory.
  * Includes font family and font size settings for both the editor and preview panes.
  */
 package com.glowingcat;
@@ -28,12 +28,12 @@ import java.nio.file.Paths;
 /**
  * Holds and persists user preferences for PurplePlatypus.
  * <p>
- * Preferences are loaded from and saved to {@code ~/.purpleplatypus.json}.
+ * Preferences are loaded from and saved to {@code ~/.purpleplatypus-settings.json}.
  * If the file does not exist or cannot be read, sensible defaults are used.
  */
 public class Preferences {
 
-    private static final String PREFS_FILENAME = ".purpleplatypus.json";
+    private static final String PREFS_FILENAME = ".purpleplatypus-settings.json";
 
     /** Font family for the markdown editor pane. */
     private String editorFontFamily = "Monospaced";
