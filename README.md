@@ -1,4 +1,4 @@
-# PurplePlatypus
+# PurplePlatypus 1.1.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
@@ -9,6 +9,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
 - **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, DeepSeek, Alibaba, Cerebras, Groq, Meta, Mistral, Moonshot AI, Perplexity, xAI, or local Ollama models
 - **Multi-window** — Open multiple editor windows with File > New
+- **Window management** — Window menu with Minimize, Zoom, Previous/Next window navigation, Cascade All, and Tile All
 - **Cross-platform** — Runs on macOS (ARM64), Windows (x64, ARM64), and Linux (x64, ARM64)
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
@@ -23,12 +24,13 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Headings** — Insert Heading 1 through Heading 6 via the Markdown menu (replaces any existing heading prefix)
 - **Horizontal Rule** — Insert a `---` separator via the Markdown menu
 - **Footnotes** — Insert footnote references and definitions via the Markdown menu
+- **Image drag-and-drop** — Drag GIF, JPEG, or PNG files onto the editor to insert markdown image links with relative paths; the caret tracks the pointer for precise placement
 - **Links and Images** — Insert or edit markdown links and images via dialogs
 - **Tables** — Insert or edit GFM-style markdown tables via a visual dialog
 - **Lists** — Convert lines to ordered, unordered, or task lists
 - **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, and Block Math
 - **Print** — Page Setup and Print (⌘/Ctrl+P) using the native system print dialog
-- **Export** — Export to HTML, PDF, TextBundle, or RTF formats
+- **Export** — Export to HTML, PDF, TextBundle, RTF, or Plain Text formats
 - **Find** — Search with options for Match Case, Wrap Around, Search Backwards, and Find in Selection (remembers the original selection for repeated searches)
 - **Find All** — Opens a results window showing matching lines with highlighted text; click a match to jump to it in the editor
 - **Count** — Quickly count the number of matches in the document or selection
@@ -60,6 +62,7 @@ Configure your LLM provider in Preferences (vendor, model, and API key).
 - **PDF** — Print-to-file via the system's PDF output
 - **TextBundle** — Standard `.textbundle` package with `text.md`, `info.json`, and images copied into `assets/` (preserving subfolder hierarchy)
 - **RTF** — Rich Text Format with headings, bold, italic, strikethrough, code, lists, and block quotes
+- **Plain Text** — Export markdown content as plain text with formatting stripped
 
 ## Platform Support
 
