@@ -1,6 +1,6 @@
 # Welcome to PurplePlatypus
 
-Start typing your markdown here.Jul 3, 2026
+Start typing your markdown here.
 
 ## Features
 
@@ -37,7 +37,7 @@ Get at [Glowing Cat Software](https://glowingcat.com)
 - [ ] Step 3
 
 This is a Quote:
-> four score and seven years ago our fathers brought forth on this land...
+> Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
 
 This is inline `code`.
 
@@ -61,9 +61,18 @@ $$
 
 ---
 
+http://glowingcat.com[^1] 
+
+
+[^1]: This is a footnote
+
+---
+
 **You**
 
 🎨 Can you show me a picture of a kitty wearing pajamas?
+
+🤒🥵🥶🤯🥳😎😥😱😡🤬💀👽🤖😺🙈🙉🙊😃😇🥰
 
 ---
 
@@ -86,35 +95,3 @@ If you'd like an actual picture, you could try:
 - **A quick image search** for "cat in pajamas" — the internet has blessed us with many 🐱
 
 ---
-
-http://glowingcat.com[^1] 
-
-
-[^1]: This is a footnote
-
----
-
-## iPad Comparison: A16 (11") vs. Air M4 (13") vs. Pro M5 (13")
-
-| Feature               | iPad A16 (11")                     | iPad Air M4 (13")                          | iPad Pro M5 (13")                          |
-|-----------------------|------------------------------------|--------------------------------------------|--------------------------------------------|
-| **Release Date**      | March 2025                         | March 2026                                   | October 2025                               |
-| **Display Size**      | 10.86" (11") Liquid Retina         | 13" Liquid Retina                          | 13" Ultra Retina XDR (OLED)                |
-| **Resolution**        | 2360 × 1640 (264 ppi)              | 2752 × 2004 (224 ppi)                      | 2752 × 2004 (OLED, 1000 nits HBM / 1600 nits peak) |
-| **Brightness**        | 500 nits                           | 500 nits                                   | 1000 nits HBM, 1600 nits peak (HDR)        |
-| **Refresh Rate**      | 60Hz (no ProMotion)                | 60Hz (no ProMotion)                        | 120Hz ProMotion                            |
-| **Color Support**     | No Wide Color (P3)                 | Wide Color (P3), True Tone                 | Wide Color (P3), True Tone, Ultra Retina XDR |
-| **Chip**              | Apple A16 Bionic (4nm, 5-core CPU, 4-core GPU, 16-core Neural Engine) | Apple M4 (8-core CPU, 9-core GPU, 16-core Neural Engine)        | Apple M5 (10-core CPU, 10-core GPU, 16-core Neural Engine)        |
-| **RAM**               | 6 GB                               | 16 GB                                      | 16 GB                                      |
-| **Storage Options**   | 128GB, 256GB, 512GB                | 128GB, 256GB, 512GB, 1TB                   | 256GB, 512GB, 1TB, 2TB                     |
-| **Front Camera**      | 12MP Ultra Wide (landscape, Center Stage) | 12MP Ultra Wide (landscape, Center Stage)  | 12MP Ultra Wide (landscape, Center Stage)  |
-| **Rear Camera**       | 12MP Wide                          | 12MP Wide                                  | 12MP Wide + Laser Diode for LiDAR          |
-| **LiDAR Sensor**      | No                                 | No                                         | Yes                                        |
-| **Connectivity**      | Wi-Fi 6, Bluetooth 5.3, eSIM only  | Wi-Fi 6E, Bluetooth 5.3, eSIM + optional physical SIM | Wi-Fi 6E, Bluetooth 5.3, eSIM + optional physical SIM |
-| **Charging**          | 20W USB-C                          | 20W USB-C                                  | 20W+ USB-C (supports faster charging)      |
-| **Apple Intelligence**| No                                 | Yes                                        | Yes                                        |
-| **Weight**            | ~481 g                             | ~610 g                                     | ~579 g                                     |
-| **Dimensions**        | 248.6 × 179.5 × 7 mm               | 280.6 × 214.9 × 6.1 mm                     | 280.6 × 214.9 × 5.1 mm                     |
-| **Starting Price**    | $449 (128GB Wi-Fi)                 | $949 (128GB Wi-Fi)                         | $1,499 (256GB Wi-Fi)                       |
-
-> **Note**: The iPad Pro M5 features Apple's first OLED display in an iPad, offering superior contrast and HDR performance. The Air M4 is the most balanced option for creatives who want large-screen productivity without OLED pricing. The A16 remains the best budget choice for general use.

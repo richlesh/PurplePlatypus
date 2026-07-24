@@ -10,6 +10,9 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.undo.UndoManager;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -17,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -751,6 +755,86 @@ public class EditorWindow {
             }
             SwingUtilities.invokeLater(() -> syncScrolling = false);
         });
+
+        // Drag-and-drop: insert markdown image link when an image file is dropped onto the editor
+        new DropTarget(editorPane, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
+            @Override
+            public void dragEnter(DropTargetDragEvent dtde) {
+                if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                    dtde.acceptDrag(DnDConstants.ACTION_COPY);
+                } else {
+                    dtde.rejectDrag();
+                }
+            }
+
+            @Override
+            public void dragOver(DropTargetDragEvent dtde) {
+                if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                    dtde.acceptDrag(DnDConstants.ACTION_COPY);
+                    // Move caret to follow the pointer for precise placement
+                    Point pt = dtde.getLocation();
+                    int offset = editorPane.viewToModel2D(pt);
+                    if (offset >= 0) {
+                        editorPane.setCaretPosition(offset);
+                    }
+                } else {
+                    dtde.rejectDrag();
+                }
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public void drop(DropTargetDropEvent dtde) {
+                if (!dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                    dtde.rejectDrop();
+                    return;
+                }
+                dtde.acceptDrop(DnDConstants.ACTION_COPY);
+                try {
+                    List<File> files = (List<File>) dtde.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+                    StringBuilder markdown = new StringBuilder();
+                    for (File file : files) {
+                        String name = file.getName().toLowerCase();
+                        if (name.endsWith(".gif") || name.endsWith(".jpg")
+                                || name.endsWith(".jpeg") || name.endsWith(".png")) {
+                            String imgPath = computeImageRelativePath(file);
+                            String altText = file.getName().replaceFirst("\\.[^.]+$", "");
+                            markdown.append("![").append(altText).append("](").append(imgPath).append(")\n");
+                        }
+                    }
+                    if (markdown.length() > 0) {
+                        // Position caret at drop location
+                        Point dropPoint = dtde.getLocation();
+                        int offset = editorPane.viewToModel2D(dropPoint);
+                        if (offset >= 0) {
+                            editorPane.setCaretPosition(offset);
+                        }
+                        editorPane.replaceSelection(markdown.toString());
+                    }
+                    dtde.dropComplete(true);
+                } catch (UnsupportedFlavorException | IOException ex) {
+                    dtde.dropComplete(false);
+                }
+            }
+        }, true);
+    }
+
+    /**
+     * Computes the relative path from the current document's directory to the given image file.
+     * Falls back to the absolute path if no document has been saved yet or paths are on different roots.
+     */
+    private String computeImageRelativePath(File imageFile) {
+        if (currentFile != null && currentFile.getParentFile() != null) {
+            Path docDir = currentFile.getParentFile().toPath();
+            Path imgPath = imageFile.toPath();
+            try {
+                return docDir.relativize(imgPath).toString().replace('\\', '/');
+            } catch (IllegalArgumentException e) {
+                // Different roots (e.g., different drives on Windows)
+                return imageFile.getAbsolutePath().replace('\\', '/');
+            }
+        }
+        return imageFile.getAbsolutePath().replace('\\', '/');
     }
 
     private void updatePreview() {
