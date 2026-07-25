@@ -65,7 +65,7 @@ Welcome to a comprehensive demonstration of **Markdown** features supported by P
 
 ## 4. Links and Images
 
-Visit [PurplePlatypus on GitHub](https://github.com) for more info.
+Visit [PurplePlatypus on GitHub](https://github.com/richlesh/PurplePlatypus) for more info.
 
 You can also use reference-style links like [this one](#6-code-blocks) to headings.
 
@@ -73,7 +73,7 @@ You can also use reference-style links like [this one](#my-target) to arbitrary 
 
 ![Placeholder Image](src/main/resources/app_icon_256.png)
 
-<a id="my-target"></a>https://example.com "Example Website"
+<a id="my-target"></a>https://glowingcat.com "Example Website"
 
 ---
 
@@ -121,14 +121,14 @@ Aligned columns
 | Bananas      |     Yellow     |          0.75 |
 | Cherries     |      Dark      |          3.20 |
 
-Cells can also contain **formatting**, `code`, and [links](https://example.com):
+Cells can also contain **formatting**, `code`, and [links](https://glowingcat.com):
 
 | Feature    | Syntax           | Example                    |
 | ---------- | ---------------- | -------------------------- |
 | Bold       | `**text**`       | **text**                   |
 | Italic     | `*text*`         | *text*                     |
 | Code       | `` `code` ``     | `code`                     |
-| Link       | `[label](url)`   | [label](https://example.com) |
+| Link       | `[label](url)`   | [label](https://glowingcat.com) |
 
 ---
 
