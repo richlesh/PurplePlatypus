@@ -1,4 +1,6 @@
-# ![app_icon_256](src/main/resources/app_icon_256.png)PurplePlatypus 1.1.0
+![app_icon_256](src/main/resources/app_icon_256.png)
+
+# PurplePlatypus 1.2.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
