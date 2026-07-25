@@ -29,10 +29,9 @@ Welcome to a comprehensive demonstration of **Markdown** features supported by P
 - *Italic text* using single asterisks
 - ***Bold and italic*** combined
 - ~~Strikethrough text~~ using tildes
-- <u>Underlined text</u> using HTML tags
+- ++Underlined text++ using double plus
 - `Inline code` using backticks
-- Regular text with a line break  
-  (two spaces at the end of the previous line)
+- Regular text with a line break
 
 ---
 
@@ -68,11 +67,13 @@ Welcome to a comprehensive demonstration of **Markdown** features supported by P
 
 Visit [PurplePlatypus on GitHub](https://github.com) for more info.
 
-You can also use reference-style links like [this one][ref-link].
+You can also use reference-style links like [this one](#6-code-blocks) to headings.
 
-[ref-link]: https://example.com "Example Website"
+You can also use reference-style links like [this one](#my-target) to arbitrary named anchor using HTML.
 
 ![Placeholder Image](src/main/resources/app_icon_256.png)
+
+<a id="my-target"></a>https://example.com "Example Website"
 
 ---
 
@@ -141,6 +142,7 @@ Image Style Attributes
 
 ![Purple Platypus](src/main/resources/app_icon_256.png){width=25%}
 
+![Purple Platypus](src/main/resources/app_icon_256.png){width=100}
 ---
 
 ## 9. Math Notation (LaTeX)
@@ -207,10 +209,13 @@ PurplePlatypus lets you export your document to several formats, so you can
 share your work wherever it needs to go.
 
 | Format       | Extension | Best For                                      |
-| ------------ | --------- | --------------------------------------------- |
+|:------------|:---------|:--------------------- |
 | **HTML**     | `.html`   | Publishing to the web or viewing in a browser |
 | **PDF**      | `.pdf`    | Printing and sharing polished documents       |
 | **Markdown** | `.md`     | Keeping the raw source, portable and editable |
+| **RTF** | `.rtf` | Rich Text Format |
+| **Plain Text** | `.txt` | Plain Text Format (loses formatting) |
+| **TextBundle** | `.textbundle` | Bundle of Markdown file and images |
 
 ### HTML
 
