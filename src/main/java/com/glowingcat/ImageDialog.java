@@ -25,6 +25,7 @@ public class ImageDialog extends JDialog {
 
     private final JTextField altTextField;
     private final JTextField pathField;
+    private final JTextField widthField;
     private final JFrame ownerFrame;
     private final File documentFile;
     private boolean confirmed = false;
@@ -38,7 +39,7 @@ public class ImageDialog extends JDialog {
      * @param documentFile the current document file (used to compute relative paths), may be null
      */
     public ImageDialog(JFrame owner, String selectedText, File documentFile) {
-        this(owner, selectedText, "", documentFile);
+        this(owner, selectedText, "", "", documentFile);
     }
 
     /**
@@ -50,6 +51,19 @@ public class ImageDialog extends JDialog {
      * @param documentFile the current document file (used to compute relative paths), may be null
      */
     public ImageDialog(JFrame owner, String altText, String existingPath, File documentFile) {
+        this(owner, altText, existingPath, "", documentFile);
+    }
+
+    /**
+     * Creates the Image dialog with pre-filled image path and width.
+     *
+     * @param owner         the parent frame
+     * @param altText       the alt text to pre-fill, may be null
+     * @param existingPath  the existing image path to pre-fill, may be null or empty
+     * @param existingWidth the existing width value to pre-fill, may be null or empty
+     * @param documentFile  the current document file (used to compute relative paths), may be null
+     */
+    public ImageDialog(JFrame owner, String altText, String existingPath, String existingWidth, File documentFile) {
         super(owner, "Insert Image", true);
         this.ownerFrame = owner;
         this.documentFile = documentFile;
@@ -100,6 +114,43 @@ public class ImageDialog extends JDialog {
         JButton browseButton = new JButton("Browse...");
         browseButton.addActionListener(e -> browseForImage());
         contentPanel.add(browseButton, gbc);
+
+        // Width field
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 0;
+        contentPanel.add(new JLabel("Width:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        widthField = new JTextField(10);
+        if (existingWidth != null && !existingWidth.isEmpty()) {
+            widthField.setText(existingWidth);
+        } else {
+            widthField.setForeground(Color.GRAY);
+            widthField.setText("e.g. 50% or 300");
+            widthField.addFocusListener(new java.awt.event.FocusAdapter() {
+                @Override
+                public void focusGained(java.awt.event.FocusEvent e) {
+                    if (widthField.getForeground() == Color.GRAY) {
+                        widthField.setText("");
+                        widthField.setForeground(UIManager.getColor("TextField.foreground"));
+                    }
+                }
+                @Override
+                public void focusLost(java.awt.event.FocusEvent e) {
+                    if (widthField.getText().isEmpty()) {
+                        widthField.setForeground(Color.GRAY);
+                        widthField.setText("e.g. 50% or 300");
+                    }
+                }
+            });
+        }
+        contentPanel.add(widthField, gbc);
 
         add(contentPanel, BorderLayout.CENTER);
 
@@ -179,5 +230,13 @@ public class ImageDialog extends JDialog {
     /** Returns the image path (relative or absolute). */
     public String getImagePath() {
         return imagePath;
+    }
+
+    /** Returns the width value entered by the user, or empty string if blank or placeholder. */
+    public String getImageWidth() {
+        if (widthField.getForeground() == Color.GRAY) {
+            return "";
+        }
+        return widthField.getText().trim();
     }
 }

@@ -57,6 +57,15 @@ $PLISTBUDDY -c "Add :CFBundleDocumentTypes:1:LSTypeIsPackage bool true" "$INFO_P
 $PLISTBUDDY -c "Add :CFBundleDocumentTypes:1:LSItemContentTypes array" "$INFO_PLIST"
 $PLISTBUDDY -c "Add :CFBundleDocumentTypes:1:LSItemContentTypes:0 string org.textbundle.package" "$INFO_PLIST"
 
+# Entry 2: TextPack files (.textpack) using org.textbundle.textpack
+$PLISTBUDDY -c "Add :CFBundleDocumentTypes:2 dict" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :CFBundleDocumentTypes:2:CFBundleTypeIconFile string textbundle_icon.icns" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :CFBundleDocumentTypes:2:CFBundleTypeName string TextPack Document" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :CFBundleDocumentTypes:2:CFBundleTypeRole string Viewer" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :CFBundleDocumentTypes:2:LSHandlerRank string Owner" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :CFBundleDocumentTypes:2:LSItemContentTypes array" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :CFBundleDocumentTypes:2:LSItemContentTypes:0 string org.textbundle.textpack" "$INFO_PLIST"
+
 # --- Add UTImportedTypeDeclarations array ---
 $PLISTBUDDY -c "Delete :UTImportedTypeDeclarations" "$INFO_PLIST" 2>/dev/null || true
 $PLISTBUDDY -c "Add :UTImportedTypeDeclarations array" "$INFO_PLIST"
@@ -85,6 +94,17 @@ $PLISTBUDDY -c "Add :UTImportedTypeDeclarations:1:UTTypeConformsTo:0 string com.
 $PLISTBUDDY -c "Add :UTImportedTypeDeclarations:1:UTTypeTagSpecification dict" "$INFO_PLIST"
 $PLISTBUDDY -c "Add :UTImportedTypeDeclarations:1:UTTypeTagSpecification:public.filename-extension array" "$INFO_PLIST"
 $PLISTBUDDY -c "Add :UTImportedTypeDeclarations:1:UTTypeTagSpecification:public.filename-extension:0 string textbundle" "$INFO_PLIST"
+
+# Entry 2: org.textbundle.textpack (for .textpack files)
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2 dict" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2:UTTypeIdentifier string org.textbundle.textpack" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2:UTTypeDescription string TextPack Document" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2:UTTypeIconFile string textbundle_icon.icns" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2:UTTypeConformsTo array" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2:UTTypeConformsTo:0 string public.data" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2:UTTypeTagSpecification dict" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2:UTTypeTagSpecification:public.filename-extension array" "$INFO_PLIST"
+$PLISTBUDDY -c "Add :UTImportedTypeDeclarations:2:UTTypeTagSpecification:public.filename-extension:0 string textpack" "$INFO_PLIST"
 
 # --- Remove any UTExportedTypeDeclarations (we only import, not export, these UTIs) ---
 $PLISTBUDDY -c "Delete :UTExportedTypeDeclarations" "$INFO_PLIST" 2>/dev/null || true

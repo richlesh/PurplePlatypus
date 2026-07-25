@@ -130,6 +130,12 @@ public class ReplaceDialog extends FindDialog {
         boolean useRegex = regexBox.isSelected();
         String replaceText = replaceField.getText();
 
+        // Process escape sequences if enabled (not applicable in regex mode)
+        if (!useRegex && escapesBox.isSelected()) {
+            searchText = processEscapes(searchText);
+            replaceText = processEscapes(replaceText);
+        }
+
         if (useRegex) {
             try {
                 int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
@@ -194,6 +200,12 @@ public class ReplaceDialog extends FindDialog {
         String content = textArea.getText();
         boolean matchCase = matchCaseBox.isSelected();
         boolean useRegex = regexBox.isSelected();
+
+        // Process escape sequences if enabled (not applicable in regex mode)
+        if (!useRegex && escapesBox.isSelected()) {
+            searchText = processEscapes(searchText);
+            replaceText = processEscapes(replaceText);
+        }
 
         int[] bounds = new int[2];
         getSearchBounds(bounds);

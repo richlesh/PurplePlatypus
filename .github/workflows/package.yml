@@ -175,6 +175,13 @@ jobs:
           description=TextBundle Document
           EOF
 
+          cat > fa-textpack.properties <<EOF
+          mime-type=application/x-textpack
+          extension=textpack
+          icon=${{ matrix.textbundle_icon }}
+          description=TextPack Document
+          EOF
+
       - name: Run jpackage
         shell: bash
         run: |
@@ -197,6 +204,7 @@ jobs:
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
+              --file-associations fa-textpack.properties \
               --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,jdk.crypto.ec,jdk.crypto.cryptoki \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --type app-image
@@ -236,6 +244,7 @@ jobs:
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
+              --file-associations fa-textpack.properties \
               --linux-app-category editors \
               --linux-menu-group "Office;TextEditor;" \
               --linux-package-deps "xdg-utils" \
@@ -268,6 +277,7 @@ jobs:
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
+              --file-associations fa-textpack.properties \
               --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,jdk.crypto.ec,jdk.crypto.cryptoki \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --win-menu \

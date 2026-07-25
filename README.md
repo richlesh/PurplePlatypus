@@ -1,4 +1,4 @@
-# PurplePlatypus 1.1.0
+# ![app_icon_256](src/main/resources/app_icon_256.png){width=100}PurplePlatypus 1.1.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
@@ -13,10 +13,11 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Cross-platform** — Runs on macOS (ARM64), Windows (x64, ARM64), and Linux (x64, ARM64)
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
-- **Toolbar** — Status bar showing the full file path with toggle buttons to show/hide the preview and AI panels
+- **Toolbar** — Status bar showing the full file path with document statistics, toggle buttons to show/hide invisible characters, synchronized scrolling, preview, and AI panels
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
-- **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt`/`.textbundle` files, and save your work
+- **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt`/`.textbundle`/`.textpack` files, and save your work
 - **TextBundle support** — Open and export `.textbundle` packages with images in the `assets/` subfolder; `.textbundle` directories appear as selectable files in the Open dialog on all platforms
+- **TextPack support** — Open and export `.textpack` files (compressed TextBundle archives); Save is disabled for files opened from a TextPack (use Save As or Export instead)
 - **Dirty checking** — Prompts to save unsaved changes when closing a window or quitting the application
 - **Undo/Redo** — Full multi-level undo and redo support
 - **Clipboard** — Cut, Copy, and Paste via the Edit menu
@@ -30,12 +31,17 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Lists** — Convert lines to ordered, unordered, or task lists
 - **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, and Block Math
 - **Print** — Page Setup and Print (⌘/Ctrl+P) using the native system print dialog
-- **Export** — Export to HTML, PDF, TextBundle, RTF, or Plain Text formats
-- **Find** — Search with options for Match Case, Wrap Around, Search Backwards, and Find in Selection (remembers the original selection for repeated searches)
+- **Export** — Export to HTML, PDF, TextBundle, TextPack, RTF, or Plain Text formats
+- **Find** — Search with options for Match Case, Wrap Around, Search Backwards, Find in Selection, and Regular Expression (remembers the original selection for repeated searches)
 - **Find All** — Opens a results window showing matching lines with highlighted text; click a match to jump to it in the editor
 - **Count** — Quickly count the number of matches in the document or selection
 - **Replace** — Find and replace with Replace, Replace and Find, and Replace All operations
-- **Keyboard shortcuts** — ⌘/Ctrl+N (New), ⌘/Ctrl+O (Open), ⌘/Ctrl+W (Close), ⌘/Ctrl+S (Save), ⌘/Ctrl+Shift+S (Save As), ⌘/Ctrl+P (Print), ⌘/Ctrl+Z (Undo), ⌘/Ctrl+Y (Redo), ⌘/Ctrl+X (Cut), ⌘/Ctrl+C (Copy), ⌘/Ctrl+V (Paste), ⌘/Ctrl+F (Find), ⌘/Ctrl+R (Replace), ⌘/Ctrl+B (Bold), ⌘/Ctrl+I (Italic), ⌘/Ctrl+U (Underline), ⌘/Ctrl+L (Link), ⌘/Ctrl+G (Image), ⌘/Ctrl+T (Table)
+- **Escape sequences in Find/Replace** — "Interpret Escapes" option processes `\t`, `\n`, `\r`, `\\`, and `\uXXXX` in find and replace fields
+- **Line ending conversion** — Detect and convert between Unix (`\n`) and Windows (`\r\n`) line endings via the Edit menu; line ending format is preserved on save
+- **Show invisible characters** — Toggle button in the toolbar to reveal spaces (dots), tabs (arrows), and line endings (paragraph marks)
+- **Document statistics** — Live display of line count, word count, and character count in the toolbar, updated as you type
+- **External change detection** — Detects when a file is modified on disk by another program and prompts to reload or keep current changes
+
 - **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins (underline), and YAML front matter
 - **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
 - **Preview fallback** — On platforms where JavaFX WebView is unavailable (e.g. Windows ARM64), the preview gracefully falls back to a Swing-based HTML renderer with reduced functionality
@@ -61,6 +67,7 @@ Configure your LLM provider in Preferences (vendor, model, and API key).
 - **HTML** — Fully styled HTML with CSS, relative image paths preserved
 - **PDF** — Print-to-file via the system's PDF output
 - **TextBundle** — Standard `.textbundle` package with `text.md`, `info.json`, and images copied into `assets/` (preserving subfolder hierarchy)
+- **TextPack** — Compressed `.textpack` file (zipped TextBundle) for easy sharing
 - **RTF** — Rich Text Format with headings, bold, italic, strikethrough, code, lists, and block quotes
 - **Plain Text** — Export markdown content as plain text with formatting stripped
 

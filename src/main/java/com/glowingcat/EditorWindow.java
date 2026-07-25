@@ -49,19 +49,27 @@ public class EditorWindow {
     private JToggleButton previewToggle;
     private JToggleButton aiToggle;
     private JToggleButton syncScrollToggle;
+    private JToggleButton hiddenCharsToggle;
     private boolean previewVisible = true;
     private boolean aiVisible = true;
     private boolean syncScrollEnabled = false;
     private boolean syncScrolling = false;
+    private boolean hiddenCharsVisible = false;
     private int lastPreviewDivider = -1;
     private int lastAiDivider = -1;
     private Preferences preferences;
     private File currentFile;
     private boolean dirty = false;
+    private boolean windowsLineEndings = false;
+    private boolean textPackSource = false;
+    private long lastModifiedOnDisk = 0;
     private long lastOpenTime = 0;
 
     private FindDialog findDialog;
     private ReplaceDialog replaceDialog;
+    private JMenuItem convertLineEndingsItem;
+    private JMenuItem saveItem;
+    private JLabel statsLabel;
 
     public EditorWindow() {
         preferences = Preferences.load();
@@ -76,6 +84,11 @@ public class EditorWindow {
             public void windowOpened(WindowEvent e) {
                 windowCount.incrementAndGet();
                 openInstances.add(EditorWindow.this);
+            }
+
+            @Override
+            public void windowActivated(WindowEvent e) {
+                checkFileChangedOnDisk();
             }
 
             @Override
@@ -178,6 +191,7 @@ public class EditorWindow {
         JMenuItem saveItem = new JMenuItem("Save");
         saveItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, shortcutMask));
         saveItem.addActionListener(e -> saveFile());
+        this.saveItem = saveItem;
 
         JMenuItem saveAsItem = new JMenuItem("Save As...");
         saveAsItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
@@ -213,6 +227,8 @@ public class EditorWindow {
         JMenuItem exportTextBundleItem = new JMenuItem("TextBundle...");
         exportTextBundleItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextBundleItem.addActionListener(e -> exportTextBundle());
+        JMenuItem exportTextPackItem = new JMenuItem("TextPack...");
+        exportTextPackItem.addActionListener(e -> exportTextPack());
         JMenuItem exportRtfItem = new JMenuItem("RTF...");
         exportRtfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportRtfItem.addActionListener(e -> exportRtf());
@@ -222,6 +238,7 @@ public class EditorWindow {
         exportMenu.add(exportHtmlItem);
         exportMenu.add(exportPdfItem);
         exportMenu.add(exportTextBundleItem);
+        exportMenu.add(exportTextPackItem);
         exportMenu.add(exportRtfItem);
         exportMenu.add(exportTextItem);
         fileMenu.add(exportMenu);
@@ -261,6 +278,10 @@ public class EditorWindow {
         editMenu.add(cutItem);
         editMenu.add(copyItem);
         editMenu.add(pasteItem);
+        editMenu.addSeparator();
+        convertLineEndingsItem = new JMenuItem("Convert to Windows Line Endings");
+        convertLineEndingsItem.addActionListener(e -> convertLineEndings());
+        editMenu.add(convertLineEndingsItem);
         menuBar.add(editMenu);
 
         // Search menu
@@ -558,6 +579,35 @@ public class EditorWindow {
         JPanel togglePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         togglePanel.setOpaque(false);
 
+        // Document statistics label
+        statsLabel = new JLabel("L: 0  W: 0  C: 0");
+        statsLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
+        statsLabel.setForeground(Color.GRAY);
+        statsLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8));
+        togglePanel.add(statsLabel);
+
+        // Hidden characters toggle button
+        ImageIcon hiddenCharsIconFull = null;
+        var hiddenCharsUrl = getClass().getClassLoader().getResource("hidden_chars.png");
+        if (hiddenCharsUrl != null) {
+            hiddenCharsIconFull = new ImageIcon(new ImageIcon(hiddenCharsUrl).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
+        }
+        hiddenCharsToggle = new JToggleButton(hiddenCharsIconFull, false);
+        hiddenCharsToggle.setToolTipText("Show/Hide Invisible Characters");
+        hiddenCharsToggle.setFocusPainted(false);
+        hiddenCharsToggle.setBorderPainted(false);
+        hiddenCharsToggle.setContentAreaFilled(false);
+        hiddenCharsToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        hiddenCharsToggle.addActionListener(e -> {
+            hiddenCharsVisible = hiddenCharsToggle.isSelected();
+            hiddenCharsToggle.setBackground(hiddenCharsVisible ? new Color(180, 130, 255) : null);
+            hiddenCharsToggle.setContentAreaFilled(hiddenCharsVisible);
+            hiddenCharsToggle.setOpaque(hiddenCharsVisible);
+            editorPane.setWhitespaceVisible(hiddenCharsVisible);
+            editorPane.setEOLMarkersVisible(hiddenCharsVisible);
+        });
+        togglePanel.add(hiddenCharsToggle);
+
         // Synchronized scrolling toggle button
         ImageIcon syncIconFull = null;
         var syncUrl = getClass().getClassLoader().getResource("sync_scrolling.png");
@@ -718,11 +768,11 @@ public class EditorWindow {
         editorPane.getDocument().addUndoableEditListener(undoManager);
         editorPane.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(DocumentEvent e) { updatePreview(); markDirty(); }
+            public void insertUpdate(DocumentEvent e) { updatePreview(); markDirty(); updateStats(); }
             @Override
-            public void removeUpdate(DocumentEvent e) { updatePreview(); markDirty(); }
+            public void removeUpdate(DocumentEvent e) { updatePreview(); markDirty(); updateStats(); }
             @Override
-            public void changedUpdate(DocumentEvent e) { updatePreview(); markDirty(); }
+            public void changedUpdate(DocumentEvent e) { updatePreview(); markDirty(); updateStats(); }
         });
 
         // Synchronized scrolling: editor scroll drives preview scroll
@@ -857,7 +907,8 @@ public class EditorWindow {
         dialog.setFilenameFilter((dir, name) -> {
             String lower = name.toLowerCase();
             return lower.endsWith(".md") || lower.endsWith(".markdown")
-                    || lower.endsWith(".txt") || lower.endsWith(".textbundle");
+                    || lower.endsWith(".txt") || lower.endsWith(".textbundle")
+                    || lower.endsWith(".textpack");
         });
         dialog.setVisible(true);
         File[] files = dialog.getFiles();
@@ -882,6 +933,34 @@ public class EditorWindow {
                             JOptionPane.showMessageDialog(frame, "Error reading TextBundle: " + ex.getMessage(),
                                     "Error", JOptionPane.ERROR_MESSAGE);
                         }
+                    }
+                } else if (file.isFile() && file.getName().toLowerCase().endsWith(".textpack")) {
+                    // Handle .textpack (zipped TextBundle)
+                    try {
+                        java.nio.file.Path tempDir = Files.createTempDirectory("textpack_");
+                        unzipTextPack(file.toPath(), tempDir);
+                        File textMd = tempDir.resolve("text.md").toFile();
+                        if (!textMd.exists()) textMd = tempDir.resolve("text.markdown").toFile();
+                        if (textMd.exists()) {
+                            String content = new String(Files.readAllBytes(textMd.toPath()), StandardCharsets.UTF_8);
+                            if (first) {
+                                openFileInTarget(textMd, content);
+                                textPackSource = true;
+                                saveItem.setEnabled(false);
+                                first = false;
+                            } else {
+                                EditorWindow newWindow = new EditorWindow();
+                                newWindow.loadFileContent(textMd, content);
+                                newWindow.textPackSource = true;
+                                newWindow.saveItem.setEnabled(false);
+                            }
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "TextPack does not contain a text.md file.",
+                                    "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } catch (IOException ex) {
+                        JOptionPane.showMessageDialog(frame, "Error reading TextPack: " + ex.getMessage(),
+                                "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 } else if (file.isFile()) {
                     try {
@@ -917,15 +996,25 @@ public class EditorWindow {
 
     public void loadFileContent(File file, String content) {
         currentFile = file;
+        windowsLineEndings = content.contains("\r\n");
+        lastModifiedOnDisk = file.lastModified();
         previewPanel.forceFullReload();
         editorPane.setText(content);
         editorPane.setCaretPosition(0);
         undoManager.discardAllEdits();
         dirty = false;
         updateTitle();
+        updateLineEndingsMenuItem();
+        updateStats();
     }
 
     private void saveFile() {
+        if (textPackSource) {
+            JOptionPane.showMessageDialog(frame,
+                    "This file was opened from a TextPack archive.\nUse Save As or Export to save changes.",
+                    "Save Disabled", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
         if (currentFile == null) saveFileAs();
         else writeFile(currentFile);
     }
@@ -945,18 +1034,98 @@ public class EditorWindow {
                 currentFile = new File(currentFile.getAbsolutePath() + ".md");
             }
             writeFile(currentFile);
+            // Clear textpack restriction since we now have a real file
+            if (textPackSource) {
+                textPackSource = false;
+                saveItem.setEnabled(true);
+            }
             updateTitle();
         }
     }
 
     private void writeFile(File file) {
         try {
-            Files.write(file.toPath(), editorPane.getText().getBytes(StandardCharsets.UTF_8));
+            String content = editorPane.getText();
+            if (windowsLineEndings) {
+                // JTextArea normalizes to \n; convert back to \r\n for Windows format
+                content = content.replace("\n", "\r\n");
+            }
+            Files.write(file.toPath(), content.getBytes(StandardCharsets.UTF_8));
+            lastModifiedOnDisk = file.lastModified();
             dirty = false;
             updateTitle();
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(frame, "Error saving file: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Converts the document's line endings between Windows (\r\n) and Unix (\n) format.
+     * Toggles the internal flag and marks the document as dirty since the on-disk
+     * representation will change on next save.
+     */
+    private void convertLineEndings() {
+        windowsLineEndings = !windowsLineEndings;
+        dirty = true;
+        updateTitle();
+        updateLineEndingsMenuItem();
+    }
+
+    /**
+     * Updates the Convert Line Endings menu item text to reflect the current format.
+     * Shows "Convert to Windows Line Endings" when the document uses Unix format,
+     * and "Convert to Unix Line Endings" when it uses Windows format.
+     */
+    private void updateLineEndingsMenuItem() {
+        if (windowsLineEndings) {
+            convertLineEndingsItem.setText("Convert to Unix Line Endings");
+        } else {
+            convertLineEndingsItem.setText("Convert to Windows Line Endings");
+        }
+    }
+
+    /**
+     * Checks whether the current file has been modified on disk by another program
+     * since the last load or save. If a change is detected, prompts the user to
+     * either reload the file (losing in-memory changes) or keep the current content.
+     */
+    private void checkFileChangedOnDisk() {
+        if (currentFile == null || !currentFile.exists()) return;
+
+        long diskModified = currentFile.lastModified();
+        if (diskModified == 0 || diskModified == lastModifiedOnDisk) return;
+
+        Object[] options = {"Reload", "Keep Changes"};
+        int choice = JOptionPane.showOptionDialog(frame,
+                "The file \"" + currentFile.getName() + "\" has been modified by another program.\n\n"
+                        + "Do you want to reload it? Any unsaved changes will be lost.",
+                "File Changed on Disk",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE,
+                null,
+                options,
+                options[1]);
+
+        if (choice == 0) { // Reload
+            try {
+                String content = new String(Files.readAllBytes(currentFile.toPath()), StandardCharsets.UTF_8);
+                windowsLineEndings = content.contains("\r\n");
+                lastModifiedOnDisk = currentFile.lastModified();
+                previewPanel.forceFullReload();
+                editorPane.setText(content);
+                editorPane.setCaretPosition(0);
+                undoManager.discardAllEdits();
+                dirty = false;
+                updateTitle();
+                updateLineEndingsMenuItem();
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error reloading file: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            // User chose to keep current changes; update timestamp to avoid repeated prompts
+            lastModifiedOnDisk = diskModified;
         }
     }
 
@@ -1140,6 +1309,177 @@ public class EditorWindow {
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    /**
+     * Exports the current document as a TextPack (.textpack) file, which is a
+     * zipped TextBundle containing text.md, info.json, and an assets/ folder.
+     */
+    private void exportTextPack() {
+        FileDialog dialog = new FileDialog(frame, "Export TextPack", FileDialog.SAVE);
+        if (currentFile != null) {
+            dialog.setDirectory(currentFile.getParent());
+            String name = currentFile.getName();
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) name = name.substring(0, dot);
+            dialog.setFile(name + ".textpack");
+        } else {
+            dialog.setFile("untitled.textpack");
+        }
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File packFile = new File(dialog.getDirectory(), dialog.getFile());
+            if (!packFile.getName().contains(".")) {
+                packFile = new File(packFile.getAbsolutePath() + ".textpack");
+            }
+            try {
+                // Create a temporary TextBundle directory, then zip it
+                java.nio.file.Path tempDir = Files.createTempDirectory("textpack_export_");
+                java.nio.file.Path bundleDir = tempDir;
+
+                // Write info.json
+                String info = "{\n  \"version\": 2,\n  \"type\": \"net.daringfireball.markdown\",\n"
+                        + "  \"transient\": false,\n  \"creatorIdentifier\": \"com.glowingcat.purpleplatypus\"\n}";
+                Files.writeString(bundleDir.resolve("info.json"), info, StandardCharsets.UTF_8);
+
+                // Process markdown: copy images into assets/ and rewrite URLs
+                String markdown = editorPane.getText();
+                java.util.regex.Pattern imgPattern = java.util.regex.Pattern.compile(
+                        "(!\\[[^\\]]*\\]\\()([^)]+)(\\))");
+                java.util.regex.Matcher matcher = imgPattern.matcher(markdown);
+                StringBuilder mdSb = new StringBuilder();
+                java.nio.file.Path assetsDir = bundleDir.resolve("assets");
+                boolean assetsCreated = false;
+
+                while (matcher.find()) {
+                    String imgPath = matcher.group(2).replace("%20", " ");
+                    if (imgPath.startsWith("http://") || imgPath.startsWith("https://")) {
+                        matcher.appendReplacement(mdSb, java.util.regex.Matcher.quoteReplacement(matcher.group(0)));
+                        continue;
+                    }
+                    File srcFile = null;
+                    if (currentFile != null && currentFile.getParentFile() != null) {
+                        srcFile = new File(currentFile.getParentFile(), imgPath);
+                        if (!srcFile.exists() && currentFile.getParentFile().getName().toLowerCase().endsWith(".textbundle")) {
+                            File inAssets = new File(currentFile.getParentFile(), "assets/" + imgPath);
+                            if (inAssets.exists()) srcFile = inAssets;
+                        }
+                    }
+                    if (srcFile != null && srcFile.exists()) {
+                        if (!assetsCreated) {
+                            Files.createDirectories(assetsDir);
+                            assetsCreated = true;
+                        }
+                        String relPath = imgPath;
+                        if (relPath.startsWith("assets/")) {
+                            relPath = relPath.substring("assets/".length());
+                        }
+                        java.nio.file.Path relativePath = java.nio.file.Path.of(relPath);
+                        java.nio.file.Path destPath = assetsDir.resolve(relativePath);
+                        Files.createDirectories(destPath.getParent());
+                        Files.copy(srcFile.toPath(), destPath,
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        String newUrl = "assets/" + relativePath.toString().replace(" ", "%20");
+                        matcher.appendReplacement(mdSb,
+                                java.util.regex.Matcher.quoteReplacement(matcher.group(1) + newUrl + matcher.group(3)));
+                    } else {
+                        matcher.appendReplacement(mdSb, java.util.regex.Matcher.quoteReplacement(matcher.group(0)));
+                    }
+                }
+                matcher.appendTail(mdSb);
+
+                // Write text.md
+                Files.writeString(bundleDir.resolve("text.md"), mdSb.toString(), StandardCharsets.UTF_8);
+
+                // Zip everything into the .textpack file
+                zipDirectory(bundleDir, packFile.toPath());
+
+                // Clean up temp directory
+                deleteRecursive(tempDir);
+
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error exporting TextPack: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Unzips a TextPack (.textpack) file into the specified target directory.
+     *
+     * @param zipFile   the .textpack file to unzip
+     * @param targetDir the directory to extract into
+     * @throws IOException if an I/O error occurs
+     */
+    private void unzipTextPack(java.nio.file.Path zipFile, java.nio.file.Path targetDir) throws IOException {
+        try (java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(
+                Files.newInputStream(zipFile))) {
+            java.util.zip.ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                java.nio.file.Path destPath = targetDir.resolve(entry.getName()).normalize();
+                // Guard against zip slip
+                if (!destPath.startsWith(targetDir)) {
+                    throw new IOException("Zip entry outside target directory: " + entry.getName());
+                }
+                if (entry.isDirectory()) {
+                    Files.createDirectories(destPath);
+                } else {
+                    Files.createDirectories(destPath.getParent());
+                    Files.copy(zis, destPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+                zis.closeEntry();
+            }
+        }
+    }
+
+    /**
+     * Zips a directory's contents into a ZIP file (for TextPack export).
+     *
+     * @param sourceDir the directory to zip
+     * @param zipFile   the output ZIP file path
+     * @throws IOException if an I/O error occurs
+     */
+    private void zipDirectory(java.nio.file.Path sourceDir, java.nio.file.Path zipFile) throws IOException {
+        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(
+                Files.newOutputStream(zipFile))) {
+            Files.walk(sourceDir)
+                    .filter(path -> !path.equals(sourceDir))
+                    .forEach(path -> {
+                        try {
+                            String entryName = sourceDir.relativize(path).toString();
+                            if (Files.isDirectory(path)) {
+                                zos.putNextEntry(new java.util.zip.ZipEntry(entryName + "/"));
+                                zos.closeEntry();
+                            } else {
+                                zos.putNextEntry(new java.util.zip.ZipEntry(entryName));
+                                Files.copy(path, zos);
+                                zos.closeEntry();
+                            }
+                        } catch (IOException e) {
+                            throw new java.io.UncheckedIOException(e);
+                        }
+                    });
+        } catch (java.io.UncheckedIOException e) {
+            throw e.getCause();
+        }
+    }
+
+    /**
+     * Recursively deletes a directory and all its contents.
+     *
+     * @param dir the directory to delete
+     * @throws IOException if an I/O error occurs
+     */
+    private void deleteRecursive(java.nio.file.Path dir) throws IOException {
+        Files.walk(dir)
+                .sorted(java.util.Comparator.reverseOrder())
+                .forEach(path -> {
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (IOException e) {
+                        // Best effort cleanup
+                    }
+                });
     }
 
     private void exportRtf() {
@@ -1429,6 +1769,25 @@ public class EditorWindow {
         }
     }
 
+    /**
+     * Updates the stats label in the toolbar with the current document's
+     * line count, word count, and character count.
+     */
+    private void updateStats() {
+        if (statsLabel == null) return;
+        String text = editorPane.getText();
+        int lines = editorPane.getLineCount();
+        int chars = text.length();
+        int words = 0;
+        if (!text.isEmpty()) {
+            String trimmed = text.trim();
+            if (!trimmed.isEmpty()) {
+                words = trimmed.split("\\s+").length;
+            }
+        }
+        statsLabel.setText("L: " + lines + "  W: " + words + "  C: " + chars);
+    }
+
     public boolean confirmClose() {
         if (!dirty) return true;
         String filename = currentFile != null ? currentFile.getName() : "Untitled";
@@ -1660,6 +2019,7 @@ public class EditorWindow {
 
         String altText = selectedText != null ? selectedText : "";
         String imgPath = "";
+        String imgWidth = "";
         int replaceStart = selStart, replaceEnd = selEnd;
 
         int searchFrom = Math.max(0, selStart - 200);
@@ -1676,10 +2036,26 @@ public class EditorWindow {
                 int pc = region.indexOf(')', bc + 2);
                 if (pc >= 0) {
                     int absStart = searchFrom + bb, absEnd = searchFrom + pc + 1;
-                    if (selStart <= absEnd && selEnd >= absStart) {
+                    // Check for {width=...} attribute after the closing paren
+                    int attrEnd = absEnd;
+                    int regionAttrStart = pc + 1;
+                    if (regionAttrStart < region.length() && region.charAt(regionAttrStart) == '{') {
+                        int braceClose = region.indexOf('}', regionAttrStart);
+                        if (braceClose >= 0) {
+                            String attrs = region.substring(regionAttrStart + 1, braceClose);
+                            // Parse width=... from attributes
+                            for (String attr : attrs.split("\\s+")) {
+                                if (attr.startsWith("width=")) {
+                                    imgWidth = attr.substring(6);
+                                }
+                            }
+                            attrEnd = searchFrom + braceClose + 1;
+                        }
+                    }
+                    if (selStart <= attrEnd && selEnd >= absStart) {
                         altText = region.substring(bb + 2, bc);
                         imgPath = region.substring(bc + 2, pc);
-                        replaceStart = absStart; replaceEnd = absEnd;
+                        replaceStart = absStart; replaceEnd = attrEnd;
                         break;
                     }
                 }
@@ -1687,12 +2063,17 @@ public class EditorWindow {
             idx = bb + 1;
         }
 
-        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, currentFile);
+        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, imgWidth, currentFile);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
+            String markdown = "![" + dialog.getAltText() + "](" + dialog.getImagePath() + ")";
+            String width = dialog.getImageWidth();
+            if (!width.isEmpty()) {
+                markdown += "{width=" + width + "}";
+            }
             editorPane.setSelectionStart(replaceStart);
             editorPane.setSelectionEnd(replaceEnd);
-            editorPane.replaceSelection("![" + dialog.getAltText() + "](" + dialog.getImagePath() + ")");
+            editorPane.replaceSelection(markdown);
         }
     }
 
@@ -1790,6 +2171,7 @@ public class EditorWindow {
     public static void openFileInWindow(File file) {
         try {
             File actualFile = file;
+            boolean isTextPack = false;
             // If it's a .textbundle directory, open text.md inside it
             if (file.isDirectory() && file.getName().toLowerCase().endsWith(".textbundle")) {
                 actualFile = new File(file, "text.md");
@@ -1798,18 +2180,49 @@ public class EditorWindow {
                     actualFile = new File(file, "text.markdown");
                 }
                 if (!actualFile.exists()) return;
+            } else if (file.isFile() && file.getName().toLowerCase().endsWith(".textpack")) {
+                // Unzip TextPack to temp directory
+                java.nio.file.Path tempDir = Files.createTempDirectory("textpack_");
+                try (java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(
+                        Files.newInputStream(file.toPath()))) {
+                    java.util.zip.ZipEntry entry;
+                    while ((entry = zis.getNextEntry()) != null) {
+                        java.nio.file.Path destPath = tempDir.resolve(entry.getName()).normalize();
+                        if (!destPath.startsWith(tempDir)) continue; // zip slip guard
+                        if (entry.isDirectory()) {
+                            Files.createDirectories(destPath);
+                        } else {
+                            Files.createDirectories(destPath.getParent());
+                            Files.copy(zis, destPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        }
+                        zis.closeEntry();
+                    }
+                }
+                actualFile = tempDir.resolve("text.md").toFile();
+                if (!actualFile.exists()) actualFile = tempDir.resolve("text.markdown").toFile();
+                if (!actualFile.exists()) return;
+                isTextPack = true;
             }
             String content = new String(Files.readAllBytes(actualFile.toPath()), StandardCharsets.UTF_8);
             final File fileToOpen = actualFile;
+            final boolean textPack = isTextPack;
             // Always open in a new window unless an empty untitled window exists
             for (EditorWindow instance : openInstances) {
                 if (!instance.dirty && instance.currentFile == null) {
                     instance.loadFileContent(fileToOpen, content);
+                    if (textPack) {
+                        instance.textPackSource = true;
+                        instance.saveItem.setEnabled(false);
+                    }
                     return;
                 }
             }
             EditorWindow newWindow = new EditorWindow();
             newWindow.loadFileContent(fileToOpen, content);
+            if (textPack) {
+                newWindow.textPackSource = true;
+                newWindow.saveItem.setEnabled(false);
+            }
         } catch (IOException ex) {
             // Silently fail
         }

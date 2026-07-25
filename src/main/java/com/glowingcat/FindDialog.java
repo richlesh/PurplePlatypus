@@ -66,6 +66,9 @@ public class FindDialog extends JDialog {
     /** Checkbox to enable regular expression matching. */
     protected JCheckBox regexBox;
 
+    /** Checkbox to interpret escape sequences (\t, \n, \r, \\, &#92;uXXXX) in find/replace fields. */
+    protected JCheckBox escapesBox;
+
     /** Start offset of the remembered selection for "Find in selection". */
     protected int selectionStart = -1;
 
@@ -148,6 +151,7 @@ public class FindDialog extends JDialog {
         wrapAroundBox = new JCheckBox("Wrap Around");
         wrapAroundBox.setSelected(true);
         regexBox = new JCheckBox("Regular Expression");
+        escapesBox = new JCheckBox("Interpret Escapes");
 
         // When "Find in selection" is checked, capture the current selection
         findInSelectionBox.addActionListener(e -> {
@@ -174,6 +178,7 @@ public class FindDialog extends JDialog {
         optionsPanel.add(matchCaseBox);
         optionsPanel.add(wrapAroundBox);
         optionsPanel.add(regexBox);
+        optionsPanel.add(escapesBox);
         return optionsPanel;
     }
 
@@ -245,11 +250,16 @@ public class FindDialog extends JDialog {
         String searchText = searchField.getText();
         if (searchText.isEmpty()) return;
 
+        // Process escape sequences if enabled (not applicable in regex mode)
+        boolean useRegex = regexBox.isSelected();
+        if (!useRegex && escapesBox.isSelected()) {
+            searchText = processEscapes(searchText);
+        }
+
         String content = textArea.getText();
         boolean matchCase = matchCaseBox.isSelected();
         boolean backwards = searchBackwardsBox.isSelected();
         boolean wrapAround = wrapAroundBox.isSelected();
-        boolean useRegex = regexBox.isSelected();
 
         int[] bounds = new int[2];
         getSearchBounds(bounds);
@@ -384,6 +394,11 @@ public class FindDialog extends JDialog {
         String content = textArea.getText();
         boolean matchCase = matchCaseBox.isSelected();
         boolean useRegex = regexBox.isSelected();
+
+        // Process escape sequences if enabled (not applicable in regex mode)
+        if (!useRegex && escapesBox.isSelected()) {
+            searchText = processEscapes(searchText);
+        }
 
         int[] bounds = new int[2];
         getSearchBounds(bounds);
@@ -580,6 +595,11 @@ public class FindDialog extends JDialog {
         boolean matchCase = matchCaseBox.isSelected();
         boolean useRegex = regexBox.isSelected();
 
+        // Process escape sequences if enabled (not applicable in regex mode)
+        if (!useRegex && escapesBox.isSelected()) {
+            searchText = processEscapes(searchText);
+        }
+
         int[] bounds = new int[2];
         getSearchBounds(bounds);
         int regionStart = bounds[0];
@@ -616,5 +636,54 @@ public class FindDialog extends JDialog {
         JOptionPane.showMessageDialog(this,
                 count + " match" + (count != 1 ? "es" : "") + " found.",
                 "Count", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Processes escape sequences in the given string, replacing recognized
+     * sequences with their corresponding characters.
+     * <p>
+     * Supported escapes:
+     * <ul>
+     *   <li>{@code \t} — tab</li>
+     *   <li>{@code \n} — newline (line feed)</li>
+     *   <li>{@code \r} — carriage return</li>
+     *   <li>{@code \\} — literal backslash</li>
+     *   <li>{@code \}uXXXX — Unicode code point (four hex digits)</li>
+     * </ul>
+     * Unrecognized escape sequences are left as literal text (backslash preserved).
+     *
+     * @param input the string potentially containing escape sequences
+     * @return the string with recognized escapes replaced by their character equivalents
+     */
+    protected static String processEscapes(String input) {
+        StringBuilder sb = new StringBuilder(input.length());
+        for (int i = 0; i < input.length(); i++) {
+            if (input.charAt(i) == '\\' && i + 1 < input.length()) {
+                char next = input.charAt(i + 1);
+                switch (next) {
+                    case 't' -> { sb.append('\t'); i++; }
+                    case 'n' -> { sb.append('\n'); i++; }
+                    case 'r' -> { sb.append('\r'); i++; }
+                    case '\\' -> { sb.append('\\'); i++; }
+                    case 'u' -> {
+                        if (i + 5 < input.length()) {
+                            String hex = input.substring(i + 2, i + 6);
+                            try {
+                                sb.append((char) Integer.parseInt(hex, 16));
+                                i += 5;
+                            } catch (NumberFormatException e) {
+                                sb.append('\\');
+                            }
+                        } else {
+                            sb.append('\\');
+                        }
+                    }
+                    default -> sb.append('\\');
+                }
+            } else {
+                sb.append(input.charAt(i));
+            }
+        }
+        return sb.toString();
     }
 }

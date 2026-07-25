@@ -30,6 +30,7 @@ public class EditorPanel extends JPanel {
         textArea.setDragEnabled(false);
         textArea.setCodeFoldingEnabled(false);
         textArea.setAntiAliasingEnabled(true);
+        textArea.setTokenPainterFactory(new CustomTokenPainterFactory());
 
         scrollPane = new RTextScrollPane(textArea);
         scrollPane.setLineNumbersEnabled(true);
