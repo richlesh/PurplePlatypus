@@ -185,6 +185,10 @@ jobs:
       - name: Run jpackage
         shell: bash
         run: |
+          # Include demo.textpack in lib for Windows installer
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp demo.textpack lib/
+          fi
           # Ensure WiX is on PATH for Windows builds
           if [ -d "$GITHUB_WORKSPACE/wix" ]; then
             export PATH="$GITHUB_WORKSPACE/wix:$PATH"
@@ -232,6 +236,9 @@ jobs:
             # (unavailable on Ubuntu 24.04 ARM64; the JFX runtime doesn't need it from the system)
             find PurplePlatypus -name "libjpeg*" -delete
 
+            # Include demo.textpack in the app image
+            cp demo.textpack PurplePlatypus/
+
             # Package from the app-image
             jpackage \
               --app-image PurplePlatypus \
@@ -259,6 +266,22 @@ jobs:
                 TMPDIR=$(mktemp -d)
                 dpkg-deb -R "$DEB_FILE" "$TMPDIR"
                 sed -i 's/^Depends:.*/Depends: xdg-utils/' "$TMPDIR/DEBIAN/control"
+                # Add postinst script to copy demo.textpack to user Desktop
+                cat > "$TMPDIR/DEBIAN/postinst" <<'POSTINST'
+          #!/bin/bash
+          # Copy demo.textpack to the Desktop of the user who initiated the install
+          REAL_USER="${SUDO_USER:-$USER}"
+          if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
+            USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+            DESKTOP="$USER_HOME/Desktop"
+            if [ -d "$DESKTOP" ]; then
+              cp /opt/purpleplatypus/demo.textpack "$DESKTOP/"
+              chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/demo.textpack"
+            fi
+          fi
+          exit 0
+          POSTINST
+                chmod 755 "$TMPDIR/DEBIAN/postinst"
                 dpkg-deb -b "$TMPDIR" "$DEB_FILE"
                 rm -rf "$TMPDIR"
               fi
@@ -333,6 +356,7 @@ jobs:
           cp -R PurplePlatypus.app "$DMG_DIR/"
           ln -s /Applications "$DMG_DIR/Applications"
           cp src/main/resources/app_icon.icns "$DMG_DIR/.VolumeIcon.icns"
+          cp demo.textpack "$DMG_DIR/"
 
           hdiutil create -volname PurplePlatypus -srcfolder "$DMG_DIR" -ov -format UDRW /tmp/purpleplatypus-rw.dmg
           hdiutil attach /tmp/purpleplatypus-rw.dmg -mountpoint /tmp/dmg-vol

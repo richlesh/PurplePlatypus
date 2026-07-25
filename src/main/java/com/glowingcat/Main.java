@@ -16,6 +16,10 @@ import javafx.embed.swing.JFXPanel;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -88,6 +92,9 @@ public class Main {
 
         // Open file from command-line argument, or create empty window
         SwingUtilities.invokeLater(() -> {
+            // Copy demo.textpack to Desktop on first run (Windows/Linux installers)
+            copyDemoFileToDesktop();
+
             // Show splash screen if not licensed
             Preferences prefs = Preferences.load();
             if (!LicenseDialog.isLicensed(prefs)) {
@@ -106,5 +113,36 @@ public class Main {
                 new EditorWindow();
             }
         });
+    }
+
+    /**
+     * Copies demo.textpack to the user's Desktop on first run, if the file exists
+     * in the application's install directory and hasn't already been copied.
+     * Used by Windows and Linux installers to place the demo file on the Desktop.
+     */
+    private static void copyDemoFileToDesktop() {
+        try {
+            // Determine the application install directory
+            Path appDir = Path.of(System.getProperty("user.dir"));
+
+            // On packaged installs, the app dir contains demo.textpack
+            // Also check common Linux install location
+            Path demoSource = appDir.resolve("demo.textpack");
+            if (!Files.exists(demoSource)) {
+                demoSource = Path.of("/opt/purpleplatypus/demo.textpack");
+            }
+            if (!Files.exists(demoSource)) return;
+
+            // Determine Desktop path
+            Path desktop = Path.of(System.getProperty("user.home"), "Desktop");
+            if (!Files.isDirectory(desktop)) return;
+
+            Path demoDest = desktop.resolve("demo.textpack");
+            if (Files.exists(demoDest)) return; // Already copied
+
+            Files.copy(demoSource, demoDest, StandardCopyOption.COPY_ATTRIBUTES);
+        } catch (IOException | SecurityException e) {
+            // Best effort — don't disrupt app launch
+        }
     }
 }
