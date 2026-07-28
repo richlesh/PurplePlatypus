@@ -1,0 +1,301 @@
+<html><head><meta charset="utf-8"><style>body { font-family: 'Calibri', sans-serif; font-size: 16pt; padding: 10px; line-height: 1.6; overflow-x: hidden; }h1, h2, h3 { color: #333; }code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: 'JetBrains Mono NL', monospace; font-size: 14pt; }pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; font-family: 'JetBrains Mono NL', monospace; font-size: 14pt; line-height: 1.4; }pre code { background: none; padding: 0; border-radius: 0; }blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }table { border-collapse: collapse; margin: 12px auto; }th, td { border: 1px solid #ddd; padding: 6px 12px; }td[align=left], th[align=left] { text-align: left; }td[align=center], th[align=center] { text-align: center; }td[align=right], th[align=right] { text-align: right; }th { background-color: #f0f0f0; font-weight: bold; }tr:nth-child(even) { background-color: #f9f9f9; }img { max-width: 75%; display: block; margin: 12px auto; }a { color: #0366d6; }li { margin: 0; padding: 0; }li p { margin: 0; display: inline; }ul, ol { padding-left: 24px; }input[type=checkbox] { margin-right: 6px; vertical-align: middle; }li:has(> input[type=checkbox]) { list-style-type: none; }mjx-container { overflow: visible !important; display: inline-block; vertical-align: middle; }mjx-container[display=true] { display: block; text-align: center; margin: 1em 0 !important; }mjx-container svg { overflow: visible; }</style><script>MathJax = {  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },  svg: { fontCache: 'global' }};</script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script></head><body><h1 id="markdown-feature-demo">Markdown Feature Demo</h1>
+<p>Welcome to a comprehensive demonstration of <strong>Markdown</strong> features supported by PurplePlatypus.</p>
+<hr />
+<h2 id="1-headings">1. Headings</h2>
+<h1 id="h1-heading">H1 Heading</h1>
+<h2 id="h2-heading">H2 Heading</h2>
+<h3 id="h3-heading">H3 Heading</h3>
+<h4 id="h4-heading">H4 Heading</h4>
+<h5 id="h5-heading">H5 Heading</h5>
+<h6 id="h6-heading">H6 Heading</h6>
+<hr />
+<h2 id="2-text-formatting">2. Text Formatting</h2>
+<ul>
+<li><strong>Bold text</strong> using double asterisks</li>
+<li><em>Italic text</em> using single asterisks</li>
+<li><em><strong>Bold and italic</strong></em> combined</li>
+<li><del>Strikethrough text</del> using tildes</li>
+<li><ins>Underlined text</ins> using double plus</li>
+<li><code>Inline code</code> using backticks</li>
+<li>Regular text with a line break</li>
+</ul>
+<hr />
+<h2 id="3-lists">3. Lists</h2>
+<h3 id="unordered-list">Unordered List</h3>
+<ul>
+<li>First item</li>
+<li>Second item
+<ul>
+<li>Nested item</li>
+<li>Another nested item
+<ul>
+<li>Deeply nested item</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Third item</li>
+</ul>
+<h3 id="ordered-list">Ordered List</h3>
+<ol>
+<li>First step</li>
+<li>Second step
+<ol>
+<li>Sub-step A</li>
+<li>Sub-step B</li>
+</ol>
+</li>
+<li>Third step</li>
+</ol>
+<h3 id="task-list">Task List</h3>
+<ul>
+<li><input type="checkbox" disabled="" checked=""> Write the introduction</li>
+<li><input type="checkbox" disabled="" checked=""> Add examples</li>
+<li><input type="checkbox" disabled=""> Review the document</li>
+<li><input type="checkbox" disabled=""> Publish it</li>
+</ul>
+<hr />
+<h2 id="4-links-and-images">4. Links and Images</h2>
+<p>Visit <a href="https://github.com">PurplePlatypus on GitHub</a> for more info.</p>
+<p>You can also use reference-style links like <a href="#6-code-blocks">this one</a> to headings.</p>
+<p>You can also use reference-style links like <a href="#my-target">this one</a> to arbitrary named anchor using HTML.</p>
+<p><img src="src/main/resources/app_icon_256.png" alt="Placeholder Image" /></p>
+<p><a id="my-target"></a><a href="https://example.com">https://example.com</a> &quot;Example Website&quot;</p>
+<hr />
+<h2 id="5-blockquotes">5. Blockquotes</h2>
+<blockquote>
+<p>This is a blockquote.</p>
+<p>It can span multiple lines and paragraphs.</p>
+<blockquote>
+<p>Nested blockquotes are also supported.</p>
+</blockquote>
+<p>— <em>Someone Famous</em></p>
+</blockquote>
+<hr />
+<h2 id="6-code-blocks">6. Code Blocks</h2>
+<p>Inline: use <code>printf()</code> to output text.</p>
+<h3 id="fenced-code-block-with-syntax-highlighting">Fenced code block with syntax highlighting</h3>
+<pre><code class="language-python">def greet(name):
+    &quot;&quot;&quot;Say hello to someone.&quot;&quot;&quot;
+    print(f&quot;Hello, {name}!&quot;)
+</code></pre>
+<hr />
+<h2 id="7-tables">7. Tables</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th align="center">Supported</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Headings</td>
+<td align="center">✅</td>
+<td>Six levels (H1–H6)</td>
+</tr>
+<tr>
+<td>Bold / Italic</td>
+<td align="center">✅</td>
+<td>Standard markdown syntax</td>
+</tr>
+<tr>
+<td>Tables</td>
+<td align="center">✅</td>
+<td>GitHub Flavored Markdown</td>
+</tr>
+<tr>
+<td>Math</td>
+<td align="center">✅</td>
+<td>Inline and block</td>
+</tr>
+<tr>
+<td>Task lists</td>
+<td align="center">✅</td>
+<td>Interactive checkboxes</td>
+</tr>
+</tbody>
+</table>
+<p>Aligned columns</p>
+<table>
+<thead>
+<tr>
+<th align="left">Left Aligned</th>
+<th align="center">Center Aligned</th>
+<th align="right">Right Aligned</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Apples</td>
+<td align="center">Red</td>
+<td align="right">1.50</td>
+</tr>
+<tr>
+<td align="left">Bananas</td>
+<td align="center">Yellow</td>
+<td align="right">0.75</td>
+</tr>
+<tr>
+<td align="left">Cherries</td>
+<td align="center">Dark</td>
+<td align="right">3.20</td>
+</tr>
+</tbody>
+</table>
+<p>Cells can also contain <strong>formatting</strong>, <code>code</code>, and <a href="https://example.com">links</a>:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Syntax</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bold</td>
+<td><code>**text**</code></td>
+<td><strong>text</strong></td>
+</tr>
+<tr>
+<td>Italic</td>
+<td><code>*text*</code></td>
+<td><em>text</em></td>
+</tr>
+<tr>
+<td>Code</td>
+<td><code>`code`</code></td>
+<td><code>code</code></td>
+</tr>
+<tr>
+<td>Link</td>
+<td><code>[label](url)</code></td>
+<td><a href="https://example.com">label</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-images">8. Images</h2>
+<p>Image Support</p>
+<p><img src="src/main/resources/app_icon_256.png" alt="Purple Platypus" /></p>
+<p>Image Style Attributes</p>
+<p><img src="src/main/resources/app_icon_256.png" alt="Purple Platypus" width="25%" /></p>
+<h2 id="purple-platypus"><img src="src/main/resources/app_icon_256.png" alt="Purple Platypus" width="100" /></h2>
+<h2 id="9-math-notation-latex">9. Math Notation (LaTeX)</h2>
+<p>You can write inline math using single dollar signs, like $E = mc^2$ or the golden ratio $\varphi = \frac{1 + \sqrt{5}}{2}$.</p>
+<p>For larger expressions, use block math with double dollar signs:</p>
+<p>$$
+\int_{a}^{b} f(x),dx = F(b) - F(a)
+$$</p>
+<h3 id="common-examples">Common Examples</h3>
+<p>The quadratic formula:</p>
+<p>$$
+x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+$$</p>
+<p>Euler's identity:</p>
+<p>$$
+e^{i\pi} + 1 = 0
+$$</p>
+<p>A summation:</p>
+<p>$$
+\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
+$$</p>
+<p>Greek letters and subscripts can be mixed inline too, such as $\alpha_1, \beta_2, \gamma_3$ or a limit $\lim_{x \to 0} \frac{\sin x}{x} = 1$.</p>
+<hr />
+<h2 id="10-footnotes">10. Footnotes</h2>
+<p>This is a line with a footnote<sup class="footnote-ref"><a href="#fn-1" id="fnref-1" data-footnote-ref>1</a></sup></p>
+<hr />
+<h2 id="11-horizontal-rules">11. Horizontal Rules</h2>
+<p>Use three or more dashes, asterisks, or underscores:</p>
+<hr />
+<h2 id="12-escaping-characters">12. Escaping Characters</h2>
+<p>Use a backslash to escape special characters: *, `, #.</p>
+<hr />
+<h2 id="13-html-in-markdown">13. HTML in Markdown</h2>
+<p>You can embed <u>HTML tags</u> directly, like <sub>subscript</sub> and <sup>superscript</sup></p>
+<h2 id="14-export-formats">14. Export Formats</h2>
+<p>PurplePlatypus lets you export your document to several formats, so you can
+share your work wherever it needs to go.</p>
+<table>
+<thead>
+<tr>
+<th align="left">Format</th>
+<th align="left">Extension</th>
+<th align="left">Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><strong>HTML</strong></td>
+<td align="left"><code>.html</code></td>
+<td align="left">Publishing to the web or viewing in a browser</td>
+</tr>
+<tr>
+<td align="left"><strong>PDF</strong></td>
+<td align="left"><code>.pdf</code></td>
+<td align="left">Printing and sharing polished documents</td>
+</tr>
+<tr>
+<td align="left"><strong>Markdown</strong></td>
+<td align="left"><code>.md</code></td>
+<td align="left">Keeping the raw source, portable and editable</td>
+</tr>
+<tr>
+<td align="left"><strong>RTF</strong></td>
+<td align="left"><code>.rtf</code></td>
+<td align="left">Rich Text Format</td>
+</tr>
+<tr>
+<td align="left"><strong>Plain Text</strong></td>
+<td align="left"><code>.txt</code></td>
+<td align="left">Plain Text Format (loses formatting)</td>
+</tr>
+<tr>
+<td align="left"><strong>TextBundle</strong></td>
+<td align="left"><code>.textbundle</code></td>
+<td align="left">Bundle of Markdown file and images</td>
+</tr>
+</tbody>
+</table>
+<h3 id="html">HTML</h3>
+<p>Exports a fully rendered web page with all formatting, tables, images, and
+math preserved. Ideal for embedding in websites or sharing a link.</p>
+<h3 id="pdf">PDF</h3>
+<p>Produces a print-ready document with consistent page layout. Great for
+reports, documentation, and anything you plan to hand off or archive.</p>
+<h3 id="markdown">Markdown</h3>
+<p>Saves the plain-text source exactly as written. This keeps your document
+lightweight, version-control friendly, and editable in any text editor.</p>
+<h3 id="textbundle">TextBundle</h3>
+<p>TextBundle is an open format that packages your Markdown text <strong>and its
+referenced assets</strong> — images, attachments, and other media — into a single
+bundle. Instead of scattering image files across folders and worrying about
+broken links, everything travels together as one self-contained unit.</p>
+<p>This makes TextBundle ideal for moving documents between apps and devices
+without losing images along the way. A <code>.textbundle</code> is technically a folder
+(shown as a single file on macOS) containing the Markdown source alongside an
+<code>assets</code> directory, while the <code>.textpack</code> variant zips it all into one
+compressed file for easy sharing. Because the format is open and widely
+supported by Markdown editors, your content stays portable and future-proof.</p>
+<h3 id="rtf">RTF</h3>
+<p>Rich Text Format (RTF) exports your document as styled text that opens
+cleanly in word processors like Microsoft Word, LibreOffice, and Apple
+Pages — and pastes nicely into emails and other rich-text fields.</p>
+<blockquote>
+<p><strong>Note:</strong> RTF is a simpler format than HTML or PDF, so <strong>not all Markdown
+features are supported</strong>. Core styling like headings, bold, italic, lists,
+and basic tables carries over well, but advanced elements — such as math
+notation, task-list checkboxes, footnotes, and syntax-highlighted code
+blocks — may be simplified or dropped during export. For documents that rely
+on those features, HTML or PDF will preserve them more faithfully.</p>
+</blockquote>
+<section class="footnotes" data-footnotes>
+<ol>
+<li id="fn-1">
+<p>Here is the footnote. <a href="#fnref-1" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="1" aria-label="Back to reference 1">↩</a></p>
+</li>
+</ol>
+</section>
+</body></html>

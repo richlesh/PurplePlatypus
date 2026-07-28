@@ -31,6 +31,9 @@ public class PreferencesDialog extends JDialog {
     private final JComboBox<Integer> previewSizeCombo;
     private final JComboBox<String> previewCodeFontCombo;
     private final JComboBox<Integer> previewCodeSizeCombo;
+    private final Color[] selectionColor;
+    private final JCheckBox useTabsBox;
+    private final JSpinner tabSizeSpinner;
     private final JComboBox<String> llmVendorCombo;
     private final JComboBox<String> llmModelCombo;
     private final JPasswordField llmApiKeyField;
@@ -79,6 +82,11 @@ public class PreferencesDialog extends JDialog {
         previewCodeFontCombo.setSelectedItem(prefs.getPreviewCodeFontFamily());
         previewCodeSizeCombo = new JComboBox<>(FONT_SIZES);
         previewCodeSizeCombo.setSelectedItem(prefs.getPreviewCodeFontSize());
+
+        // Initialize editor settings
+        selectionColor = new Color[]{prefs.getSelectionColorObj()};
+        useTabsBox = new JCheckBox("Use Tabs", prefs.isUseTabs());
+        tabSizeSpinner = new JSpinner(new SpinnerNumberModel(prefs.getTabSize(), 1, 8, 1));
 
         // Initialize LLM combos
         String[] vendorNames = new String[VENDOR_DATA.length];
@@ -264,6 +272,44 @@ public class PreferencesDialog extends JDialog {
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(previewCodeSizeCombo, gbc);
 
+        // Separator
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(10, 6, 10, 6);
+        panel.add(new JSeparator(), gbc);
+        gbc.insets = new Insets(4, 6, 4, 6);
+
+        // Editor section
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2;
+        JLabel editorSettingsHeader = new JLabel("Editor");
+        editorSettingsHeader.setFont(editorSettingsHeader.getFont().deriveFont(Font.BOLD));
+        panel.add(editorSettingsHeader, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Selection Color:"), gbc);
+        JPanel hlSwatch = new JPanel();
+        hlSwatch.setBackground(selectionColor[0]);
+        hlSwatch.setPreferredSize(new Dimension(60, 24));
+        hlSwatch.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
+        hlSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        hlSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                Color c = JColorChooser.showDialog(PreferencesDialog.this, "Selection Color", selectionColor[0]);
+                if (c != null) { selectionColor[0] = c; hlSwatch.setBackground(c); }
+            }
+        });
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
+        panel.add(hlSwatch, gbc);
+
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.NONE;
+        panel.add(useTabsBox, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Spaces for tab:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
+        panel.add(tabSizeSpinner, gbc);
+
         // Vertical glue to push content to top
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.weighty = 1;
         gbc.fill = GridBagConstraints.VERTICAL;
@@ -386,6 +432,9 @@ public class PreferencesDialog extends JDialog {
         prefs.setPreviewFontSize((Integer) previewSizeCombo.getSelectedItem());
         prefs.setPreviewCodeFontFamily((String) previewCodeFontCombo.getSelectedItem());
         prefs.setPreviewCodeFontSize((Integer) previewCodeSizeCombo.getSelectedItem());
+        prefs.setSelectionColor(selectionColor[0]);
+        prefs.setUseTabs(useTabsBox.isSelected());
+        prefs.setTabSize((Integer) tabSizeSpinner.getValue());
         prefs.setLlmVendor((String) llmVendorCombo.getSelectedItem());
         Object modelItem = llmModelCombo.getSelectedItem();
         prefs.setLlmModel(modelItem != null ? modelItem.toString() : null);

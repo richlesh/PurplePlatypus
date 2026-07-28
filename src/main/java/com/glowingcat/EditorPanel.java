@@ -31,6 +31,9 @@ public class EditorPanel extends JPanel {
         textArea.setCodeFoldingEnabled(false);
         textArea.setAntiAliasingEnabled(true);
         textArea.setTokenPainterFactory(new CustomTokenPainterFactory());
+        textArea.setSelectionColor(preferences.getSelectionColorObj());
+        textArea.setTabSize(preferences.getTabSize());
+        textArea.setTabsEmulated(!preferences.isUseTabs());
 
         scrollPane = new RTextScrollPane(textArea);
         scrollPane.setLineNumbersEnabled(true);
@@ -49,8 +52,11 @@ public class EditorPanel extends JPanel {
         return scrollPane;
     }
 
-    /** Applies font preferences to the editor. */
+    /** Applies font and editor preferences. */
     public void applyPreferences(Preferences preferences) {
         textArea.setFont(new Font(preferences.getEditorFontFamily(), Font.PLAIN, preferences.getEditorFontSize()));
+        textArea.setSelectionColor(preferences.getSelectionColorObj());
+        textArea.setTabSize(preferences.getTabSize());
+        textArea.setTabsEmulated(!preferences.isUseTabs());
     }
 }

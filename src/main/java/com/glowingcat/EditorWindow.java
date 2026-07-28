@@ -8,6 +8,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.plaf.basic.BasicToggleButtonUI;
 import javax.swing.undo.UndoManager;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
@@ -593,6 +594,7 @@ public class EditorWindow {
             hiddenCharsIconFull = new ImageIcon(new ImageIcon(hiddenCharsUrl).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
         }
         hiddenCharsToggle = new JToggleButton(hiddenCharsIconFull, false);
+        hiddenCharsToggle.setUI(new BasicToggleButtonUI());
         hiddenCharsToggle.setToolTipText("Show/Hide Invisible Characters");
         hiddenCharsToggle.setFocusPainted(false);
         hiddenCharsToggle.setBorderPainted(false);
@@ -615,6 +617,7 @@ public class EditorWindow {
             syncIconFull = new ImageIcon(new ImageIcon(syncUrl).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
         }
         syncScrollToggle = new JToggleButton(syncIconFull, false);
+        syncScrollToggle.setUI(new BasicToggleButtonUI());
         syncScrollToggle.setToolTipText("Synchronized Scrolling");
         syncScrollToggle.setFocusPainted(false);
         syncScrollToggle.setBorderPainted(false);
@@ -635,6 +638,7 @@ public class EditorWindow {
             eyeIconFull = new ImageIcon(new ImageIcon(eyeUrl).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
         }
         previewToggle = new JToggleButton(eyeIconFull, true);
+        previewToggle.setUI(new BasicToggleButtonUI());
         previewToggle.setToolTipText("Show/Hide Preview");
         previewToggle.setFocusPainted(false);
         previewToggle.setBorderPainted(false);
@@ -652,6 +656,7 @@ public class EditorWindow {
             aiIconFull = new ImageIcon(new ImageIcon(aiUrl).getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH));
         }
         aiToggle = new JToggleButton(aiIconFull, true);
+        aiToggle.setUI(new BasicToggleButtonUI());
         aiToggle.setToolTipText("Show/Hide AI Assistant");
         aiToggle.setFocusPainted(false);
         aiToggle.setBorderPainted(false);

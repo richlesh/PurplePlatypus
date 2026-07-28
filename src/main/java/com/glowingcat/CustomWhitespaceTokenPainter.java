@@ -36,7 +36,7 @@ public class CustomWhitespaceTokenPainter extends VisibleWhitespaceTokenPainter 
     @Override
     protected void paintSpaceText(Graphics2D g, float x, float y, int ascent,
                                   int width, int height) {
-        int dotSize = Math.max(4, height / 8 + 2);
+        int dotSize = Math.max(3, height / 10 + 1);
         int dotX = (int)(x - width / 2f) - dotSize / 2;
         int dotY = (int)(y - ascent + height / 2f) - dotSize / 2;
         g.fillOval(dotX, dotY, dotSize, dotSize);

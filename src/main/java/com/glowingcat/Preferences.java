@@ -53,6 +53,17 @@ public class Preferences {
     /** Font size for code in the HTML preview pane. */
     private int previewCodeFontSize = 13;
 
+    // --- Editor settings ---
+
+    /** Editor selection/highlight color (hex string). */
+    private String selectionColor = "#E8F2FE";
+
+    /** Whether to use real tabs (true) or spaces (false). */
+    private boolean useTabs = false;
+
+    /** Number of spaces per tab stop. */
+    private int tabSize = 4;
+
     // --- LLM / AI Chat settings ---
 
     /** LLM vendor name (OpenAI, Anthropic, Google, DeepSeek, Alibaba, Ollama). */
@@ -152,6 +163,17 @@ public class Preferences {
     public void setPreviewCodeFontFamily(String previewCodeFontFamily) { this.previewCodeFontFamily = previewCodeFontFamily; }
     public int getPreviewCodeFontSize() { return previewCodeFontSize; }
     public void setPreviewCodeFontSize(int previewCodeFontSize) { this.previewCodeFontSize = previewCodeFontSize; }
+
+    // --- Editor settings getters/setters ---
+
+    public String getSelectionColor() { return selectionColor; }
+    public void setSelectionColor(String hex) { this.selectionColor = hex; }
+    public Color getSelectionColorObj() { return Color.decode(selectionColor); }
+    public void setSelectionColor(Color color) { this.selectionColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
+    public boolean isUseTabs() { return useTabs; }
+    public void setUseTabs(boolean useTabs) { this.useTabs = useTabs; }
+    public int getTabSize() { return tabSize; }
+    public void setTabSize(int tabSize) { this.tabSize = Math.max(1, Math.min(8, tabSize)); }
 
     // --- Window state getters/setters ---
 
