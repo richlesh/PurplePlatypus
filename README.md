@@ -10,6 +10,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Live preview** — The preview updates in real time as you type, with no manual refresh needed
 - **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
 - **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, DeepSeek, Alibaba, Cerebras, Groq, Meta, Mistral, Moonshot AI, Perplexity, xAI, or local Ollama models
+- **Generic LLM vendor** — YAML-configurable API endpoint for any LLM service (corporate APIs, custom proxies, etc.) with OAuth/IAM token exchange, configurable request/response format, and single-shot or multi-turn conversation modes
 - **Multi-window** — Open multiple editor windows with File > New
 - **Window management** — Window menu with Minimize, Zoom, Previous/Next window navigation, Cascade All, and Tile All
 - **Cross-platform** — Runs on macOS (ARM64), Windows (x64, ARM64), and Linux (x64, ARM64)
@@ -47,7 +48,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins (underline), and YAML front matter
 - **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
 - **Preview fallback** — On platforms where JavaFX WebView is unavailable (e.g. Windows ARM64), the preview gracefully falls back to a Swing-based HTML renderer with reduced functionality
-- **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors
+- **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors; toolbar button highlight color
 - **Window state persistence** — Window size, divider positions, and panel visibility are remembered between sessions
 
 ## AI Assistant
@@ -62,7 +63,21 @@ The built-in AI chat panel helps you write and improve markdown content:
 
 When the AI suggests a complete document replacement, you're given Allow/Reject buttons to accept or decline the changes.
 
-Configure your LLM provider in Preferences (vendor, model, and API key).
+Configure your LLM provider in Preferences (vendor, model, and API key). For custom or corporate APIs, select the "Generic" vendor and use "Configure..." to define a YAML configuration with custom endpoints, headers, authentication, and response parsing.
+
+## Generic LLM Vendor
+
+The Generic vendor supports any LLM API through a YAML configuration file (`~/.purpleplatypus-generic.yml`):
+
+- **Custom endpoints** — Define any REST API URL with variable substitution
+- **Flexible authentication** — Bearer tokens, Basic auth, API keys, or OAuth/IAM token exchange
+- **Token exchange** — Optional `Auth` section automatically fetches and caches access tokens (supports IBM IAM, OAuth2, etc.)
+- **Conversation modes** — Single-shot (with server-side GUID tracking) or multi-turn (full history sent)
+- **Response parsing** — JSONPath-like expressions to extract content from any response format
+- **Model discovery** — Configurable models endpoint with custom field extraction
+- **Variables** — `${AUTH_TOKEN}`, `${MODEL}`, `${PROMPT}`, `${MESSAGES}`, `${MESSAGES_NO_SYSTEM}`, `${SYSTEM_PROMPT}`, `${GUID}`
+
+Sample configurations for Amazon Bedrock, Anthropic, IBM watsonx.ai, Microsoft Azure, and OpenAI are included in the `config/` folder.
 
 ## Export Formats
 
@@ -109,6 +124,7 @@ Or run `com.glowingcat.Main` directly from your IDE.
 - **RSyntaxTextArea** — Syntax-aware text editor component
 - **JavaFX WebView** — HTML preview rendering with MathJax (with JEditorPane fallback)
 - **Gson** — JSON serialization for user preferences
+- **SnakeYAML** — YAML parsing for Generic vendor configuration
 - **java.net.http** — HTTP client for LLM API calls
 
 ---
