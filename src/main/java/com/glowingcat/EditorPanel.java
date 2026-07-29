@@ -32,6 +32,7 @@ public class EditorPanel extends JPanel {
         textArea.setAntiAliasingEnabled(true);
         textArea.setTokenPainterFactory(new CustomTokenPainterFactory());
         textArea.setSelectionColor(preferences.getSelectionColorObj());
+        textArea.setUseSelectedTextColor(true);
         textArea.setTabSize(preferences.getTabSize());
         textArea.setTabsEmulated(!preferences.isUseTabs());
 
