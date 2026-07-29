@@ -210,8 +210,9 @@ jobs:
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
               --file-associations fa-textpack.properties \
-              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,jdk.crypto.ec,jdk.crypto.cryptoki \
+              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,java.logging,jdk.crypto.ec,jdk.crypto.cryptoki \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
+              --java-options "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
               --type app-image
           elif [ "${{ runner.os }}" = "Linux" ]; then
             # Build app-image first to remove ALSA-linked native libs
@@ -225,9 +226,9 @@ jobs:
               --copyright "(C) 2026 Glowing Cat" \
               --description "A lightweight desktop Markdown editor with live preview" \
               --icon "${{ matrix.icon }}" \
-              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,jdk.crypto.ec,jdk.crypto.cryptoki \
+              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,java.logging,jdk.crypto.ec,jdk.crypto.cryptoki \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
-              --java-options "-Dawt.useSystemAAFontSettings=on" \
+              --java-options "-Dawt.useSystemAAFontSettings=on --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
               --type app-image
 
             # Remove native sound libraries to eliminate libasound2 dependency
@@ -309,8 +310,9 @@ jobs:
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
               --file-associations fa-textpack.properties \
-              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,jdk.crypto.ec,jdk.crypto.cryptoki \
+              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,java.logging,jdk.crypto.ec,jdk.crypto.cryptoki \
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
+              --java-options "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
               --win-menu \
               --win-shortcut \
               --type ${{ matrix.pkg_type }}
