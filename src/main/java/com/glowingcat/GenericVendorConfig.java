@@ -109,6 +109,37 @@ public class GenericVendorConfig {
             #     TokenPath: "access_token"
             #     ExpiresInPath: "expires_in"
 
+            # Optional: TrustStore section for corporate/custom SSL certificates.
+            # Use this if your network uses a TLS intercepting proxy or self-signed certs.
+            # A restart of the application is required after changing these settings.
+            #
+            # To create a trust store with your corporate CA certificate:
+            #   1. Export your corporate root CA certificate (PEM or DER format)
+            #      - On macOS: Keychain Access > System > find your corporate CA > export as .cer
+            #      - On Windows: certmgr.msc > Trusted Root CAs > find CA > export as .cer
+            #      - On Linux: check /etc/ssl/certs/ or ask your IT department
+            #   2. Create a Java KeyStore (JKS) file:
+            #      keytool -import -trustcacerts -alias corporate-ca \
+            #        -file /path/to/corporate-ca.cer \
+            #        -keystore ~/.purpleplatypus-truststore.jks \
+            #        -storepass changeit
+            #   3. To include the default Java CA certificates as well:
+            #      keytool -importkeystore \
+            #        -srckeystore $JAVA_HOME/lib/security/cacerts \
+            #        -srcstorepass changeit \
+            #        -destkeystore ~/.purpleplatypus-truststore.jks \
+            #        -deststorepass changeit
+            #      Then import your corporate CA on top:
+            #      keytool -import -trustcacerts -alias corporate-ca \
+            #        -file /path/to/corporate-ca.cer \
+            #        -keystore ~/.purpleplatypus-truststore.jks \
+            #        -storepass changeit
+            #
+            # TrustStore:
+            #   Path: ~/.purpleplatypus-truststore.jks
+            #   Password: changeit
+            #   Type: JKS
+
             Models:
               URI: https://example.com/api/models
               Method: GET
@@ -124,6 +155,46 @@ public class GenericVendorConfig {
                 IdField: "model_id"
                 DescriptionField: "short_description"
             """;
+
+    /**
+     * Apply TrustStore settings from the YAML config as JVM system properties.
+     * Must be called early at application startup, before any HTTPS connections.
+     * Changes require a restart to take effect.
+     */
+    @SuppressWarnings("unchecked")
+    public static void applyTrustStore() {
+        try {
+            String yamlContent = loadYamlString();
+            Yaml yaml = new Yaml();
+            Map<String, Object> root = yaml.load(yamlContent);
+            if (root == null) return;
+
+            Map<String, Object> trustStoreConfig = (Map<String, Object>) root.get("TrustStore");
+            if (trustStoreConfig == null) return;
+
+            String path = trustStoreConfig.get("Path") != null ? trustStoreConfig.get("Path").toString() : null;
+            String password = trustStoreConfig.get("Password") != null ? trustStoreConfig.get("Password").toString() : null;
+            String type = trustStoreConfig.get("Type") != null ? trustStoreConfig.get("Type").toString() : "JKS";
+
+            if (path == null || path.isBlank()) return;
+
+            // Expand ~ to user home directory
+            if (path.startsWith("~")) {
+                path = System.getProperty("user.home") + path.substring(1);
+            }
+
+            // Only apply if the file exists
+            if (!Files.exists(Paths.get(path))) return;
+
+            System.setProperty("javax.net.ssl.trustStore", path);
+            if (password != null && !password.isBlank()) {
+                System.setProperty("javax.net.ssl.trustStorePassword", password);
+            }
+            System.setProperty("javax.net.ssl.trustStoreType", type);
+        } catch (Exception e) {
+            // Silently fail — don't prevent app from launching
+        }
+    }
 
     public GenericVendorConfig() {
         load();

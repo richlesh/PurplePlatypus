@@ -36,6 +36,9 @@ public class Main {
      * and opens the first editor window.
      */
     public static void main(String[] args) {
+        // Apply custom trust store settings before any HTTPS connections
+        GenericVendorConfig.applyTrustStore();
+
         System.setProperty("apple.laf.useScreenMenuBar", "true");
         System.setProperty("apple.awt.application.name", "PurplePlatypus");
         try {
