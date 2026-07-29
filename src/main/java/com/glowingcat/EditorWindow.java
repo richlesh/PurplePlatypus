@@ -602,7 +602,7 @@ public class EditorWindow {
         hiddenCharsToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         hiddenCharsToggle.addActionListener(e -> {
             hiddenCharsVisible = hiddenCharsToggle.isSelected();
-            hiddenCharsToggle.setBackground(hiddenCharsVisible ? new Color(180, 130, 255) : null);
+            hiddenCharsToggle.setBackground(hiddenCharsVisible ? preferences.getButtonHighlightColorObj() : null);
             hiddenCharsToggle.setContentAreaFilled(hiddenCharsVisible);
             hiddenCharsToggle.setOpaque(hiddenCharsVisible);
             editorPane.setWhitespaceVisible(hiddenCharsVisible);
@@ -625,7 +625,7 @@ public class EditorWindow {
         syncScrollToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         syncScrollToggle.addActionListener(e -> {
             syncScrollEnabled = syncScrollToggle.isSelected();
-            syncScrollToggle.setBackground(syncScrollEnabled ? new Color(180, 130, 255) : null);
+            syncScrollToggle.setBackground(syncScrollEnabled ? preferences.getButtonHighlightColorObj() : null);
             syncScrollToggle.setContentAreaFilled(syncScrollEnabled);
             syncScrollToggle.setOpaque(syncScrollEnabled);
         });
@@ -644,7 +644,7 @@ public class EditorWindow {
         previewToggle.setBorderPainted(false);
         previewToggle.setContentAreaFilled(true);
         previewToggle.setOpaque(true);
-        previewToggle.setBackground(new Color(180, 130, 255));
+        previewToggle.setBackground(preferences.getButtonHighlightColorObj());
         previewToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         previewToggle.addActionListener(e -> togglePreview());
         togglePanel.add(previewToggle);
@@ -662,7 +662,7 @@ public class EditorWindow {
         aiToggle.setBorderPainted(false);
         aiToggle.setContentAreaFilled(true);
         aiToggle.setOpaque(true);
-        aiToggle.setBackground(new Color(180, 130, 255));
+        aiToggle.setBackground(preferences.getButtonHighlightColorObj());
         aiToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         aiToggle.addActionListener(e -> toggleAI());
         togglePanel.add(aiToggle);
@@ -700,7 +700,7 @@ public class EditorWindow {
         }
         editorPreviewSplit.revalidate();
         editorPreviewSplit.repaint();
-        previewToggle.setBackground(previewVisible ? new Color(180, 130, 255) : null);
+        previewToggle.setBackground(previewVisible ? preferences.getButtonHighlightColorObj() : null);
         previewToggle.setContentAreaFilled(previewVisible);
         previewToggle.setOpaque(previewVisible);
     }
@@ -722,7 +722,7 @@ public class EditorWindow {
         }
         mainSplit.revalidate();
         mainSplit.repaint();
-        aiToggle.setBackground(aiVisible ? new Color(180, 130, 255) : null);
+        aiToggle.setBackground(aiVisible ? preferences.getButtonHighlightColorObj() : null);
         aiToggle.setContentAreaFilled(aiVisible);
         aiToggle.setOpaque(aiVisible);
     }
@@ -2164,6 +2164,12 @@ public class EditorWindow {
             if (aiChatPanel != null) aiChatPanel.updateFont();
             previewPanel.forceFullReload();
             updatePreview();
+            // Update toolbar toggle button highlight colors
+            Color hlColor = preferences.getButtonHighlightColorObj();
+            if (hiddenCharsToggle.isSelected()) hiddenCharsToggle.setBackground(hlColor);
+            if (syncScrollToggle.isSelected()) syncScrollToggle.setBackground(hlColor);
+            if (previewToggle.isSelected()) previewToggle.setBackground(hlColor);
+            if (aiToggle.isSelected()) aiToggle.setBackground(hlColor);
         }
     }
 

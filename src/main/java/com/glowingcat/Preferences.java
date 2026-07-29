@@ -56,7 +56,7 @@ public class Preferences {
     // --- Editor settings ---
 
     /** Editor selection/highlight color (hex string). */
-    private String selectionColor = "#E8F2FE";
+    private String selectionColor = "#B482FF";
 
     /** Whether to use real tabs (true) or spaces (false). */
     private boolean useTabs = false;
@@ -95,6 +95,9 @@ public class Preferences {
 
     /** Text color for AI response chat bubbles (hex string for Gson). */
     private String aiTextColor = "#FFFFFF";
+
+    /** Toolbar toggle button highlight color (hex string for Gson). */
+    private String buttonHighlightColor = "#B482FF";
 
     // --- Window state (not shown in preferences dialog) ---
 
@@ -171,6 +174,11 @@ public class Preferences {
     public void setAiTextColor(Color color) { this.aiTextColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
     public String getAiTextColor() { return aiTextColor; }
     public void setAiTextColor(String hex) { this.aiTextColor = hex; }
+
+    public Color getButtonHighlightColorObj() { return Color.decode(buttonHighlightColor); }
+    public void setButtonHighlightColor(Color color) { this.buttonHighlightColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
+    public String getButtonHighlightColor() { return buttonHighlightColor; }
+    public void setButtonHighlightColor(String hex) { this.buttonHighlightColor = hex; }
 
     public String getEditorFontFamily() { return editorFontFamily; }
     public void setEditorFontFamily(String editorFontFamily) { this.editorFontFamily = editorFontFamily; }

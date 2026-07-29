@@ -44,6 +44,7 @@ public class PreferencesDialog extends JDialog {
     private final Color[] userTextColor;
     private final Color[] aiResponseColor;
     private final Color[] aiTextColor;
+    private final Color[] buttonHighlightColor;
     private boolean confirmed = false;
     private final Runnable[] fetchModelsHolder = new Runnable[1];
 
@@ -116,6 +117,7 @@ public class PreferencesDialog extends JDialog {
         userTextColor = new Color[]{prefs.getUserTextColorObj()};
         aiResponseColor = new Color[]{prefs.getAiResponseColorObj()};
         aiTextColor = new Color[]{prefs.getAiTextColorObj()};
+        buttonHighlightColor = new Color[]{prefs.getButtonHighlightColorObj()};
 
         // === LEFT PANEL: Font Settings ===
         JPanel leftPanel = buildFontPanel();
@@ -541,6 +543,22 @@ public class PreferencesDialog extends JDialog {
         gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
         panel.add(aiColorPanel, gbc);
 
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Button Highlight:"), gbc);
+        JPanel btnHlSwatch = new JPanel();
+        btnHlSwatch.setBackground(buttonHighlightColor[0]);
+        btnHlSwatch.setPreferredSize(new Dimension(60, 24));
+        btnHlSwatch.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
+        btnHlSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnHlSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                Color c = JColorChooser.showDialog(PreferencesDialog.this, "Button Highlight Color", buttonHighlightColor[0]);
+                if (c != null) { buttonHighlightColor[0] = c; btnHlSwatch.setBackground(c); }
+            }
+        });
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
+        panel.add(btnHlSwatch, gbc);
+
         // Vertical glue to push content to top
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.weighty = 1;
         gbc.fill = GridBagConstraints.VERTICAL;
@@ -574,5 +592,6 @@ public class PreferencesDialog extends JDialog {
         prefs.setUserTextColor(userTextColor[0]);
         prefs.setAiResponseColor(aiResponseColor[0]);
         prefs.setAiTextColor(aiTextColor[0]);
+        prefs.setButtonHighlightColor(buttonHighlightColor[0]);
     }
 }
