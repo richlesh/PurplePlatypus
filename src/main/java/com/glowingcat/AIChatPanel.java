@@ -38,6 +38,7 @@ public class AIChatPanel extends JPanel {
     private float pulseAlpha = 0f;
     private Runnable statusUpdater;
     private int promptCount = 0;
+    private GenericVendorConfig genericConfig;
 
     public AIChatPanel(RSyntaxTextArea editorPane, Preferences preferences) {
         super(new BorderLayout());
@@ -128,6 +129,7 @@ public class AIChatPanel extends JPanel {
             chatPanel.removeAll();
             chatPanel.revalidate();
             chatPanel.repaint();
+            if (genericConfig != null) genericConfig.resetGuid();
         });
     }
 
@@ -459,6 +461,10 @@ public class AIChatPanel extends JPanel {
         String apiKey = preferences.getLlmApiKey();
         String model = preferences.getLlmModel();
 
+        if ("Generic".equals(vendor)) {
+            return callGeneric(apiKey, model);
+        }
+
         String baseUrl = switch (vendor) {
             case "Alibaba" -> "https://dashscope-us.aliyuncs.com/compatible-mode/v1";
             case "Anthropic" -> "https://api.anthropic.com/v1";
@@ -547,6 +553,34 @@ public class AIChatPanel extends JPanel {
         String respBody = resp.body();
         String content = extractJsonValue(respBody, "text");
         if (content == null) throw new RuntimeException("Unexpected response: " + respBody.substring(0, Math.min(300, respBody.length())));
+        messages.add(Map.of("role", "assistant", "content", content));
+        return content;
+    }
+
+    private String callGeneric(String apiKey, String model) throws Exception {
+        if (genericConfig == null) {
+            genericConfig = new GenericVendorConfig();
+        } else {
+            genericConfig.load(); // Reload in case user edited config
+        }
+        if (!genericConfig.isValid()) {
+            throw new RuntimeException("Generic vendor not configured. Use Configure... in Preferences.");
+        }
+
+        // For single-shot mode, send just the latest user prompt
+        // For multi-turn mode, send the full messages list
+        String lastPrompt = "";
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            if ("user".equals(messages.get(i).get("role"))) {
+                lastPrompt = messages.get(i).get("content");
+                break;
+            }
+        }
+
+        String content = genericConfig.callPrompt(apiKey, model, lastPrompt, messages);
+        if (content == null || content.isBlank()) {
+            throw new RuntimeException("Empty response from Generic vendor");
+        }
         messages.add(Map.of("role", "assistant", "content", content));
         return content;
     }

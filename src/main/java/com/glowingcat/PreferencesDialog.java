@@ -45,6 +45,7 @@ public class PreferencesDialog extends JDialog {
     private final Color[] aiResponseColor;
     private final Color[] aiTextColor;
     private boolean confirmed = false;
+    private final Runnable[] fetchModelsHolder = new Runnable[1];
 
     private static final Integer[] FONT_SIZES = {8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36};
 
@@ -53,6 +54,7 @@ public class PreferencesDialog extends JDialog {
         {"Anthropic", "https://console.anthropic.com/settings/keys", "https://api.anthropic.com/v1"},
         {"Cerebras", "https://cloud.cerebras.ai", "https://api.cerebras.ai/v1"},
         {"DeepSeek", "https://platform.deepseek.com/api_keys", "https://api.deepseek.com/v1"},
+        {"Generic", "", ""},
         {"Generic OpenAI API", "", ""},
         {"Google", "https://aistudio.google.com/apikey", "https://generativelanguage.googleapis.com/v1beta/openai"},
         {"Groq", "https://console.groq.com/keys", "https://api.groq.com/openai/v1"},
@@ -143,6 +145,26 @@ public class PreferencesDialog extends JDialog {
         Runnable fetchModels = () -> {
             int vi = llmVendorCombo.getSelectedIndex();
             String apiKey = new String(llmApiKeyField.getPassword()).trim();
+
+            // Handle Generic (YAML-configured) vendor separately
+            if ("Generic".equals(VENDOR_DATA[vi][0])) {
+                llmModelCombo.removeAllItems();
+                new Thread(() -> {
+                    try {
+                        GenericVendorConfig config = new GenericVendorConfig();
+                        List<String> models = config.fetchModels(apiKey);
+                        SwingUtilities.invokeLater(() -> {
+                            llmModelCombo.removeAllItems();
+                            for (String mod : models) llmModelCombo.addItem(mod);
+                            if (prefs.getLlmModel() != null) llmModelCombo.setSelectedItem(prefs.getLlmModel());
+                        });
+                    } catch (Exception ex) {
+                        // leave model combo empty on failure
+                    }
+                }).start();
+                return;
+            }
+
             String resolvedUrl = VENDOR_DATA[vi][2];
             if ("Generic OpenAI API".equals(VENDOR_DATA[vi][0])) {
                 resolvedUrl = llmEndpointField.getText().trim();
@@ -194,6 +216,7 @@ public class PreferencesDialog extends JDialog {
                 }
             }).start();
         };
+        fetchModelsHolder[0] = fetchModels;
         if (prefs.getLlmModel() != null) llmModelCombo.addItem(prefs.getLlmModel());
         fetchModels.run();
         llmVendorCombo.addActionListener(e -> {
@@ -379,6 +402,7 @@ public class PreferencesDialog extends JDialog {
 
         JLabel endpointLabel = new JLabel("Endpoint:");
         JLabel apiKeyLink = new JLabel("<html><nobr><a href=''>Get API key...</a></nobr></html>");
+        JLabel configureLink = new JLabel("<html><nobr><a href=''>Configure...</a></nobr></html>");
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
         panel.add(endpointLabel, gbc);
@@ -387,9 +411,11 @@ public class PreferencesDialog extends JDialog {
 
         // Show/hide endpoint based on vendor selection
         boolean isGeneric = "Generic OpenAI API".equals(llmVendorCombo.getSelectedItem());
+        boolean isGenericYaml = "Generic".equals(llmVendorCombo.getSelectedItem());
         endpointLabel.setVisible(isGeneric);
         llmEndpointField.setVisible(isGeneric);
-        apiKeyLink.setVisible(!isGeneric);
+        apiKeyLink.setVisible(!isGeneric && !isGenericYaml);
+        configureLink.setVisible(isGenericYaml);
 
         gbc.gridy = ++row; gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
         apiKeyLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -405,12 +431,27 @@ public class PreferencesDialog extends JDialog {
         });
         panel.add(apiKeyLink, gbc);
 
+        configureLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        configureLink.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                GenericVendorDialog dlg = new GenericVendorDialog(PreferencesDialog.this);
+                dlg.setVisible(true);
+                if (dlg.isConfirmed() && fetchModelsHolder[0] != null) {
+                    // Reload config and refresh model list
+                    fetchModelsHolder[0].run();
+                }
+            }
+        });
+        panel.add(configureLink, gbc);
+
         // Update endpoint/link visibility when vendor changes
         llmVendorCombo.addActionListener(e -> {
             boolean generic = "Generic OpenAI API".equals(llmVendorCombo.getSelectedItem());
+            boolean genericYaml = "Generic".equals(llmVendorCombo.getSelectedItem());
             endpointLabel.setVisible(generic);
             llmEndpointField.setVisible(generic);
-            apiKeyLink.setVisible(!generic);
+            apiKeyLink.setVisible(!generic && !genericYaml);
+            configureLink.setVisible(genericYaml);
         });
 
         // Separator
