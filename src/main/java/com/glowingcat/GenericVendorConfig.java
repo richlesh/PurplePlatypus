@@ -32,14 +32,28 @@ public class GenericVendorConfig {
     // Parsed config sections
     private Map<String, Object> promptConfig;
     private Map<String, Object> modelsConfig;
+    private Map<String, Object> authConfig;
 
     // Conversation GUID — generated once per session/clear
     private String conversationGuid = UUID.randomUUID().toString();
+
+    // Cached auth token and expiry
+    private String cachedAccessToken = null;
+    private long tokenExpiryTime = 0;
 
     /** Default YAML template for new configurations. */
     public static final String DEFAULT_YAML = """
             # Generic LLM Vendor Configuration
             # Variables: ${AUTH_TOKEN}, ${MODEL}, ${PROMPT}, ${MESSAGES}, ${GUID}
+            #            ${MESSAGES_NO_SYSTEM}, ${SYSTEM_PROMPT}
+            #
+            # ${AUTH_TOKEN}          - API key from the Preferences dialog
+            # ${MODEL}              - Selected model from the Preferences dialog
+            # ${PROMPT}             - The current user message (JSON-escaped)
+            # ${MESSAGES}           - Full conversation history as JSON array
+            # ${MESSAGES_NO_SYSTEM} - Conversation history excluding system messages
+            # ${SYSTEM_PROMPT}      - Content of the system message (JSON-escaped)
+            # ${GUID}              - Conversation GUID (regenerated on Clear)
             #
             # ConversationMode:
             #   single-shot - sends only the current prompt with a conversation GUID
@@ -79,6 +93,21 @@ public class GenericVendorConfig {
             #      "temperature": 0,
             #      "stream": false
             #    }
+
+            # Optional: Auth section for OAuth/IAM token exchange.
+            # If present, ${AUTH_TOKEN} in Prompt/Models is replaced with the
+            # fetched access token instead of the raw API key from Preferences.
+            # The token is cached until expiry.
+            #
+            # Auth:
+            #   TokenURI: https://iam.cloud.ibm.com/identity/token
+            #   Method: POST
+            #   Headers:
+            #     Content-Type: application/x-www-form-urlencoded
+            #   Body: "grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey=${AUTH_TOKEN}"
+            #   Response:
+            #     TokenPath: "access_token"
+            #     ExpiresInPath: "expires_in"
 
             Models:
               URI: https://example.com/api/models
@@ -120,11 +149,13 @@ public class GenericVendorConfig {
             if (root != null) {
                 promptConfig = (Map<String, Object>) root.get("Prompt");
                 modelsConfig = (Map<String, Object>) root.get("Models");
+                authConfig = (Map<String, Object>) root.get("Auth");
             }
         } catch (Exception e) {
             // If parsing fails, leave configs null — calls will fail gracefully
             promptConfig = null;
             modelsConfig = null;
+            authConfig = null;
         }
     }
 
@@ -180,12 +211,15 @@ public class GenericVendorConfig {
             throw new RuntimeException("Generic vendor not configured. Use Configure... in Preferences.");
         }
 
-        String uri = substituteVars(getString(promptConfig, "URI"), authToken, model, prompt, messages);
+        // Resolve token (performs exchange if Auth section is configured)
+        String resolvedToken = resolveAuthToken(authToken);
+
+        String uri = substituteVars(getString(promptConfig, "URI"), resolvedToken, model, prompt, messages);
         String method = getString(promptConfig, "Method");
         if (method == null) method = "POST";
 
-        Map<String, String> headers = getHeaders(promptConfig, authToken, model, prompt, messages);
-        String body = substituteVars(getString(promptConfig, "Body"), authToken, model, prompt, messages);
+        Map<String, String> headers = getHeaders(promptConfig, resolvedToken, model, prompt, messages);
+        String body = substituteVars(getString(promptConfig, "Body"), resolvedToken, model, prompt, messages);
 
         HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(uri))
@@ -237,11 +271,14 @@ public class GenericVendorConfig {
         if (modelsConfig == null) return result;
 
         try {
-            String uri = substituteVars(getString(modelsConfig, "URI"), authToken, "", "", null);
+            // Resolve token (performs exchange if Auth section is configured)
+            String resolvedToken = resolveAuthToken(authToken);
+
+            String uri = substituteVars(getString(modelsConfig, "URI"), resolvedToken, "", "", null);
             String method = getString(modelsConfig, "Method");
             if (method == null) method = "GET";
 
-            Map<String, String> headers = getHeaders(modelsConfig, authToken, "", "", null);
+            Map<String, String> headers = getHeaders(modelsConfig, resolvedToken, "", "", null);
 
             HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(uri))
@@ -252,7 +289,7 @@ public class GenericVendorConfig {
             }
 
             if ("POST".equalsIgnoreCase(method)) {
-                String body = substituteVars(getString(modelsConfig, "Body"), authToken, "", "", null);
+                String body = substituteVars(getString(modelsConfig, "Body"), resolvedToken, "", "", null);
                 reqBuilder.POST(HttpRequest.BodyPublishers.ofString(body != null ? body : ""));
             } else {
                 reqBuilder.GET();
@@ -300,6 +337,120 @@ public class GenericVendorConfig {
 
     // --- Private helpers ---
 
+    /**
+     * Resolve the auth token. If an Auth section is configured, performs a token
+     * exchange (e.g., OAuth/IAM) using the raw API key and caches the result.
+     * If no Auth section, returns the raw authToken as-is.
+     *
+     * @param rawAuthToken the API key / credential from Preferences
+     * @return the resolved bearer/access token to use in API calls
+     */
+    @SuppressWarnings("unchecked")
+    private String resolveAuthToken(String rawAuthToken) throws Exception {
+        if (authConfig == null) {
+            return rawAuthToken; // No token exchange configured
+        }
+
+        // Return cached token if still valid (with 60-second buffer)
+        if (cachedAccessToken != null && System.currentTimeMillis() < (tokenExpiryTime - 60_000)) {
+            return cachedAccessToken;
+        }
+
+        String tokenUri = getString(authConfig, "TokenURI");
+        if (tokenUri == null || tokenUri.isBlank()) {
+            return rawAuthToken;
+        }
+
+        String method = getString(authConfig, "Method");
+        if (method == null) method = "POST";
+
+        // Substitute ${AUTH_TOKEN} in the auth request body and headers
+        // (using raw token since we haven't resolved yet)
+        String body = getString(authConfig, "Body");
+        if (body != null) {
+            body = body.replace("${AUTH_TOKEN}", rawAuthToken != null ? rawAuthToken : "");
+        }
+
+        // Build headers
+        Map<String, String> headers = new LinkedHashMap<>();
+        Object headersObj = authConfig.get("Headers");
+        if (headersObj instanceof Map) {
+            Map<String, Object> headersMap = (Map<String, Object>) headersObj;
+            for (Map.Entry<String, Object> entry : headersMap.entrySet()) {
+                String val = entry.getValue() != null ? entry.getValue().toString() : "";
+                val = val.replace("${AUTH_TOKEN}", rawAuthToken != null ? rawAuthToken : "");
+                headers.put(entry.getKey(), val);
+            }
+        }
+
+        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(tokenUri))
+                .timeout(Duration.ofSeconds(15));
+
+        for (Map.Entry<String, String> h : headers.entrySet()) {
+            reqBuilder.header(h.getKey(), h.getValue());
+        }
+
+        if ("POST".equalsIgnoreCase(method)) {
+            reqBuilder.POST(HttpRequest.BodyPublishers.ofString(body != null ? body : "", StandardCharsets.UTF_8));
+        } else {
+            reqBuilder.GET();
+        }
+
+        HttpResponse<String> resp = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build()
+                .send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
+
+        if (resp.statusCode() != 200) {
+            throw new RuntimeException("Auth token exchange failed (HTTP " + resp.statusCode() + "): " +
+                    resp.body().substring(0, Math.min(200, resp.body().length())));
+        }
+
+        // Extract the token from the response
+        Map<String, Object> responseConfig = (Map<String, Object>) authConfig.get("Response");
+        if (responseConfig == null) {
+            throw new RuntimeException("Auth section missing Response configuration");
+        }
+
+        String tokenPath = (String) responseConfig.get("TokenPath");
+        if (tokenPath == null || tokenPath.isBlank()) {
+            throw new RuntimeException("Auth section missing Response.TokenPath");
+        }
+
+        String token = evaluateJsonPath(resp.body(), tokenPath);
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException("Failed to extract token from auth response");
+        }
+
+        cachedAccessToken = token;
+
+        // Check for expiry info — look for "expires_in" (seconds) or "expiration" (epoch)
+        String expiresInPath = (String) responseConfig.get("ExpiresInPath");
+        if (expiresInPath != null && !expiresInPath.isBlank()) {
+            try {
+                String expiresStr = evaluateJsonPath(resp.body(), expiresInPath);
+                if (expiresStr != null) {
+                    long expiresIn = Long.parseLong(expiresStr.trim());
+                    // If value > 1_000_000_000, treat as epoch seconds; otherwise as duration in seconds
+                    if (expiresIn > 1_000_000_000L) {
+                        tokenExpiryTime = expiresIn * 1000; // epoch seconds to millis
+                    } else {
+                        tokenExpiryTime = System.currentTimeMillis() + (expiresIn * 1000);
+                    }
+                }
+            } catch (NumberFormatException e) {
+                // Default to 50 minutes if we can't parse
+                tokenExpiryTime = System.currentTimeMillis() + (50 * 60 * 1000);
+            }
+        } else {
+            // Default: assume token is valid for 50 minutes
+            tokenExpiryTime = System.currentTimeMillis() + (50 * 60 * 1000);
+        }
+
+        return cachedAccessToken;
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, String> getHeaders(Map<String, Object> config, String authToken,
                                            String model, String prompt,
@@ -322,8 +473,11 @@ public class GenericVendorConfig {
     }
 
     /**
-     * Substitute ${AUTH_TOKEN}, ${MODEL}, ${PROMPT}, ${GUID}, ${MESSAGES} in a template string.
-     * ${MESSAGES} expands to a JSON array of message objects for multi-turn mode.
+     * Substitute ${AUTH_TOKEN}, ${MODEL}, ${PROMPT}, ${GUID}, ${MESSAGES},
+     * ${MESSAGES_NO_SYSTEM}, and ${SYSTEM_PROMPT} in a template string.
+     * ${MESSAGES} expands to a JSON array of all message objects.
+     * ${MESSAGES_NO_SYSTEM} expands to a JSON array excluding system-role messages.
+     * ${SYSTEM_PROMPT} expands to the content of the first system message (unescaped for embedding in JSON).
      */
     private String substituteVars(String template, String authToken, String model,
                                   String prompt, List<Map<String, String>> messages) {
@@ -334,16 +488,40 @@ public class GenericVendorConfig {
         result = result.replace("${PROMPT}", jsonEscape(prompt != null ? prompt : ""));
         result = result.replace("${GUID}", conversationGuid);
 
-        if (messages != null && result.contains("${MESSAGES}")) {
-            StringBuilder sb = new StringBuilder("[");
-            for (int i = 0; i < messages.size(); i++) {
-                if (i > 0) sb.append(",");
-                Map<String, String> msg = messages.get(i);
-                sb.append("{\"role\":\"").append(jsonEscape(msg.get("role")))
-                  .append("\",\"content\":\"").append(jsonEscape(msg.get("content"))).append("\"}");
+        if (messages != null) {
+            if (result.contains("${MESSAGES}")) {
+                StringBuilder sb = new StringBuilder("[");
+                for (int i = 0; i < messages.size(); i++) {
+                    if (i > 0) sb.append(",");
+                    Map<String, String> msg = messages.get(i);
+                    sb.append("{\"role\":\"").append(jsonEscape(msg.get("role")))
+                      .append("\",\"content\":\"").append(jsonEscape(msg.get("content"))).append("\"}");
+                }
+                sb.append("]");
+                result = result.replace("${MESSAGES}", sb.toString());
             }
-            sb.append("]");
-            result = result.replace("${MESSAGES}", sb.toString());
+
+            if (result.contains("${MESSAGES_NO_SYSTEM}")) {
+                StringBuilder sb = new StringBuilder("[");
+                boolean first = true;
+                for (Map<String, String> msg : messages) {
+                    if ("system".equals(msg.get("role"))) continue;
+                    if (!first) sb.append(",");
+                    sb.append("{\"role\":\"").append(jsonEscape(msg.get("role")))
+                      .append("\",\"content\":\"").append(jsonEscape(msg.get("content"))).append("\"}");
+                    first = false;
+                }
+                sb.append("]");
+                result = result.replace("${MESSAGES_NO_SYSTEM}", sb.toString());
+            }
+
+            if (result.contains("${SYSTEM_PROMPT}")) {
+                String sysContent = messages.stream()
+                    .filter(m -> "system".equals(m.get("role")))
+                    .map(m -> m.get("content"))
+                    .findFirst().orElse("");
+                result = result.replace("${SYSTEM_PROMPT}", jsonEscape(sysContent));
+            }
         }
 
         return result;

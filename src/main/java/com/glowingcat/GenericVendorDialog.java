@@ -25,7 +25,7 @@ public class GenericVendorDialog extends JDialog {
         // Header
         JLabel header = new JLabel(
                 "<html><b>YAML Configuration</b><br>" +
-                "<small>Variables: ${AUTH_TOKEN}, ${MODEL}, ${PROMPT}, ${MESSAGES}, ${GUID}</small></html>");
+                "<small>Variables: ${AUTH_TOKEN}, ${MODEL}, ${PROMPT}, ${MESSAGES}, ${MESSAGES_NO_SYSTEM}, ${SYSTEM_PROMPT}, ${GUID}</small></html>");
         add(header, BorderLayout.NORTH);
 
         // YAML text area

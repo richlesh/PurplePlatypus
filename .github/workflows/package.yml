@@ -188,6 +188,7 @@ jobs:
           # Include demo.textpack in lib for Windows installer
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp demo.textpack lib/
+            cp -R config lib/
           fi
           # Ensure WiX is on PATH for Windows builds
           if [ -d "$GITHUB_WORKSPACE/wix" ]; then
@@ -239,6 +240,9 @@ jobs:
             # Include demo.textpack in the app image
             cp demo.textpack PurplePlatypus/
 
+            # Include config folder in the app image
+            cp -R config PurplePlatypus/
+
             # Package from the app-image
             jpackage \
               --app-image PurplePlatypus \
@@ -269,7 +273,7 @@ jobs:
                 # Add postinst script to copy demo.textpack to user Desktop
                 cat > "$TMPDIR/DEBIAN/postinst" <<'POSTINST'
           #!/bin/bash
-          # Copy demo.textpack to the Desktop of the user who initiated the install
+          # Copy demo.textpack and config folder to the Desktop of the user who initiated the install
           REAL_USER="${SUDO_USER:-$USER}"
           if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
             USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
@@ -277,6 +281,10 @@ jobs:
             if [ -d "$DESKTOP" ]; then
               cp /opt/purpleplatypus/demo.textpack "$DESKTOP/"
               chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/demo.textpack"
+              if [ -d /opt/purpleplatypus/config ]; then
+                cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs"
+                chown -R "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/PurplePlatypus Configs"
+              fi
             fi
           fi
           exit 0
@@ -357,6 +365,7 @@ jobs:
           ln -s /Applications "$DMG_DIR/Applications"
           cp src/main/resources/app_icon.icns "$DMG_DIR/.VolumeIcon.icns"
           cp demo.textpack "$DMG_DIR/"
+          cp -R config "$DMG_DIR/"
 
           hdiutil create -volname PurplePlatypus -srcfolder "$DMG_DIR" -ov -format UDRW /tmp/purpleplatypus-rw.dmg
           hdiutil attach /tmp/purpleplatypus-rw.dmg -mountpoint /tmp/dmg-vol
@@ -414,6 +423,13 @@ jobs:
           for f in *.dmg; do [ -f "$f" ] && mv "$f" "${f%.dmg}-${{ matrix.arch }}.dmg" || true; done
           for f in *.msi; do [ -f "$f" ] && mv "$f" "${f%.msi}-${{ matrix.arch }}.msi" || true; done
 
+      - name: Create config zip (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cp -R config "PurplePlatypus Configs"
+          7z a "PurplePlatypus-Configs.zip" "PurplePlatypus Configs"
+
       - name: Upload package artifact
         uses: actions/upload-artifact@v7
         with:
@@ -423,6 +439,7 @@ jobs:
             *.msi
             *.deb
             *.rpm
+            PurplePlatypus-Configs.zip
 
       - name: Attach to release
         if: inputs.version != ''
@@ -435,6 +452,7 @@ jobs:
             *.msi
             *.deb
             *.rpm
+            PurplePlatypus-Configs.zip
 
   java-zip:
     runs-on: ubuntu-22.04
