@@ -86,6 +86,11 @@ public class GenericVendorConfig {
               Headers:
                 Authorization: "Basic ${AUTH_TOKEN}"
               Response:
+                # ListPath: JSONPath to the array of models in the response.
+                #   "" (empty) = response body is the array itself, e.g. [{"model_id":...}, ...]
+                #   "data"     = array is in the "data" field, e.g. {"data": [...]}
+                #   "models"   = array is in the "models" field
+                #   "result.models" = nested path, e.g. {"result": {"models": [...]}}
                 ListPath: ""
                 IdField: "model_id"
                 DescriptionField: "short_description"
