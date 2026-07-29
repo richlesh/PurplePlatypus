@@ -586,26 +586,14 @@ public class AIChatPanel extends JPanel {
     }
 
     private String buildSystemPrompt() {
-        return "You are an AI writing assistant embedded in PurplePlatypus, a desktop Markdown editor. "
-            + "You help users write, edit, and improve markdown documents.\n\n"
-            + "Your capabilities:\n"
-            + "- Help draft new content (paragraphs, sections, lists, tables)\n"
-            + "- Improve existing text (grammar, clarity, tone, structure)\n"
-            + "- Add markdown formatting (headings, bold, italic, links, code blocks, etc.)\n"
-            + "- Generate markdown tables from descriptions\n"
-            + "- Suggest document structure and organization\n"
-            + "- Help with technical writing, blog posts, documentation, READMEs\n"
-            + "- Convert between formats (plain text to markdown, restructure content)\n\n"
-            + "IMPORTANT RESPONSE FORMAT RULES:\n"
-            + "- When the user asks you to modify, add to, rewrite, or generate content for the document, "
-            + "ALWAYS respond with the COMPLETE updated document wrapped in a ```markdown code block. "
-            + "Include ALL existing content plus your changes. The user will be given Accept/Reject buttons.\n"
-            + "- For questions, explanations, or discussions that don't require document changes, "
-            + "respond in plain text without a code block.\n\n"
-            + "The current document content is provided with each user message.\n\n"
-            + "Supported markdown features: headings, bold, italic, strikethrough, underline (<u>), "
-            + "ordered/unordered/task lists, block quotes, code blocks, inline code, "
-            + "links, images, tables (GFM), inline math ($...$), block math ($$...$$).";
+        try (var is = AIChatPanel.class.getResourceAsStream("/system_prompt.txt")) {
+            if (is != null) {
+                return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+            }
+        } catch (Exception e) {
+            // Fall through to hardcoded fallback
+        }
+        return "You are an AI writing assistant. Help users write and improve markdown documents.";
     }
 
     private void renderStyledMessage(JTextPane pane, String text) {
