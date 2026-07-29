@@ -122,6 +122,10 @@ jobs:
           }
           EOF
 
+      - name: Set Maven project version
+        shell: bash
+        run: mvn versions:set -DnewVersion="${{ env.APP_VERSION }}" -DgenerateBackupPoms=false -q
+
       - name: Build fat JAR
         shell: bash
         run: |
@@ -491,6 +495,10 @@ jobs:
               static final String LICENSE_SALT = "${LICENSE_SALT}";
           }
           EOF
+
+      - name: Set Maven project version
+        shell: bash
+        run: mvn versions:set -DnewVersion="${{ env.APP_VERSION }}" -DgenerateBackupPoms=false -q
 
       - name: Build app JAR (excluding JavaFX)
         run: |
