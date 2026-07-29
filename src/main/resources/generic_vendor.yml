@@ -27,7 +27,7 @@ Prompt:
     {
       "model": "${MODEL}",
       "messages": [
-        {"role": "system", "content": "always respond using markdown in UTF-8"},
+        {"role": "system", "content": "${SYSTEM_PROMPT}"},
         {"role": "user", "content": "${PROMPT}"}
       ],
       "temperature": 0,
