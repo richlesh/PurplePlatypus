@@ -5,23 +5,13 @@
 /**
  * PreferencesDialog.java
  *
- * A modal dialog for editing PurplePlaftypus user preferences. Font settings on
- * the left, AI/LLM settings on the right.
+ * A modal dialog for editing PurplePlatypus user preferences (fonts and editor settings).
+ * AI/LLM settings are handled by AIChatPreferencesDialog.
  */
 package com.glowingcat;
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.*;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class PreferencesDialog extends JDialog {
 
@@ -34,39 +24,10 @@ public class PreferencesDialog extends JDialog {
     private final Color[] selectionColor;
     private final JCheckBox useTabsBox;
     private final JSpinner tabSizeSpinner;
-    private final JComboBox<String> llmVendorCombo;
-    private final JComboBox<String> llmModelCombo;
-    private final JPasswordField llmApiKeyField;
-    private final JTextField llmEndpointField;
-    private final JComboBox<String> aiFontCombo;
-    private final JComboBox<Integer> aiFontSizeCombo;
-    private final Color[] userPromptColor;
-    private final Color[] userTextColor;
-    private final Color[] aiResponseColor;
-    private final Color[] aiTextColor;
     private final Color[] buttonHighlightColor;
     private boolean confirmed = false;
-    private final Runnable[] fetchModelsHolder = new Runnable[1];
 
     private static final Integer[] FONT_SIZES = {8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36};
-
-    private static final String[][] VENDOR_DATA = {
-        {"Alibaba", "https://www.alibabacloud.com/help/en/model-studio/get-api-key", "https://dashscope-us.aliyuncs.com/compatible-mode/v1"},
-        {"Anthropic", "https://console.anthropic.com/settings/keys", "https://api.anthropic.com/v1"},
-        {"Cerebras", "https://cloud.cerebras.ai", "https://api.cerebras.ai/v1"},
-        {"DeepSeek", "https://platform.deepseek.com/api_keys", "https://api.deepseek.com/v1"},
-        {"Generic", "", ""},
-        {"Generic OpenAI API", "", ""},
-        {"Google", "https://aistudio.google.com/apikey", "https://generativelanguage.googleapis.com/v1beta/openai"},
-        {"Groq", "https://console.groq.com/keys", "https://api.groq.com/openai/v1"},
-        {"Meta", "https://developer.meta.com/ai/", "https://api.meta.ai/v1"},
-        {"Mistral", "https://console.mistral.ai/api-keys", "https://api.mistral.ai/v1"},
-        {"Moonshot AI", "https://platform.kimi.ai", "https://api.moonshot.ai/v1"},
-        {"Ollama", "https://ollama.com", "http://localhost:11434/v1"},
-        {"OpenAI", "https://platform.openai.com/api-keys", "https://api.openai.com/v1"},
-        {"Perplexity", "https://www.perplexity.ai/settings/api", "https://api.perplexity.ai"},
-        {"xAI", "https://console.x.ai", "https://api.x.ai/v1"},
-    };
 
     public PreferencesDialog(JFrame owner, Preferences prefs) {
         super(owner, "Preferences", true);
@@ -95,41 +56,11 @@ public class PreferencesDialog extends JDialog {
         useTabsBox = new JCheckBox("Use Tabs", prefs.isUseTabs());
         tabSizeSpinner = new JSpinner(new SpinnerNumberModel(prefs.getTabSize(), 1, 8, 1));
 
-        // Initialize LLM combos
-        String[] vendorNames = new String[VENDOR_DATA.length];
-        for (int i = 0; i < VENDOR_DATA.length; i++) vendorNames[i] = VENDOR_DATA[i][0];
-        llmVendorCombo = new JComboBox<>(vendorNames);
-        if (prefs.getLlmVendor() != null) llmVendorCombo.setSelectedItem(prefs.getLlmVendor());
-
-        llmModelCombo = new JComboBox<>();
-        llmModelCombo.setEditable(true);
-
-        llmApiKeyField = new JPasswordField(prefs.getLlmApiKey() != null ? prefs.getLlmApiKey() : "", 20);
-
-        llmEndpointField = new JTextField(prefs.getLlmEndpoint() != null ? prefs.getLlmEndpoint() : "", 20);
-
-        aiFontCombo = new JComboBox<>(fontFamilies);
-        aiFontCombo.setSelectedItem(prefs.getAiFontFamily());
-        aiFontSizeCombo = new JComboBox<>(FONT_SIZES);
-        aiFontSizeCombo.setSelectedItem(prefs.getAiFontSize());
-
-        userPromptColor = new Color[]{prefs.getUserPromptColorObj()};
-        userTextColor = new Color[]{prefs.getUserTextColorObj()};
-        aiResponseColor = new Color[]{prefs.getAiResponseColorObj()};
-        aiTextColor = new Color[]{prefs.getAiTextColorObj()};
         buttonHighlightColor = new Color[]{prefs.getButtonHighlightColorObj()};
 
-        // === LEFT PANEL: Font Settings ===
-        JPanel leftPanel = buildFontPanel();
-
-        // === RIGHT PANEL: LLM / AI Settings ===
-        JPanel rightPanel = buildLlmPanel(prefs);
-
-        // === Main layout: left | right ===
-        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        // === Main layout ===
+        JPanel mainPanel = buildFontPanel();
         mainPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        mainPanel.add(leftPanel);
-        mainPanel.add(rightPanel);
 
         add(mainPanel, BorderLayout.CENTER);
 
@@ -142,110 +73,6 @@ public class PreferencesDialog extends JDialog {
         buttonPanel.add(okButton);
         buttonPanel.add(cancelButton);
         add(buttonPanel, BorderLayout.SOUTH);
-
-        // Wire up model fetching
-        Runnable fetchModels = () -> {
-            int vi = llmVendorCombo.getSelectedIndex();
-            String apiKey = new String(llmApiKeyField.getPassword()).trim();
-
-            // Handle Generic (YAML-configured) vendor separately
-            if ("Generic".equals(VENDOR_DATA[vi][0])) {
-                llmModelCombo.removeAllItems();
-                new Thread(() -> {
-                    try {
-                        GenericVendorConfig config = new GenericVendorConfig();
-                        List<String> models = config.fetchModels(apiKey);
-                        SwingUtilities.invokeLater(() -> {
-                            llmModelCombo.removeAllItems();
-                            for (String mod : models) llmModelCombo.addItem(mod);
-                            if (prefs.getLlmModel() != null) llmModelCombo.setSelectedItem(prefs.getLlmModel());
-                        });
-                    } catch (Exception ex) {
-                        // leave model combo empty on failure
-                    }
-                }).start();
-                return;
-            }
-
-            String resolvedUrl = VENDOR_DATA[vi][2];
-            if ("Generic OpenAI API".equals(VENDOR_DATA[vi][0])) {
-                resolvedUrl = llmEndpointField.getText().trim();
-                if (resolvedUrl.isEmpty()) {
-                    llmModelCombo.removeAllItems();
-                    return;
-                }
-                // Strip trailing slash for consistency
-                if (resolvedUrl.endsWith("/")) resolvedUrl = resolvedUrl.substring(0, resolvedUrl.length() - 1);
-            }
-            final String baseUrl = resolvedUrl;
-            llmModelCombo.removeAllItems();
-            if (apiKey.isEmpty() && !"Ollama".equals(VENDOR_DATA[vi][0]) && !"Generic OpenAI API".equals(VENDOR_DATA[vi][0])) {
-                return;
-            }
-            new Thread(() -> {
-                try {
-                    String modelsUrl = "Perplexity".equals(VENDOR_DATA[vi][0])
-                        ? baseUrl + "/v1/models" : baseUrl + "/models";
-                    HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
-                        .uri(URI.create(modelsUrl))
-                        .header("Content-Type", "application/json")
-                        .GET();
-                    if ("Anthropic".equals(VENDOR_DATA[vi][0])) {
-                        reqBuilder.header("x-api-key", apiKey);
-                        reqBuilder.header("anthropic-version", "2023-06-01");
-                    } else if (!apiKey.isEmpty()) {
-                        reqBuilder.header("Authorization", "Bearer " + apiKey);
-                    }
-                    HttpResponse<String> resp = HttpClient.newHttpClient()
-                        .send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
-                    String body = resp.body();
-                    List<String> models = new ArrayList<>();
-                    Matcher m = Pattern.compile("\"id\"\\s*:\\s*\"([^\"]+)\"").matcher(body);
-                    while (m.find()) {
-                        String id = m.group(1);
-                        if ("Perplexity".equals(VENDOR_DATA[vi][0]) && id.contains("/")) {
-                            id = id.substring(id.indexOf('/') + 1);
-                        }
-                        models.add(id);
-                    }
-                    SwingUtilities.invokeLater(() -> {
-                        llmModelCombo.removeAllItems();
-                        for (String mod : models) llmModelCombo.addItem(mod);
-                        if (prefs.getLlmModel() != null) llmModelCombo.setSelectedItem(prefs.getLlmModel());
-                    });
-                } catch (Exception ex) {
-                    // leave model combo empty on failure
-                }
-            }).start();
-        };
-        fetchModelsHolder[0] = fetchModels;
-        if (prefs.getLlmModel() != null) llmModelCombo.addItem(prefs.getLlmModel());
-        fetchModels.run();
-        llmVendorCombo.addActionListener(e -> {
-            llmApiKeyField.setText("");
-            llmModelCombo.removeAllItems();
-            fetchModels.run();
-        });
-        llmApiKeyField.getDocument().addDocumentListener(new DocumentListener() {
-            private final Timer debounce = new Timer(500, e -> {
-                llmModelCombo.removeAllItems();
-                fetchModels.run();
-            });
-            { debounce.setRepeats(false); }
-            public void insertUpdate(DocumentEvent e) { debounce.restart(); }
-            public void removeUpdate(DocumentEvent e) { debounce.restart(); }
-            public void changedUpdate(DocumentEvent e) { debounce.restart(); }
-        });
-        llmEndpointField.getDocument().addDocumentListener(new DocumentListener() {
-            private final Timer debounce = new Timer(500, e -> {
-                llmModelCombo.removeAllItems();
-                fetchModels.run();
-            });
-            { debounce.setRepeats(false); }
-            public void insertUpdate(DocumentEvent e) { debounce.restart(); }
-            public void removeUpdate(DocumentEvent e) { debounce.restart(); }
-            public void changedUpdate(DocumentEvent e) { debounce.restart(); }
-        });
 
         getRootPane().setDefaultButton(okButton);
         pack();
@@ -363,186 +190,19 @@ public class PreferencesDialog extends JDialog {
         gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
         panel.add(tabSizeSpinner, gbc);
 
-        // Vertical glue to push content to top
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.weighty = 1;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        panel.add(Box.createVerticalGlue(), gbc);
-
-        return panel;
-    }
-
-    private JPanel buildLlmPanel(Preferences prefs) {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("AI Chat"));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(4, 6, 4, 6);
-        gbc.anchor = GridBagConstraints.WEST;
-        int row = 0;
-
-        // LLM Connection
-        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
-        JLabel llmHeader = new JLabel("LLM Connection");
-        llmHeader.setFont(llmHeader.getFont().deriveFont(Font.BOLD));
-        panel.add(llmHeader, gbc);
-
-        gbc.gridwidth = 1;
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Vendor:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1;
-        panel.add(llmVendorCombo, gbc);
-        gbc.weightx = 0;
-
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Model:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(llmModelCombo, gbc);
-
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("API Key:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(llmApiKeyField, gbc);
-
-        JLabel endpointLabel = new JLabel("Endpoint:");
-        JLabel apiKeyLink = new JLabel("<html><nobr><a href=''>Get API key...</a></nobr></html>");
-        JLabel configureLink = new JLabel("<html><nobr><a href=''>Configure...</a></nobr></html>");
-
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(endpointLabel, gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(llmEndpointField, gbc);
-
-        // Show/hide endpoint based on vendor selection
-        boolean isGeneric = "Generic OpenAI API".equals(llmVendorCombo.getSelectedItem());
-        boolean isGenericYaml = "Generic".equals(llmVendorCombo.getSelectedItem());
-        endpointLabel.setVisible(isGeneric);
-        llmEndpointField.setVisible(isGeneric);
-        apiKeyLink.setVisible(!isGeneric && !isGenericYaml);
-        configureLink.setVisible(isGenericYaml);
-
-        gbc.gridy = ++row; gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
-        apiKeyLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        apiKeyLink.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                int vi = llmVendorCombo.getSelectedIndex();
-                String url = VENDOR_DATA[vi][1];
-                if (!url.isEmpty()) {
-                    try { Desktop.getDesktop().browse(URI.create(url)); }
-                    catch (Exception ignored) {}
-                }
-            }
-        });
-        panel.add(apiKeyLink, gbc);
-
-        configureLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        configureLink.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                GenericVendorDialog dlg = new GenericVendorDialog(PreferencesDialog.this);
-                dlg.setVisible(true);
-                if (dlg.isConfirmed() && fetchModelsHolder[0] != null) {
-                    // Reload config and refresh model list
-                    fetchModelsHolder[0].run();
-                }
-            }
-        });
-        panel.add(configureLink, gbc);
-
-        // Update endpoint/link visibility when vendor changes
-        llmVendorCombo.addActionListener(e -> {
-            boolean generic = "Generic OpenAI API".equals(llmVendorCombo.getSelectedItem());
-            boolean genericYaml = "Generic".equals(llmVendorCombo.getSelectedItem());
-            endpointLabel.setVisible(generic);
-            llmEndpointField.setVisible(generic);
-            apiKeyLink.setVisible(!generic && !genericYaml);
-            configureLink.setVisible(genericYaml);
-        });
-
         // Separator
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 6, 10, 6);
         panel.add(new JSeparator(), gbc);
         gbc.insets = new Insets(4, 6, 4, 6);
 
-        // Appearance
+        // Appearance section
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2;
         JLabel appearHeader = new JLabel("Appearance");
         appearHeader.setFont(appearHeader.getFont().deriveFont(Font.BOLD));
         panel.add(appearHeader, gbc);
 
         gbc.gridwidth = 1;
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Font:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(aiFontCombo, gbc);
-
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Size:"), gbc);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(aiFontSizeCombo, gbc);
-
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("User Color:"), gbc);
-        JPanel userColorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        userColorPanel.setOpaque(false);
-        JPanel userSwatch = new JPanel();
-        userSwatch.setBackground(userPromptColor[0]);
-        userSwatch.setPreferredSize(new Dimension(60, 24));
-        userSwatch.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
-        userSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        userSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(PreferencesDialog.this, "User Prompt Color", userPromptColor[0]);
-                if (c != null) { userPromptColor[0] = c; userSwatch.setBackground(c); }
-            }
-        });
-        userColorPanel.add(userSwatch);
-        userColorPanel.add(new JLabel("Text:"));
-        JPanel userTextSwatch = new JPanel();
-        userTextSwatch.setBackground(userTextColor[0]);
-        userTextSwatch.setPreferredSize(new Dimension(60, 24));
-        userTextSwatch.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
-        userTextSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        userTextSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(PreferencesDialog.this, "User Text Color", userTextColor[0]);
-                if (c != null) { userTextColor[0] = c; userTextSwatch.setBackground(c); }
-            }
-        });
-        userColorPanel.add(userTextSwatch);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
-        panel.add(userColorPanel, gbc);
-
-        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("AI Color:"), gbc);
-        JPanel aiColorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        aiColorPanel.setOpaque(false);
-        JPanel aiSwatch = new JPanel();
-        aiSwatch.setBackground(aiResponseColor[0]);
-        aiSwatch.setPreferredSize(new Dimension(60, 24));
-        aiSwatch.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
-        aiSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        aiSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(PreferencesDialog.this, "AI Response Color", aiResponseColor[0]);
-                if (c != null) { aiResponseColor[0] = c; aiSwatch.setBackground(c); }
-            }
-        });
-        aiColorPanel.add(aiSwatch);
-        aiColorPanel.add(new JLabel("Text:"));
-        JPanel aiTextSwatch = new JPanel();
-        aiTextSwatch.setBackground(aiTextColor[0]);
-        aiTextSwatch.setPreferredSize(new Dimension(60, 24));
-        aiTextSwatch.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
-        aiTextSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        aiTextSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(PreferencesDialog.this, "AI Text Color", aiTextColor[0]);
-                if (c != null) { aiTextColor[0] = c; aiTextSwatch.setBackground(c); }
-            }
-        });
-        aiColorPanel.add(aiTextSwatch);
-        gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
-        panel.add(aiColorPanel, gbc);
-
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
         panel.add(new JLabel("Button Highlight:"), gbc);
         JPanel btnHlSwatch = new JPanel();
@@ -579,19 +239,6 @@ public class PreferencesDialog extends JDialog {
         prefs.setSelectionColor(selectionColor[0]);
         prefs.setUseTabs(useTabsBox.isSelected());
         prefs.setTabSize((Integer) tabSizeSpinner.getValue());
-        prefs.setLlmVendor((String) llmVendorCombo.getSelectedItem());
-        Object modelItem = llmModelCombo.getSelectedItem();
-        prefs.setLlmModel(modelItem != null ? modelItem.toString() : null);
-        String key = new String(llmApiKeyField.getPassword()).trim();
-        prefs.setLlmApiKey(key.isEmpty() ? null : key);
-        String endpoint = llmEndpointField.getText().trim();
-        prefs.setLlmEndpoint(endpoint.isEmpty() ? null : endpoint);
-        prefs.setAiFontFamily((String) aiFontCombo.getSelectedItem());
-        prefs.setAiFontSize((Integer) aiFontSizeCombo.getSelectedItem());
-        prefs.setUserPromptColor(userPromptColor[0]);
-        prefs.setUserTextColor(userTextColor[0]);
-        prefs.setAiResponseColor(aiResponseColor[0]);
-        prefs.setAiTextColor(aiTextColor[0]);
         prefs.setButtonHighlightColor(buttonHighlightColor[0]);
     }
 }

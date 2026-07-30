@@ -15,8 +15,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.awt.Color;
-import java.awt.Font;
-import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -64,40 +62,20 @@ public class Preferences {
     /** Number of spaces per tab stop. */
     private int tabSize = 4;
 
-    // --- LLM / AI Chat settings ---
-
-    /** LLM vendor name (OpenAI, Anthropic, Google, DeepSeek, Alibaba, Ollama). */
-    private String llmVendor = "OpenAI";
-
-    /** LLM model identifier. */
-    private String llmModel = "gpt-4o";
-
-    /** LLM API key (null means not configured). */
-    private String llmApiKey = null;
-
-    /** Custom LLM endpoint URL for Generic OpenAI API vendor. */
-    private String llmEndpoint = null;
-
-    /** Font family for the AI chat panel. */
-    private String aiFontFamily = detectAIFont();
-
-    /** Font size for the AI chat panel. */
-    private int aiFontSize = 14;
-
-    /** Background color for user prompt chat bubbles (hex string for Gson). */
-    private String userPromptColor = "#9B59B6";
-
-    /** Text color for user prompt chat bubbles (hex string for Gson). */
-    private String userTextColor = "#FFFFFF";
-
-    /** Background color for AI response chat bubbles (hex string for Gson). */
-    private String aiResponseColor = "#6C3483";
-
-    /** Text color for AI response chat bubbles (hex string for Gson). */
-    private String aiTextColor = "#FFFFFF";
-
     /** Toolbar toggle button highlight color (hex string for Gson). */
     private String buttonHighlightColor = "#B482FF";
+
+    // --- Legacy AI fields (kept for reading from old settings files for migration) ---
+    private String llmVendor = null;
+    private String llmModel = null;
+    private String llmApiKey = null;
+    private String llmEndpoint = null;
+    private String aiFontFamily = null;
+    private Integer aiFontSize = null;
+    private String userPromptColor = null;
+    private String userTextColor = null;
+    private String aiResponseColor = null;
+    private String aiTextColor = null;
 
     // --- Window state (not shown in preferences dialog) ---
 
@@ -127,53 +105,38 @@ public class Preferences {
     /** License key (16 hex chars). */
     private String licenseKey = null;
 
-    private static String detectAIFont() {
-        String os = System.getProperty("os.name", "").toLowerCase();
-        String[] candidates;
-        if (os.contains("linux")) candidates = new String[]{"DejaVu Sans", "Arial", "Helvetica", "SansSerif"};
-        else if (os.contains("win")) candidates = new String[]{"Calibri", "Arial", "Helvetica", "SansSerif"};
-        else candidates = new String[]{"Arial", "Helvetica", "SansSerif"};
-        for (String name : candidates) {
-            Font f = new Font(name, Font.PLAIN, 14);
-            if (!f.getFamily().equals("Dialog")) return name;
-        }
-        return "SansSerif";
+    // --- LLM Legacy Getters (for migration) ---
+
+    String getLegacyLlmVendor() { return llmVendor; }
+    String getLegacyLlmModel() { return llmModel; }
+    String getLegacyLlmApiKey() { return llmApiKey; }
+    String getLegacyLlmEndpoint() { return llmEndpoint; }
+    String getLegacyAiFontFamily() { return aiFontFamily; }
+    Integer getLegacyAiFontSize() { return aiFontSize; }
+    String getLegacyUserPromptColor() { return userPromptColor; }
+    String getLegacyUserTextColor() { return userTextColor; }
+    String getLegacyAiResponseColor() { return aiResponseColor; }
+    String getLegacyAiTextColor() { return aiTextColor; }
+
+    /** Returns true if this settings file contains legacy AI fields that need migration. */
+    boolean hasLegacyAiSettings() {
+        return llmVendor != null || llmApiKey != null || aiFontFamily != null
+            || userPromptColor != null || aiResponseColor != null;
     }
 
-    // --- LLM Getters/Setters ---
-
-    public String getLlmVendor() { return llmVendor; }
-    public void setLlmVendor(String llmVendor) { this.llmVendor = llmVendor; }
-    public String getLlmModel() { return llmModel; }
-    public void setLlmModel(String llmModel) { this.llmModel = llmModel; }
-    public String getLlmApiKey() { return llmApiKey; }
-    public void setLlmApiKey(String llmApiKey) { this.llmApiKey = llmApiKey; }
-    public String getLlmEndpoint() { return llmEndpoint; }
-    public void setLlmEndpoint(String llmEndpoint) { this.llmEndpoint = llmEndpoint; }
-    public String getAiFontFamily() { return aiFontFamily; }
-    public void setAiFontFamily(String aiFontFamily) { this.aiFontFamily = aiFontFamily; }
-    public int getAiFontSize() { return aiFontSize; }
-    public void setAiFontSize(int aiFontSize) { this.aiFontSize = aiFontSize; }
-
-    public Color getUserPromptColorObj() { return Color.decode(userPromptColor); }
-    public void setUserPromptColor(Color color) { this.userPromptColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
-    public String getUserPromptColor() { return userPromptColor; }
-    public void setUserPromptColor(String hex) { this.userPromptColor = hex; }
-
-    public Color getUserTextColorObj() { return Color.decode(userTextColor); }
-    public void setUserTextColor(Color color) { this.userTextColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
-    public String getUserTextColor() { return userTextColor; }
-    public void setUserTextColor(String hex) { this.userTextColor = hex; }
-
-    public Color getAiResponseColorObj() { return Color.decode(aiResponseColor); }
-    public void setAiResponseColor(Color color) { this.aiResponseColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
-    public String getAiResponseColor() { return aiResponseColor; }
-    public void setAiResponseColor(String hex) { this.aiResponseColor = hex; }
-
-    public Color getAiTextColorObj() { return Color.decode(aiTextColor); }
-    public void setAiTextColor(Color color) { this.aiTextColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
-    public String getAiTextColor() { return aiTextColor; }
-    public void setAiTextColor(String hex) { this.aiTextColor = hex; }
+    /** Clear legacy AI fields so they are not written back to the settings file. */
+    void clearLegacyAiSettings() {
+        llmVendor = null;
+        llmModel = null;
+        llmApiKey = null;
+        llmEndpoint = null;
+        aiFontFamily = null;
+        aiFontSize = null;
+        userPromptColor = null;
+        userTextColor = null;
+        aiResponseColor = null;
+        aiTextColor = null;
+    }
 
     public Color getButtonHighlightColorObj() { return Color.decode(buttonHighlightColor); }
     public void setButtonHighlightColor(Color color) { this.buttonHighlightColor = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); }
@@ -237,6 +200,8 @@ public class Preferences {
                 Gson gson = new Gson();
                 Preferences prefs = gson.fromJson(reader, Preferences.class);
                 if (prefs != null) {
+                    // Migrate legacy AI settings to AIChatPreferences if needed
+                    prefs.migrateAiSettings();
                     return prefs;
                 }
             } catch (IOException | com.google.gson.JsonSyntaxException e) {
@@ -244,6 +209,41 @@ public class Preferences {
             }
         }
         return new Preferences();
+    }
+
+    /**
+     * Migrate legacy AI settings from this file to ~/.glowingcat-ai-settings.json.
+     * Only migrates if the AI settings file does not already exist and this file
+     * contains legacy AI fields.
+     */
+    private void migrateAiSettings() {
+        if (!hasLegacyAiSettings()) return;
+
+        Path aiPath = Paths.get(System.getProperty("user.home"), ".glowingcat-ai-settings.json");
+        if (Files.exists(aiPath)) {
+            // AI settings file already exists, just clear legacy fields
+            clearLegacyAiSettings();
+            save();
+            return;
+        }
+
+        // Migrate to AIChatPreferences
+        AIChatPreferences aiPrefs = new AIChatPreferences();
+        if (llmVendor != null) aiPrefs.setLlmVendor(llmVendor);
+        if (llmModel != null) aiPrefs.setLlmModel(llmModel);
+        if (llmApiKey != null) aiPrefs.setLlmApiKey(llmApiKey);
+        if (llmEndpoint != null) aiPrefs.setLlmEndpoint(llmEndpoint);
+        if (aiFontFamily != null) aiPrefs.setAiFontFamily(aiFontFamily);
+        if (aiFontSize != null) aiPrefs.setAiFontSize(aiFontSize);
+        if (userPromptColor != null) aiPrefs.setUserPromptColor(userPromptColor);
+        if (userTextColor != null) aiPrefs.setUserTextColor(userTextColor);
+        if (aiResponseColor != null) aiPrefs.setAiResponseColor(aiResponseColor);
+        if (aiTextColor != null) aiPrefs.setAiTextColor(aiTextColor);
+        aiPrefs.save();
+
+        // Clear legacy fields and re-save
+        clearLegacyAiSettings();
+        save();
     }
 
     public void save() {
