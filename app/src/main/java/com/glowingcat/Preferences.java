@@ -90,6 +90,12 @@ public class Preferences {
 
     // --- Window state (not shown in preferences dialog) ---
 
+    /** Recently opened file paths (most recent first). */
+    private java.util.List<String> recentFiles = new java.util.ArrayList<>();
+
+    /** Maximum number of recent files to remember. */
+    private static final transient int MAX_RECENT_FILES = 20;
+
     /** Window width. */
     private int windowWidth = 1200;
 
@@ -216,6 +222,30 @@ public class Preferences {
     public void setLicenseEmail(String licenseEmail) { this.licenseEmail = licenseEmail; }
     public String getLicenseKey() { return licenseKey; }
     public void setLicenseKey(String licenseKey) { this.licenseKey = licenseKey; }
+
+    // --- Recent Files ---
+
+    /** Get the list of recently opened file paths (most recent first). */
+    public java.util.List<String> getRecentFiles() {
+        if (recentFiles == null) recentFiles = new java.util.ArrayList<>();
+        return java.util.Collections.unmodifiableList(recentFiles);
+    }
+
+    /** Add a file to the recent files list (moves to front if already present). */
+    public void addRecentFile(String path) {
+        if (recentFiles == null) recentFiles = new java.util.ArrayList<>();
+        recentFiles.remove(path);
+        recentFiles.add(0, path);
+        while (recentFiles.size() > MAX_RECENT_FILES) {
+            recentFiles.remove(recentFiles.size() - 1);
+        }
+    }
+
+    /** Clear all recent files. */
+    public void clearRecentFiles() {
+        if (recentFiles == null) recentFiles = new java.util.ArrayList<>();
+        recentFiles.clear();
+    }
 
     private static Path getPrefsPath() {
         return Paths.get(System.getProperty("user.home"), PREFS_FILENAME);

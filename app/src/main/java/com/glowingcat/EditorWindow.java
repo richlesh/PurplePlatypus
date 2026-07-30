@@ -73,6 +73,7 @@ public class EditorWindow {
 
     private FindDialog findDialog;
     private ReplaceDialog replaceDialog;
+    private JMenu recentsMenu;
     private JMenuItem convertLineEndingsItem;
     private JMenuItem saveItem;
     private JLabel statsLabel;
@@ -208,6 +209,9 @@ public class EditorWindow {
 
         fileMenu.add(newItem);
         fileMenu.add(openItem);
+        recentsMenu = new JMenu("Recents");
+        rebuildRecentsMenu();
+        fileMenu.add(recentsMenu);
         fileMenu.addSeparator();
         fileMenu.add(closeItem);
         fileMenu.addSeparator();
@@ -932,6 +936,80 @@ public class EditorWindow {
 
     // --- File operations ---
 
+    private void rebuildRecentsMenu() {
+        recentsMenu.removeAll();
+        java.util.List<String> recentFiles = preferences.getRecentFiles();
+        if (recentFiles.isEmpty()) {
+            JMenuItem emptyItem = new JMenuItem("(No Recent Files)");
+            emptyItem.setEnabled(false);
+            recentsMenu.add(emptyItem);
+        } else {
+            for (String path : recentFiles) {
+                File file = new File(path);
+                JMenuItem item = new JMenuItem(file.getName());
+                item.setToolTipText(path);
+                item.addActionListener(e -> openRecentFile(file));
+                recentsMenu.add(item);
+            }
+            recentsMenu.addSeparator();
+            JMenuItem clearItem = new JMenuItem("Clear All Recents");
+            clearItem.addActionListener(e -> {
+                preferences.clearRecentFiles();
+                preferences.save();
+                rebuildRecentsMenuAllWindows();
+            });
+            recentsMenu.add(clearItem);
+        }
+    }
+
+    private void addToRecents(File file) {
+        if (file == null) return;
+        preferences.addRecentFile(file.getAbsolutePath());
+        preferences.save();
+        rebuildRecentsMenuAllWindows();
+    }
+
+    private static void rebuildRecentsMenuAllWindows() {
+        for (EditorWindow w : openInstances) {
+            w.rebuildRecentsMenu();
+        }
+    }
+
+    private void openRecentFile(File file) {
+        if (!file.exists()) {
+            JOptionPane.showMessageDialog(frame,
+                "File not found:\n" + file.getAbsolutePath(),
+                "File Not Found", JOptionPane.WARNING_MESSAGE);
+            // Remove from recents
+            java.util.List<String> recents = new java.util.ArrayList<>(preferences.getRecentFiles());
+            recents.remove(file.getAbsolutePath());
+            preferences.clearRecentFiles();
+            for (int i = recents.size() - 1; i >= 0; i--) {
+                preferences.addRecentFile(recents.get(i));
+            }
+            preferences.save();
+            rebuildRecentsMenuAllWindows();
+            return;
+        }
+        // Check if file is already open in another window — bring it to front
+        for (EditorWindow w : openInstances) {
+            if (w.currentFile != null && w.currentFile.getAbsolutePath().equals(file.getAbsolutePath())) {
+                w.frame.toFront();
+                w.frame.setState(java.awt.Frame.NORMAL);
+                w.frame.requestFocus();
+                return;
+            }
+        }
+        try {
+            String content = java.nio.file.Files.readString(file.toPath(), java.nio.charset.StandardCharsets.UTF_8);
+            openFileInTarget(file, content);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame,
+                "Error opening file:\n" + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void newFile() {
         SwingUtilities.invokeLater(EditorWindow::new);
     }
@@ -1045,6 +1123,7 @@ public class EditorWindow {
         updateTitle();
         updateLineEndingsMenuItem();
         updateStats();
+        addToRecents(file);
     }
 
     private void saveFile() {
