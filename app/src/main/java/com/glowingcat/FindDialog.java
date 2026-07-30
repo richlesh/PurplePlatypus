@@ -48,6 +48,9 @@ public class FindDialog extends JDialog {
     /** The text area being searched. */
     protected final JTextArea textArea;
 
+    /** Application preferences for storing search/replace recents. */
+    protected final Preferences preferences;
+
     /** Text field where the user enters the search query. */
     protected JTextField searchField;
 
@@ -78,25 +81,28 @@ public class FindDialog extends JDialog {
     /**
      * Creates a Find dialog with the default title "Find".
      *
-     * @param owner    the parent frame
-     * @param textArea the text area to search within
+     * @param owner       the parent frame
+     * @param textArea    the text area to search within
+     * @param preferences the application preferences for storing recents
      */
-    public FindDialog(JFrame owner, JTextArea textArea) {
-        this(owner, textArea, "Find");
+    public FindDialog(JFrame owner, JTextArea textArea, Preferences preferences) {
+        this(owner, textArea, preferences, "Find");
     }
 
     /**
      * Creates a Find dialog with a custom title. This constructor is used by subclasses
      * to provide their own dialog title (e.g., "Replace").
      *
-     * @param owner    the parent frame
-     * @param textArea the text area to search within
-     * @param title    the dialog window title
+     * @param owner       the parent frame
+     * @param textArea    the text area to search within
+     * @param preferences the application preferences for storing recents
+     * @param title       the dialog window title
      */
-    protected FindDialog(JFrame owner, JTextArea textArea, String title) {
+    protected FindDialog(JFrame owner, JTextArea textArea, Preferences preferences, String title) {
         super(owner, title, false);
         this.ownerFrame = owner;
         this.textArea = textArea;
+        this.preferences = preferences;
 
         setLayout(new BorderLayout(8, 8));
         getRootPane().setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -127,7 +133,8 @@ public class FindDialog extends JDialog {
     protected JPanel createTopPanel() {
         JPanel topPanel = new JPanel(new BorderLayout(8, 0));
         topPanel.add(new JLabel("Find:"), BorderLayout.WEST);
-        topPanel.add(searchField = new JTextField(24), BorderLayout.CENTER);
+        searchField = new JTextField(24);
+        topPanel.add(createFieldWithRecents(searchField, true), BorderLayout.CENTER);
         return topPanel;
     }
 
@@ -221,6 +228,102 @@ public class FindDialog extends JDialog {
         btn.setMaximumSize(btnSize);
         btn.setPreferredSize(btnSize);
         return btn;
+    }
+
+    /**
+     * Creates a small icon button for the recents controls.
+     */
+    private JButton createSmallButton(String label, String tooltip) {
+        JButton btn = new JButton();
+        btn.setToolTipText(tooltip);
+        btn.setText(null);
+        btn.setIcon(new Icon() {
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2.setFont(c.getFont().deriveFont(Font.PLAIN, 14f));
+                g2.setColor(c.getForeground());
+                FontMetrics fm = g2.getFontMetrics();
+                int tx = (getIconWidth() - fm.stringWidth(label)) / 2;
+                int ty = (getIconHeight() + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(label, x + tx, y + ty);
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return 18; }
+            @Override public int getIconHeight() { return 18; }
+        });
+        btn.setFocusable(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setFocusPainted(false);
+        btn.putClientProperty("JButton.buttonType", "toolbar");
+        Dimension size = new Dimension(22, 22);
+        btn.setPreferredSize(size);
+        btn.setMinimumSize(size);
+        btn.setMaximumSize(size);
+        return btn;
+    }
+
+    /**
+     * Creates a panel with a text field and +, -, ▼ recents buttons.
+     *
+     * @param field    the text field
+     * @param isSearch true for search recents, false for replace recents
+     * @return a panel containing the field and buttons
+     */
+    protected JPanel createFieldWithRecents(JTextField field, boolean isSearch) {
+        JPanel panel = new JPanel(new BorderLayout(4, 0));
+        panel.add(field, BorderLayout.CENTER);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 1, 0));
+        JButton addBtn = createSmallButton("+", "Save to recents");
+        JButton removeBtn = createSmallButton("\u2212", "Remove from recents");
+        JButton dropBtn = createSmallButton("\u25BE", "Show recents");
+
+        addBtn.addActionListener(e -> {
+            String text = field.getText();
+            if (text.isEmpty()) return;
+            if (isSearch) {
+                preferences.addSearchRecent(text);
+            } else {
+                preferences.addReplaceRecent(text);
+            }
+            preferences.save();
+        });
+
+        removeBtn.addActionListener(e -> {
+            String text = field.getText();
+            if (text.isEmpty()) return;
+            if (isSearch) {
+                preferences.removeSearchRecent(text);
+            } else {
+                preferences.removeReplaceRecent(text);
+            }
+            preferences.save();
+        });
+
+        dropBtn.addActionListener(e -> {
+            java.util.List<String> recents = isSearch
+                ? preferences.getSearchRecents()
+                : preferences.getReplaceRecents();
+            if (recents.isEmpty()) return;
+            JPopupMenu popup = new JPopupMenu();
+            for (String item : recents) {
+                // Truncate display for very long expressions
+                String display = item.length() > 60 ? item.substring(0, 57) + "..." : item;
+                JMenuItem mi = new JMenuItem(display);
+                mi.setToolTipText(item);
+                mi.addActionListener(ev -> field.setText(item));
+                popup.add(mi);
+            }
+            popup.show(dropBtn, 0, dropBtn.getHeight());
+        });
+
+        btnPanel.add(addBtn);
+        btnPanel.add(removeBtn);
+        btnPanel.add(dropBtn);
+        panel.add(btnPanel, BorderLayout.EAST);
+        return panel;
     }
 
     /**

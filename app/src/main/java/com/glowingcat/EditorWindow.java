@@ -2252,13 +2252,13 @@ public class EditorWindow {
     // --- Dialogs ---
 
     private void showFindDialog() {
-        if (findDialog == null) findDialog = new FindDialog(frame, editorPane);
+        if (findDialog == null) findDialog = new FindDialog(frame, editorPane, preferences);
         findDialog.setVisible(true);
         findDialog.toFront();
     }
 
     private void showReplaceDialog() {
-        if (replaceDialog == null) replaceDialog = new ReplaceDialog(frame, editorPane);
+        if (replaceDialog == null) replaceDialog = new ReplaceDialog(frame, editorPane, preferences);
         replaceDialog.setVisible(true);
         replaceDialog.toFront();
     }
