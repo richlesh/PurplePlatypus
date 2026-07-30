@@ -340,30 +340,10 @@ public class PreviewPanel extends JPanel {
         }
 
         return "<html><head><meta charset=\"utf-8\">" + baseTag + "<style>"
-                + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; padding: 10px; line-height: 1.6; overflow-x: hidden; }"
-                + "h1, h2, h3 { color: #333; }"
-                + "code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"
-                + "pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; line-height: 1.4; }"
-                + "pre code { background: none; padding: 0; border-radius: 0; }"
-                + "blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }"
-                + "table { border-collapse: collapse; margin: 12px auto; }"
-                + "th, td { border: 1px solid #ddd; padding: 6px 12px; }"
-                + "td[align=left], th[align=left] { text-align: left; }"
-                + "td[align=center], th[align=center] { text-align: center; }"
-                + "td[align=right], th[align=right] { text-align: right; }"
-                + "th { background-color: #f0f0f0; font-weight: bold; }"
-                + "tr:nth-child(even) { background-color: #f9f9f9; }"
-                + "img { max-width: 75%; display: block; margin: 12px auto; }"
-                + "a { color: #0366d6; }"
-                + "li { margin: 0; padding: 0; }"
-                + "li p { margin: 0; display: inline; }"
-                + "ul, ol { padding-left: 24px; }"
-                + "input[type=checkbox] { margin-right: 6px; vertical-align: middle; }"
-                + "li:has(> input[type=checkbox]) { list-style-type: none; }"
-                + "mjx-container { overflow: visible !important; display: inline-block; vertical-align: middle; }"
-                + "mjx-container[display=true] { display: block; text-align: center; margin: 1em 0 !important; }"
-                + "mjx-container svg { overflow: visible; }"
+                + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; }"
+                + "code, pre { font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"
                 + "</style>"
+                + "<style>" + loadPreviewCss() + "</style>"
                 + "<script>"
                 + "MathJax = {"
                 + "  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },"
@@ -456,5 +436,16 @@ public class PreviewPanel extends JPanel {
                 // Silently fail
             }
         }
+    }
+
+    private static String loadPreviewCss() {
+        try (var is = PreviewPanel.class.getResourceAsStream("/preview.css")) {
+            if (is != null) {
+                return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            }
+        } catch (Exception e) {
+            // Fall through
+        }
+        return "";
     }
 }

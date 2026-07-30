@@ -3,7 +3,7 @@
 body {
     margin: 0;
     padding: 8px;
-    padding-right: 13px;
+    padding-right: 18px;
     background: #f5f5f5;
     overflow-x: hidden;
     word-wrap: break-word;
@@ -122,6 +122,13 @@ pre code {
     border-radius: 0;
 }
 
+blockquote {
+    border-left: 4px solid #ccc;
+    margin-left: 0;
+    padding-left: 16px;
+    color: #333333;
+}
+
 table {
     color: #333333;
     border-collapse: collapse;
@@ -138,12 +145,12 @@ td[align=center], th[align=center] { text-align: center; }
 td[align=right], th[align=right] { text-align: right; }
 
 th {
-    background-color: #dddddd;
+    background-color: #f0f0f0;
     font-weight: bold;
 }
 
 tr:nth-child(even) {
-    background-color: #eeeeee;
+    background-color: #f9f9f9;
 }
 
 tr:nth-child(odd) {
@@ -157,13 +164,6 @@ a {
 .bubble-content img {
     max-width: 100%;
     border-radius: 4px;
-}
-
-blockquote {
-    border-left: 4px solid #ccc;
-    margin-left: 0;
-    padding-left: 16px;
-    color: #666;
 }
 
 p {
@@ -195,9 +195,16 @@ li:has(> input[type=checkbox]) {
 }
 
 .thinking {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     color: #888;
     font-style: italic;
     padding: 10px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.thinking .bubble-icon {
     animation: pulse 1.5s ease-in-out infinite;
 }
 

@@ -483,7 +483,7 @@ public class AIChatPanel extends JPanel {
         StringBuilder html = new StringBuilder();
         html.append("<html><head><meta charset=\"utf-8\"><style>");
         // Dynamic styles that depend on preferences
-        html.append("body { font-family: '").append(fontFamily).append("', sans-serif; ");
+        html.append("body { font-family: '").append(fontFamily).append("', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; ");
         html.append("font-size: ").append(fontSize).append("pt; }");
         html.append(".user-bubble { background: ").append(userBg).append("; color: ").append(userText).append("; }");
         html.append(".ai-bubble { background: ").append(aiBg).append("; color: ").append(aiText).append("; }");
@@ -561,7 +561,7 @@ public class AIChatPanel extends JPanel {
 
         // Pulsing "thinking" indicator
         if (pulsing) {
-            html.append("<div class=\"thinking\">Thinking...</div>");
+            html.append("<div class=\"thinking\"><img class=\"bubble-icon\" src=\"").append(aiIconDataUri).append("\">Thinking...</div>");
         }
 
         // Auto-scroll to bottom
