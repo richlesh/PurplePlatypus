@@ -1,6 +1,6 @@
 ![app_icon_256](src/main/resources/app_icon_256.png)
 
-# PurplePlatypus 1.3.1
+# PurplePlatypus 1.4.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
@@ -67,7 +67,7 @@ Configure your LLM provider in Preferences (vendor, model, and API key). For cus
 
 ## Generic LLM Vendor
 
-The Generic vendor supports any LLM API through a YAML configuration file (`~/.purpleplatypus-generic.yml`):
+The Generic vendor supports any LLM API through a YAML configuration file (`~/.glowingcat-generic.yml`):
 
 - **Custom endpoints** — Define any REST API URL with variable substitution
 - **Flexible authentication** — Bearer tokens, Basic auth, API keys, or OAuth/IAM token exchange
