@@ -1,4 +1,4 @@
-![app_icon_256](src/main/resources/app_icon_256.png)
+![app_icon_256](app/src/main/resources/app_icon_256.png)
 
 # PurplePlatypus 1.4.0
 
