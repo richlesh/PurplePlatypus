@@ -2255,12 +2255,14 @@ public class EditorWindow {
         if (findDialog == null) findDialog = new FindDialog(frame, editorPane, preferences);
         findDialog.setVisible(true);
         findDialog.toFront();
+        findDialog.focusSearchField();
     }
 
     private void showReplaceDialog() {
         if (replaceDialog == null) replaceDialog = new ReplaceDialog(frame, editorPane, preferences);
         replaceDialog.setVisible(true);
         replaceDialog.toFront();
+        replaceDialog.focusSearchField();
     }
 
     public void showAboutDialog() {

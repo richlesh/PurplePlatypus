@@ -134,6 +134,7 @@ public class FindDialog extends JDialog {
         JPanel topPanel = new JPanel(new BorderLayout(8, 0));
         topPanel.add(new JLabel("Find:"), BorderLayout.WEST);
         searchField = new JTextField(24);
+        addSelectAllOnFocus(searchField);
         topPanel.add(createFieldWithRecents(searchField, true), BorderLayout.CENTER);
         return topPanel;
     }
@@ -233,6 +234,28 @@ public class FindDialog extends JDialog {
     /**
      * Creates a small icon button for the recents controls.
      */
+    /**
+     * Focuses the search field and selects its contents.
+     */
+    public void focusSearchField() {
+        SwingUtilities.invokeLater(() -> {
+            searchField.requestFocusInWindow();
+            searchField.selectAll();
+        });
+    }
+
+    /**
+     * Adds a FocusListener that selects all text when the field gains focus.
+     */
+    protected static void addSelectAllOnFocus(JTextField field) {
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                SwingUtilities.invokeLater(field::selectAll);
+            }
+        });
+    }
+
     private JButton createSmallButton(String label, String tooltip) {
         JButton btn = new JButton();
         btn.setToolTipText(tooltip);

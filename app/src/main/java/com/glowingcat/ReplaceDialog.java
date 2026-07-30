@@ -63,6 +63,7 @@ public class ReplaceDialog extends FindDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
         searchField = new JTextField(24);
+        addSelectAllOnFocus(searchField);
         topPanel.add(createFieldWithRecents(searchField, true), gbc);
 
         // Replace label and field
@@ -76,6 +77,7 @@ public class ReplaceDialog extends FindDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
         replaceField = new JTextField(24);
+        addSelectAllOnFocus(replaceField);
         topPanel.add(createFieldWithRecents(replaceField, false), gbc);
 
         return topPanel;
