@@ -10,6 +10,7 @@
  */
 package com.glowingcat;
 
+import com.glowingcat.aichat.GenericVendorConfig;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 

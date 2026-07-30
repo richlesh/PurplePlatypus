@@ -3,6 +3,10 @@
  */
 package com.glowingcat;
 
+import com.glowingcat.aichat.AIChatPanel;
+import com.glowingcat.aichat.AIChatPreferences;
+import com.glowingcat.aichat.AIChatPreferencesDialog;
+import com.glowingcat.aichat.LLMClientFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import javax.swing.*;
@@ -686,7 +690,26 @@ public class EditorWindow {
         editorPreviewSplit.setResizeWeight(0.5);
 
         aiPreferences = AIChatPreferences.load();
-        aiChatPanel = new AIChatPanel(editorPane, preferences, aiPreferences);
+        aiChatPanel = AIChatPanel.builder()
+            .editor(new com.glowingcat.aichat.DocumentEditor() {
+                @Override public String getText() { return editorPane.getText(); }
+                @Override public void setText(String text) {
+                    editorPane.setText(text);
+                    editorPane.setCaretPosition(0);
+                }
+            })
+            .preferences(aiPreferences)
+            .chatColors(new com.glowingcat.aichat.ChatColors() {
+                @Override public String getUserPromptColor() { return preferences.getUserPromptColor(); }
+                @Override public String getUserTextColor() { return preferences.getUserTextColor(); }
+                @Override public String getAiResponseColor() { return preferences.getAiResponseColor(); }
+                @Override public String getAiTextColor() { return preferences.getAiTextColor(); }
+            })
+            .llmClient(com.glowingcat.aichat.LLMClientFactory.create(aiPreferences))
+            .onPromptNag(() -> {
+                if (!LicenseDialog.isLicensed(preferences)) SplashScreen.show();
+            })
+            .build();
         mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorPreviewSplit, aiChatPanel);
         mainSplit.setResizeWeight(1.0);
         mainSplit.setDividerLocation(frame.getWidth() - 400);
@@ -2184,12 +2207,29 @@ public class EditorWindow {
     }
 
     public void showAiSettingsDialog() {
-        AIChatPreferencesDialog dialog = new AIChatPreferencesDialog(frame, aiPreferences);
+        com.glowingcat.aichat.ChatColors currentColors = new com.glowingcat.aichat.ChatColors() {
+            @Override public String getUserPromptColor() { return preferences.getUserPromptColor(); }
+            @Override public String getUserTextColor() { return preferences.getUserTextColor(); }
+            @Override public String getAiResponseColor() { return preferences.getAiResponseColor(); }
+            @Override public String getAiTextColor() { return preferences.getAiTextColor(); }
+        };
+        AIChatPreferencesDialog dialog = new AIChatPreferencesDialog(frame, aiPreferences, currentColors);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
             dialog.applyTo(aiPreferences);
             aiPreferences.save();
-            if (aiChatPanel != null) aiChatPanel.updateFont();
+            // Save colors to app preferences
+            preferences.setUserPromptColor(dialog.getSelectedUserPromptColor());
+            preferences.setUserTextColor(dialog.getSelectedUserTextColor());
+            preferences.setAiResponseColor(dialog.getSelectedAiResponseColor());
+            preferences.setAiTextColor(dialog.getSelectedAiTextColor());
+            preferences.save();
+            if (aiChatPanel != null) {
+                aiChatPanel.setLlmClient(LLMClientFactory.create(aiPreferences));
+                aiChatPanel.updateFont();
+                // Colors update automatically since ChatColors reads from preferences
+                aiChatPanel.setChatColors(currentColors);
+            }
         }
     }
 

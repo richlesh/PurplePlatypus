@@ -1,7 +1,7 @@
 /*
  * (c) 2026 Glowing Cat Software
  */
-package com.glowingcat;
+package com.glowingcat.aichat;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -25,6 +25,8 @@ public class AIChatPreferencesDialog extends JDialog {
     private final JTextField llmEndpointField;
     private final JComboBox<String> aiFontCombo;
     private final JComboBox<Integer> aiFontSizeCombo;
+    private final JComboBox<String> aiCodeFontCombo;
+    private final JComboBox<Integer> aiCodeFontSizeCombo;
     private final Color[] userPromptColor;
     private final Color[] userTextColor;
     private final Color[] aiResponseColor;
@@ -53,6 +55,10 @@ public class AIChatPreferencesDialog extends JDialog {
     };
 
     public AIChatPreferencesDialog(Window owner, AIChatPreferences prefs) {
+        this(owner, prefs, null);
+    }
+
+    public AIChatPreferencesDialog(Window owner, AIChatPreferences prefs, ChatColors colors) {
         super(owner, "AI Settings", ModalityType.APPLICATION_MODAL);
 
         String[] fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment()
@@ -76,10 +82,31 @@ public class AIChatPreferencesDialog extends JDialog {
         aiFontSizeCombo = new JComboBox<>(FONT_SIZES);
         aiFontSizeCombo.setSelectedItem(prefs.getAiFontSize());
 
-        userPromptColor = new Color[]{prefs.getUserPromptColorObj()};
-        userTextColor = new Color[]{prefs.getUserTextColorObj()};
-        aiResponseColor = new Color[]{prefs.getAiResponseColorObj()};
-        aiTextColor = new Color[]{prefs.getAiTextColorObj()};
+        // Monospaced font combo for code
+        String[] monoFonts = java.util.Arrays.stream(fontFamilies)
+            .filter(name -> {
+                Font f = new Font(name, Font.PLAIN, 13);
+                FontMetrics fm = new JLabel().getFontMetrics(f);
+                return fm.charWidth('i') == fm.charWidth('m');
+            })
+            .toArray(String[]::new);
+        aiCodeFontCombo = new JComboBox<>(monoFonts);
+        aiCodeFontCombo.setSelectedItem(prefs.getAiCodeFontFamily());
+        aiCodeFontSizeCombo = new JComboBox<>(FONT_SIZES);
+        aiCodeFontSizeCombo.setSelectedItem(prefs.getAiCodeFontSize());
+
+        // Use ChatColors if provided, otherwise fall back to AIChatPreferences
+        if (colors != null) {
+            userPromptColor = new Color[]{Color.decode(colors.getUserPromptColor())};
+            userTextColor = new Color[]{Color.decode(colors.getUserTextColor())};
+            aiResponseColor = new Color[]{Color.decode(colors.getAiResponseColor())};
+            aiTextColor = new Color[]{Color.decode(colors.getAiTextColor())};
+        } else {
+            userPromptColor = new Color[]{prefs.getUserPromptColorObj()};
+            userTextColor = new Color[]{prefs.getUserTextColorObj()};
+            aiResponseColor = new Color[]{prefs.getAiResponseColorObj()};
+            aiTextColor = new Color[]{prefs.getAiTextColorObj()};
+        }
 
         // Build the panel
         JPanel mainPanel = buildPanel(prefs);
@@ -313,6 +340,16 @@ public class AIChatPreferencesDialog extends JDialog {
         panel.add(aiFontSizeCombo, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Code Font:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(aiCodeFontCombo, gbc);
+
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Code Size:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(aiCodeFontSizeCombo, gbc);
+
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
         panel.add(new JLabel("User Color:"), gbc);
         JPanel userColorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         userColorPanel.setOpaque(false);
@@ -396,9 +433,19 @@ public class AIChatPreferencesDialog extends JDialog {
         prefs.setLlmEndpoint(endpoint.isEmpty() ? null : endpoint);
         prefs.setAiFontFamily((String) aiFontCombo.getSelectedItem());
         prefs.setAiFontSize((Integer) aiFontSizeCombo.getSelectedItem());
-        prefs.setUserPromptColor(userPromptColor[0]);
-        prefs.setUserTextColor(userTextColor[0]);
-        prefs.setAiResponseColor(aiResponseColor[0]);
-        prefs.setAiTextColor(aiTextColor[0]);
+        prefs.setAiCodeFontFamily((String) aiCodeFontCombo.getSelectedItem());
+        prefs.setAiCodeFontSize((Integer) aiCodeFontSizeCombo.getSelectedItem());
     }
+
+    /** Get the selected user prompt bubble background color. */
+    public Color getSelectedUserPromptColor() { return userPromptColor[0]; }
+
+    /** Get the selected user prompt text color. */
+    public Color getSelectedUserTextColor() { return userTextColor[0]; }
+
+    /** Get the selected AI response bubble background color. */
+    public Color getSelectedAiResponseColor() { return aiResponseColor[0]; }
+
+    /** Get the selected AI response text color. */
+    public Color getSelectedAiTextColor() { return aiTextColor[0]; }
 }

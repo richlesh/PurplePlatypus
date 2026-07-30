@@ -1,7 +1,7 @@
 /*
  * (c) 2026 Glowing Cat Software
  */
-package com.glowingcat;
+package com.glowingcat.aichat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -37,17 +37,23 @@ public class AIChatPreferences {
     /** Font size for the AI chat panel. */
     private int aiFontSize = 14;
 
+    /** Font family for code blocks and inline code in the AI chat panel (monospaced). */
+    private String aiCodeFontFamily = detectCodeFont();
+
+    /** Font size for code blocks and inline code in the AI chat panel. */
+    private int aiCodeFontSize = 13;
+
     /** Background color for user prompt chat bubbles (hex string). */
-    private String userPromptColor = "#9B59B6";
+    private String userPromptColor = "#88FF88";
 
     /** Text color for user prompt chat bubbles (hex string). */
-    private String userTextColor = "#FFFFFF";
+    private String userTextColor = "#555555";
 
     /** Background color for AI response chat bubbles (hex string). */
-    private String aiResponseColor = "#6C3483";
+    private String aiResponseColor = "#33BB00";
 
     /** Text color for AI response chat bubbles (hex string). */
-    private String aiTextColor = "#FFFFFF";
+    private String aiTextColor = "#DDFFDD";
 
     // --- Getters and Setters ---
 
@@ -68,6 +74,12 @@ public class AIChatPreferences {
 
     public int getAiFontSize() { return aiFontSize; }
     public void setAiFontSize(int aiFontSize) { this.aiFontSize = aiFontSize; }
+
+    public String getAiCodeFontFamily() { return aiCodeFontFamily; }
+    public void setAiCodeFontFamily(String aiCodeFontFamily) { this.aiCodeFontFamily = aiCodeFontFamily; }
+
+    public int getAiCodeFontSize() { return aiCodeFontSize; }
+    public void setAiCodeFontSize(int aiCodeFontSize) { this.aiCodeFontSize = aiCodeFontSize; }
 
     public Color getUserPromptColorObj() { return Color.decode(userPromptColor); }
     public void setUserPromptColor(Color color) { this.userPromptColor = toHex(color); }
@@ -132,11 +144,24 @@ public class AIChatPreferences {
         String[] candidates;
         if (os.contains("linux")) candidates = new String[]{"DejaVu Sans", "Arial", "Helvetica", "SansSerif"};
         else if (os.contains("win")) candidates = new String[]{"Calibri", "Arial", "Helvetica", "SansSerif"};
-        else candidates = new String[]{"Arial", "Helvetica", "SansSerif"};
+        else candidates = new String[]{"Calibri", "DejaVu Sans", "Arial", "Helvetica", "SansSerif"};
         for (String name : candidates) {
             Font f = new Font(name, Font.PLAIN, 14);
             if (!f.getFamily().equals("Dialog")) return name;
         }
         return "SansSerif";
+    }
+
+    private static String detectCodeFont() {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        String[] candidates;
+        if (os.contains("mac")) candidates = new String[]{"JetBrains Mono", "Consolas", "Menlo", "SF Mono", "Monaco", "Monospaced"};
+        else if (os.contains("win")) candidates = new String[]{"JetBrains Mono", "Cascadia Mono", "Consolas", "Courier New", "Monospaced"};
+        else candidates = new String[]{"JetBrains Mono", "DejaVu Sans Mono", "Liberation Mono", "Monospaced"};
+        for (String name : candidates) {
+            Font f = new Font(name, Font.PLAIN, 13);
+            if (!f.getFamily().equals("Dialog")) return name;
+        }
+        return "Monospaced";
     }
 }

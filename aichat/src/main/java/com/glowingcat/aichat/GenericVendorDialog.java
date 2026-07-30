@@ -1,7 +1,7 @@
 /*
  * (c) 2026 Glowing Cat Software
  */
-package com.glowingcat;
+package com.glowingcat.aichat;
 
 import javax.swing.*;
 import java.awt.*;

@@ -11,6 +11,7 @@
  */
 package com.glowingcat;
 
+import com.glowingcat.aichat.AIChatPreferences;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -72,10 +73,20 @@ public class Preferences {
     private String llmEndpoint = null;
     private String aiFontFamily = null;
     private Integer aiFontSize = null;
-    private String userPromptColor = null;
-    private String userTextColor = null;
-    private String aiResponseColor = null;
-    private String aiTextColor = null;
+
+
+    /** Background color for user prompt chat bubbles (hex string). */
+    private String userPromptColor = "#B47FFF";     // HSV(265,50,100) Purple
+
+
+    /** Text color for user prompt chat bubbles (hex string). */
+    private String userTextColor = "#333333";       // HSV(0,20,0)
+
+    /** Background color for AI response chat bubbles (hex string). */
+    private String aiResponseColor = "#8E3EFF";     // HSV(265,50,100)
+
+    /** Text color for AI response chat bubbles (hex string). */
+    private String aiTextColor = "#BBBBBB";         // HSV(0,75,0)
 
     // --- Window state (not shown in preferences dialog) ---
 
@@ -113,15 +124,36 @@ public class Preferences {
     String getLegacyLlmEndpoint() { return llmEndpoint; }
     String getLegacyAiFontFamily() { return aiFontFamily; }
     Integer getLegacyAiFontSize() { return aiFontSize; }
-    String getLegacyUserPromptColor() { return userPromptColor; }
-    String getLegacyUserTextColor() { return userTextColor; }
-    String getLegacyAiResponseColor() { return aiResponseColor; }
-    String getLegacyAiTextColor() { return aiTextColor; }
+
+    // --- AI Chat Colors ---
+
+    public String getUserPromptColor() { return userPromptColor; }
+    public void setUserPromptColor(String hex) { this.userPromptColor = hex; }
+    public void setUserPromptColor(Color color) { this.userPromptColor = toHex(color); }
+    public Color getUserPromptColorObj() { return Color.decode(userPromptColor); }
+
+    public String getUserTextColor() { return userTextColor; }
+    public void setUserTextColor(String hex) { this.userTextColor = hex; }
+    public void setUserTextColor(Color color) { this.userTextColor = toHex(color); }
+    public Color getUserTextColorObj() { return Color.decode(userTextColor); }
+
+    public String getAiResponseColor() { return aiResponseColor; }
+    public void setAiResponseColor(String hex) { this.aiResponseColor = hex; }
+    public void setAiResponseColor(Color color) { this.aiResponseColor = toHex(color); }
+    public Color getAiResponseColorObj() { return Color.decode(aiResponseColor); }
+
+    public String getAiTextColor() { return aiTextColor; }
+    public void setAiTextColor(String hex) { this.aiTextColor = hex; }
+    public void setAiTextColor(Color color) { this.aiTextColor = toHex(color); }
+    public Color getAiTextColorObj() { return Color.decode(aiTextColor); }
+
+    private static String toHex(Color color) {
+        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
+    }
 
     /** Returns true if this settings file contains legacy AI fields that need migration. */
     boolean hasLegacyAiSettings() {
-        return llmVendor != null || llmApiKey != null || aiFontFamily != null
-            || userPromptColor != null || aiResponseColor != null;
+        return llmVendor != null || llmApiKey != null || aiFontFamily != null;
     }
 
     /** Clear legacy AI fields so they are not written back to the settings file. */
@@ -132,10 +164,6 @@ public class Preferences {
         llmEndpoint = null;
         aiFontFamily = null;
         aiFontSize = null;
-        userPromptColor = null;
-        userTextColor = null;
-        aiResponseColor = null;
-        aiTextColor = null;
     }
 
     public Color getButtonHighlightColorObj() { return Color.decode(buttonHighlightColor); }
