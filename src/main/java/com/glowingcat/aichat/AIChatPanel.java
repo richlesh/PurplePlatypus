@@ -1,24 +1,23 @@
 /*
  * (c) 2026 Glowing Cat Software
  */
-package com.glowingcat;
+package com.glowingcat.aichat;
 
 import javax.swing.*;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
-import java.net.URI;
-import java.net.http.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-
 /**
  * AI Chat panel that provides LLM-powered markdown writing assistance.
  * Users can ask for help with content, formatting, structure, and editing.
+ *
+ * Use {@link #builder()} to construct instances.
  */
 public class AIChatPanel extends JPanel {
 
@@ -26,9 +25,8 @@ public class AIChatPanel extends JPanel {
     private final JScrollPane chatScroll;
     private final JTextArea inputArea;
     private final JButton sendBtn;
-    private final RSyntaxTextArea editorPane;
+    private final DocumentEditor editor;
     private final AIChatPreferences aiPreferences;
-    private final Preferences preferences;
     private final List<Map<String, String>> messages = new ArrayList<>();
     private final String systemPrompt;
     private final ImageIcon humanIcon;
@@ -39,13 +37,65 @@ public class AIChatPanel extends JPanel {
     private float pulseAlpha = 0f;
     private Runnable statusUpdater;
     private int promptCount = 0;
-    private GenericVendorConfig genericConfig;
+    private LLMClient llmClient;
+    private Runnable promptNagCallback;
 
-    public AIChatPanel(RSyntaxTextArea editorPane, Preferences preferences, AIChatPreferences aiPreferences) {
+    /**
+     * Create a builder for constructing an AIChatPanel.
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder for AIChatPanel.
+     */
+    public static class Builder {
+        private DocumentEditor editor;
+        private AIChatPreferences preferences;
+        private LLMClient llmClient;
+        private Runnable onPromptNag;
+
+        private Builder() {}
+
+        /** Set the document editor (required). */
+        public Builder editor(DocumentEditor editor) {
+            this.editor = editor;
+            return this;
+        }
+
+        /** Set the AI chat preferences (required). */
+        public Builder preferences(AIChatPreferences preferences) {
+            this.preferences = preferences;
+            return this;
+        }
+
+        /** Set the LLM client (optional; will use LLMClientFactory if not set). */
+        public Builder llmClient(LLMClient llmClient) {
+            this.llmClient = llmClient;
+            return this;
+        }
+
+        /** Set a callback invoked every N prompts for nag/licensing (optional). */
+        public Builder onPromptNag(Runnable onPromptNag) {
+            this.onPromptNag = onPromptNag;
+            return this;
+        }
+
+        /** Build the AIChatPanel. */
+        public AIChatPanel build() {
+            if (editor == null) throw new IllegalStateException("editor is required");
+            if (preferences == null) throw new IllegalStateException("preferences is required");
+            return new AIChatPanel(this);
+        }
+    }
+
+    private AIChatPanel(Builder builder) {
         super(new BorderLayout());
-        this.editorPane = editorPane;
-        this.preferences = preferences;
-        this.aiPreferences = aiPreferences;
+        this.editor = builder.editor;
+        this.aiPreferences = builder.preferences;
+        this.llmClient = builder.llmClient;
+        this.promptNagCallback = builder.onPromptNag;
         this.systemPrompt = buildSystemPrompt();
 
         // Load icons
@@ -113,7 +163,7 @@ public class AIChatPanel extends JPanel {
 
         statusUpdater = () -> {
             int sp = systemPrompt.length();
-            int doc = editorPane.getText().length();
+            int doc = editor.getText().length();
             statusBar.setText(String.format("System: %,d chars    Document: %,d chars", sp, doc));
         };
         statusUpdater.run();
@@ -131,8 +181,21 @@ public class AIChatPanel extends JPanel {
             chatPanel.removeAll();
             chatPanel.revalidate();
             chatPanel.repaint();
-            if (genericConfig != null) genericConfig.resetGuid();
+            if (llmClient instanceof GenericClient gc) {
+                GenericVendorConfig cfg = gc.getConfig();
+                if (cfg != null) cfg.resetGuid();
+            }
         });
+    }
+
+    /** Set or replace the LLM client at runtime (e.g., after preferences change). */
+    public void setLlmClient(LLMClient client) {
+        this.llmClient = client;
+    }
+
+    /** Set or replace the prompt nag callback at runtime. */
+    public void setPromptNagCallback(Runnable callback) {
+        this.promptNagCallback = callback;
     }
 
     /** Update fonts after preferences change. */
@@ -160,26 +223,33 @@ public class AIChatPanel extends JPanel {
         inputArea.setText("");
         addUserBubble(text);
 
-        // Show splash every 10 prompts if not licensed
+        // Invoke nag callback every 10 prompts
         promptCount++;
-        if (promptCount % 10 == 0 && !LicenseDialog.isLicensed(preferences)) {
-            SplashScreen.show();
+        if (promptCount % 10 == 0 && promptNagCallback != null) {
+            promptNagCallback.run();
         }
 
         statusUpdater.run();
 
-        String context = "Current markdown document:\n```markdown\n" + editorPane.getText() + "\n```";
+        String context = "Current markdown document:\n```markdown\n" + editor.getText() + "\n```";
 
         if (messages.isEmpty()) {
             messages.add(Map.of("role", "system", "content", systemPrompt));
         }
         messages.add(Map.of("role", "user", "content", context + "\n\nUser request: " + text));
 
+        // Ensure we have an LLM client
+        if (llmClient == null) {
+            llmClient = LLMClientFactory.create(aiPreferences);
+        }
+
         sendBtn.setEnabled(false);
         startPulse();
+        final LLMClient client = llmClient;
         currentThread = new Thread(() -> {
             try {
-                String response = callLLM();
+                String response = client.chat(messages, systemPrompt);
+                messages.add(Map.of("role", "assistant", "content", response));
                 SwingUtilities.invokeLater(() -> {
                     stopPulse();
                     processResponse(response);
@@ -283,36 +353,8 @@ public class AIChatPanel extends JPanel {
             addAiBubble("Here's the updated document (" + lines + " lines). Review and accept or reject the changes.");
         }
 
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2)) {
-            @Override
-            public Dimension getPreferredSize() {
-                // FlowLayout doesn't account for wrapping; compute height based on actual width
-                int width = getWidth();
-                if (width == 0) width = getParent() != null ? getParent().getWidth() : 300;
-                if (width == 0) return super.getPreferredSize();
-                Insets insets = getInsets();
-                FlowLayout fl = (FlowLayout) getLayout();
-                int hgap = fl.getHgap();
-                int vgap = fl.getVgap();
-                int x = insets.left;
-                int rowHeight = 0;
-                int height = insets.top + vgap;
-                int maxWidth = width - insets.left - insets.right;
-                for (Component comp : getComponents()) {
-                    if (!comp.isVisible()) continue;
-                    Dimension d = comp.getPreferredSize();
-                    if (x > insets.left && x + d.width > maxWidth + insets.left) {
-                        height += rowHeight + vgap;
-                        x = insets.left;
-                        rowHeight = 0;
-                    }
-                    rowHeight = Math.max(rowHeight, d.height);
-                    x += d.width + hgap;
-                }
-                height += rowHeight + vgap + insets.bottom;
-                return new Dimension(width, height);
-            }
-        };
+        JPanel btnRow = new JPanel();
+        btnRow.setLayout(new BoxLayout(btnRow, BoxLayout.X_AXIS));
         btnRow.setOpaque(false);
         btnRow.setBorder(BorderFactory.createEmptyBorder(2, 14, 6, 6));
         JLabel prompt = new JLabel("Apply changes to document?");
@@ -320,7 +362,7 @@ public class AIChatPanel extends JPanel {
         JButton allowBtn = new JButton("Accept");
         JButton rejectBtn = new JButton("Reject");
         allowBtn.addActionListener(e -> {
-            editorPane.setText(newMarkdown);
+            editor.setText(newMarkdown);
             prompt.setText("Changes accepted.");
             btnRow.remove(allowBtn);
             btnRow.remove(rejectBtn);
@@ -337,7 +379,9 @@ public class AIChatPanel extends JPanel {
             chatPanel.revalidate();
         });
         btnRow.add(prompt);
+        btnRow.add(Box.createHorizontalStrut(8));
         btnRow.add(allowBtn);
+        btnRow.add(Box.createHorizontalStrut(4));
         btnRow.add(rejectBtn);
 
         chatPanel.add(btnRow);
@@ -429,20 +473,6 @@ public class AIChatPanel extends JPanel {
         });
     }
 
-    /**
-     * Returns black or white text color based on the background color's lightness.
-     * If HSL lightness > 70%, returns black; otherwise returns white.
-     */
-    private static Color textColorForBackground(Color bg) {
-        float[] hsl = new float[3];
-        int r = bg.getRed(), g = bg.getGreen(), b = bg.getBlue();
-        float rf = r / 255f, gf = g / 255f, bf = b / 255f;
-        float max = Math.max(rf, Math.max(gf, bf));
-        float min = Math.min(rf, Math.min(gf, bf));
-        float lightness = (max + min) / 2f;
-        return lightness > 0.65f ? Color.BLACK : Color.WHITE;
-    }
-
     private void processResponse(String response) {
         // Normalize line endings to \n
         String normalized = response.replace("\r\n", "\n").replace("\r", "\n");
@@ -463,7 +493,6 @@ public class AIChatPanel extends JPanel {
                 if (candidate < 0) break;
                 int afterFence = candidate + 4;
                 // Check that after ``` there's only whitespace or end of string
-                // (not a language identifier like "python" which would be an opening fence)
                 if (afterFence >= normalized.length()) {
                     blockEnd = candidate;
                 } else {
@@ -490,139 +519,10 @@ public class AIChatPanel extends JPanel {
         addAiBubble(response);
     }
 
-    private String callLLM() throws Exception {
-        String vendor = aiPreferences.getLlmVendor();
-        String apiKey = aiPreferences.getLlmApiKey();
-        String model = aiPreferences.getLlmModel();
-
-        if ("Generic".equals(vendor)) {
-            return callGeneric(apiKey, model);
-        }
-
-        String baseUrl = switch (vendor) {
-            case "Alibaba" -> "https://dashscope-us.aliyuncs.com/compatible-mode/v1";
-            case "Anthropic" -> "https://api.anthropic.com/v1";
-            case "Cerebras" -> "https://api.cerebras.ai/v1";
-            case "DeepSeek" -> "https://api.deepseek.com/v1";
-            case "Generic OpenAI API" -> {
-                String ep = aiPreferences.getLlmEndpoint();
-                if (ep == null || ep.isBlank()) throw new RuntimeException("No endpoint configured for Generic OpenAI API");
-                if (ep.endsWith("/")) ep = ep.substring(0, ep.length() - 1);
-                yield ep;
-            }
-            case "Google" -> "https://generativelanguage.googleapis.com/v1beta/openai";
-            case "Groq" -> "https://api.groq.com/openai/v1";
-            case "Meta" -> "https://api.meta.ai/v1";
-            case "Mistral" -> "https://api.mistral.ai/v1";
-            case "Moonshot AI" -> "https://api.moonshot.ai/v1";
-            case "Ollama" -> "http://localhost:11434/v1";
-            case "OpenAI" -> "https://api.openai.com/v1";
-            case "Perplexity" -> "https://api.perplexity.ai";
-            case "xAI" -> "https://api.x.ai/v1";
-            default -> "https://api.openai.com/v1";
-        };
-
-        if ("Anthropic".equals(vendor)) {
-            return callAnthropic(apiKey, model);
-        }
-
-        StringBuilder body = new StringBuilder();
-        body.append("{\"model\":\"").append(model).append("\",\"max_tokens\":128000,\"messages\":[");
-        for (int i = 0; i < messages.size(); i++) {
-            if (i > 0) body.append(",");
-            body.append("{\"role\":\"").append(messages.get(i).get("role"))
-                .append("\",\"content\":").append(jsonString(messages.get(i).get("content"))).append("}");
-        }
-        body.append("]}");
-
-        HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
-            .uri(URI.create(baseUrl + "/chat/completions"))
-            .header("Content-Type", "application/json")
-            .timeout(java.time.Duration.ofSeconds(120))
-            .POST(HttpRequest.BodyPublishers.ofString(body.toString()));
-
-        if (apiKey != null && !apiKey.isEmpty()) {
-            reqBuilder.header("Authorization", "Bearer " + apiKey);
-        }
-
-        HttpResponse<String> resp = HttpClient.newBuilder()
-            .connectTimeout(java.time.Duration.ofSeconds(30))
-            .build()
-            .send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
-
-        String respBody = resp.body();
-        String content = extractJsonValue(respBody, "content");
-        if (content == null) throw new RuntimeException("Unexpected response: " + respBody.substring(0, Math.min(300, respBody.length())));
-        messages.add(Map.of("role", "assistant", "content", content));
-        return content;
-    }
-
-    private String callAnthropic(String apiKey, String model) throws Exception {
-        StringBuilder body = new StringBuilder();
-        body.append("{\"model\":\"").append(model).append("\",\"max_tokens\":128000,");
-        String sys = messages.stream()
-            .filter(m -> "system".equals(m.get("role")))
-            .map(m -> m.get("content"))
-            .findFirst().orElse("");
-        body.append("\"system\":").append(jsonString(sys)).append(",\"messages\":[");
-        boolean first = true;
-        for (var m : messages) {
-            if ("system".equals(m.get("role"))) continue;
-            if (!first) body.append(",");
-            body.append("{\"role\":\"").append(m.get("role"))
-                .append("\",\"content\":").append(jsonString(m.get("content"))).append("}");
-            first = false;
-        }
-        body.append("]}");
-
-        HttpRequest req = HttpRequest.newBuilder()
-            .uri(URI.create("https://api.anthropic.com/v1/messages"))
-            .header("Content-Type", "application/json")
-            .header("x-api-key", apiKey)
-            .header("anthropic-version", "2023-06-01")
-            .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
-            .build();
-
-        HttpResponse<String> resp = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
-        String respBody = resp.body();
-        String content = extractJsonValue(respBody, "text");
-        if (content == null) throw new RuntimeException("Unexpected response: " + respBody.substring(0, Math.min(300, respBody.length())));
-        messages.add(Map.of("role", "assistant", "content", content));
-        return content;
-    }
-
-    private String callGeneric(String apiKey, String model) throws Exception {
-        if (genericConfig == null) {
-            genericConfig = new GenericVendorConfig();
-        } else {
-            genericConfig.load(); // Reload in case user edited config
-        }
-        if (!genericConfig.isValid()) {
-            throw new RuntimeException("Generic vendor not configured. Use Configure... in Preferences.");
-        }
-
-        // For single-shot mode, send just the latest user prompt
-        // For multi-turn mode, send the full messages list
-        String lastPrompt = "";
-        for (int i = messages.size() - 1; i >= 0; i--) {
-            if ("user".equals(messages.get(i).get("role"))) {
-                lastPrompt = messages.get(i).get("content");
-                break;
-            }
-        }
-
-        String content = genericConfig.callPrompt(apiKey, model, lastPrompt, messages);
-        if (content == null || content.isBlank()) {
-            throw new RuntimeException("Empty response from Generic vendor");
-        }
-        messages.add(Map.of("role", "assistant", "content", content));
-        return content;
-    }
-
     private String buildSystemPrompt() {
         try (var is = AIChatPanel.class.getResourceAsStream("/system_prompt.md")) {
             if (is != null) {
-                return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+                return new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
             }
         } catch (Exception e) {
             // Fall through to hardcoded fallback
@@ -634,6 +534,8 @@ public class AIChatPanel extends JPanel {
         StyledDocument doc = pane.getStyledDocument();
         String fontName = aiPreferences.getAiFontFamily();
         int fontSize = aiPreferences.getAiFontSize();
+        String codeFontName = aiPreferences.getAiCodeFontFamily();
+        int codeFontSize = aiPreferences.getAiCodeFontSize();
 
         Style normal = doc.addStyle("normal", null);
         StyleConstants.setFontFamily(normal, fontName);
@@ -647,12 +549,12 @@ public class AIChatPanel extends JPanel {
         StyleConstants.setItalic(italic, true);
 
         Style code = doc.addStyle("code", normal);
-        StyleConstants.setFontFamily(code, preferences.getPreviewCodeFontFamily());
-        StyleConstants.setFontSize(code, preferences.getPreviewCodeFontSize());
+        StyleConstants.setFontFamily(code, codeFontName);
+        StyleConstants.setFontSize(code, codeFontSize);
 
         Style codeBlock = doc.addStyle("codeBlock", null);
-        StyleConstants.setFontFamily(codeBlock, preferences.getPreviewCodeFontFamily());
-        StyleConstants.setFontSize(codeBlock, preferences.getPreviewCodeFontSize());
+        StyleConstants.setFontFamily(codeBlock, codeFontName);
+        StyleConstants.setFontSize(codeBlock, codeFontSize);
         StyleConstants.setForeground(codeBlock, pane.getForeground());
 
         Style header = doc.addStyle("header", normal);
@@ -725,51 +627,5 @@ public class AIChatPanel extends JPanel {
 
     private static void insertText(StyledDocument doc, String text, Style style) {
         try { doc.insertString(doc.getLength(), text, style); } catch (BadLocationException ignored) {}
-    }
-
-    private static String jsonString(String s) {
-        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
-            .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\"";
-    }
-
-    private static String extractJsonValue(String json, String key) {
-        String pattern = "\"" + key + "\"";
-        int idx = json.lastIndexOf(pattern);
-        if (idx < 0) return null;
-        int colonIdx = json.indexOf(':', idx + pattern.length());
-        if (colonIdx < 0) return null;
-        int i = colonIdx + 1;
-        while (i < json.length() && Character.isWhitespace(json.charAt(i))) i++;
-        if (i >= json.length() || json.charAt(i) != '"') return null;
-        i++;
-        StringBuilder sb = new StringBuilder();
-        while (i < json.length()) {
-            char c = json.charAt(i);
-            if (c == '\\' && i + 1 < json.length()) {
-                char next = json.charAt(i + 1);
-                switch (next) {
-                    case 'n' -> sb.append('\n');
-                    case 'r' -> sb.append('\r');
-                    case 't' -> sb.append('\t');
-                    case '"' -> sb.append('"');
-                    case '\\' -> sb.append('\\');
-                    case '/' -> sb.append('/');
-                    case 'u' -> {
-                        if (i + 5 < json.length()) {
-                            sb.append((char) Integer.parseInt(json.substring(i + 2, i + 6), 16));
-                            i += 4;
-                        }
-                    }
-                    default -> { sb.append('\\'); sb.append(next); }
-                }
-                i += 2;
-            } else if (c == '"') {
-                return sb.toString();
-            } else {
-                sb.append(c);
-                i++;
-            }
-        }
-        return sb.toString();
     }
 }

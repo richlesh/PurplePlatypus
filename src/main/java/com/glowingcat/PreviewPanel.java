@@ -224,6 +224,12 @@ public class PreviewPanel extends JPanel {
         mdMatcher.appendTail(mdSb);
         markdown = mdSb.toString();
 
+        // Convert LaTeX-style math delimiters to dollar-sign delimiters before parsing
+        // \(...\) → $...$ (inline math) — single line only
+        markdown = markdown.replaceAll("\\\\\\((.+?)\\\\\\)", "\\$$1\\$");
+        // \[...\] → $$...$$ (display math) — may span lines
+        markdown = markdown.replaceAll("(?s)\\\\\\[(.+?)\\\\\\]", "\\$\\$$1\\$\\$");
+
         Node document = parser.parse(markdown);
         String html = renderer.render(document);
 
@@ -360,7 +366,7 @@ public class PreviewPanel extends JPanel {
                 + "</style>"
                 + "<script>"
                 + "MathJax = {"
-                + "  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },"
+                + "  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },"
                 + "  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },"
                 + "  svg: { fontCache: 'global' }"
                 + "};"

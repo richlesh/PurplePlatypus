@@ -11,6 +11,7 @@
  */
 package com.glowingcat;
 
+import com.glowingcat.aichat.AIChatPreferences;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
