@@ -4,41 +4,76 @@
 package com.glowingcat.aichat;
 
 import javax.swing.*;
-import javax.swing.text.*;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
-import java.awt.geom.RoundRectangle2D;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.commonmark.Extension;
+import org.commonmark.ext.autolink.AutolinkExtension;
+import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension;
+import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.ext.task.list.items.TaskListItemsExtension;
+import org.commonmark.node.Node;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
+
 /**
  * AI Chat panel that provides LLM-powered markdown writing assistance.
- * Users can ask for help with content, formatting, structure, and editing.
+ * Renders conversation as HTML in a JavaFX WebView with full markdown support
+ * (tables, math, code highlighting). Falls back to a basic Swing renderer
+ * when WebView is unavailable.
  *
  * Use {@link #builder()} to construct instances.
  */
 public class AIChatPanel extends JPanel {
 
-    private final JPanel chatPanel;
-    private final JScrollPane chatScroll;
     private final JTextArea inputArea;
     private final JButton sendBtn;
     private final DocumentEditor editor;
     private final AIChatPreferences aiPreferences;
     private final List<Map<String, String>> messages = new ArrayList<>();
+    private final List<ChatMessage> chatMessages = new ArrayList<>();
     private final String systemPrompt;
-    private final ImageIcon humanIcon;
-    private final ImageIcon aiIcon;
-    private JLabel pulsingAiLabel;
-    private Timer pulseTimer;
+    private final Parser mdParser;
+    private final HtmlRenderer mdRenderer;
+    private final String humanIconDataUri;
+    private final String aiIconDataUri;
+
+    // WebView rendering
+    private javafx.embed.swing.JFXPanel jfxPanel;
+    private javafx.scene.web.WebEngine webEngine;
+    private boolean useWebView = false;
+    private boolean webViewReady = false;
+    // Strong reference to prevent GC of the JavaScript bridge object
+    private ChatBridge chatBridge;
+
+    // Fallback rendering
+    private JEditorPane fallbackPane;
+    private JScrollPane fallbackScroll;
+
     private volatile Thread currentThread;
-    private float pulseAlpha = 0f;
-    private Runnable statusUpdater;
+    private boolean pulsing = false;
     private int promptCount = 0;
     private LLMClient llmClient;
     private Runnable promptNagCallback;
+
+    /** Internal chat message record. */
+    private static class ChatMessage {
+        final String role; // "user" or "assistant"
+        final String markdown;
+        boolean accepted; // for code approval messages
+        boolean rejected;
+        boolean isApproval; // whether this contains a document replacement
+
+        ChatMessage(String role, String markdown) {
+            this.role = role;
+            this.markdown = markdown;
+        }
+    }
 
     /**
      * Create a builder for constructing an AIChatPanel.
@@ -97,36 +132,26 @@ public class AIChatPanel extends JPanel {
         this.llmClient = builder.llmClient;
         this.promptNagCallback = builder.onPromptNag;
         this.systemPrompt = buildSystemPrompt();
+        this.humanIconDataUri = loadIconAsDataUri("/human.png");
+        this.aiIconDataUri = loadIconAsDataUri("/AI.png");
 
-        // Load icons
-        var humanUrl = AIChatPanel.class.getResource("/human.png");
-        var aiUrl = AIChatPanel.class.getResource("/AI.png");
-        humanIcon = humanUrl != null ? new ImageIcon(new ImageIcon(humanUrl).getImage().getScaledInstance(28, 28, Image.SCALE_SMOOTH)) : null;
-        aiIcon = aiUrl != null ? new ImageIcon(new ImageIcon(aiUrl).getImage().getScaledInstance(28, 28, Image.SCALE_SMOOTH)) : null;
+        // Set up commonmark parser for rendering AI responses
+        List<Extension> extensions = List.of(
+            TablesExtension.create(),
+            StrikethroughExtension.create(),
+            TaskListItemsExtension.create(),
+            AutolinkExtension.create()
+        );
+        mdParser = Parser.builder().extensions(extensions).build();
+        mdRenderer = HtmlRenderer.builder().extensions(extensions).build();
 
         setPreferredSize(new Dimension(380, 0));
         setBorder(BorderFactory.createTitledBorder("AI Assistant"));
 
-        chatPanel = new JPanel() {
-            @Override
-            public Dimension getPreferredSize() {
-                if (getParent() != null) {
-                    int w = getParent().getWidth();
-                    if (w > 0) {
-                        Dimension d = super.getPreferredSize();
-                        return new Dimension(w, d.height);
-                    }
-                }
-                return super.getPreferredSize();
-            }
-        };
-        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
-        chatPanel.setBackground(new Color(245, 245, 245));
-        chatScroll = new JScrollPane(chatPanel);
-        chatScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        chatScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        chatScroll.getVerticalScrollBar().setUnitIncrement(16);
+        // Initialize chat display (WebView or fallback)
+        initChatDisplay();
 
+        // Input area
         inputArea = new JTextArea(3, 20);
         inputArea.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
         inputArea.setLineWrap(true);
@@ -161,7 +186,7 @@ public class AIChatPanel extends JPanel {
         statusBar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 10));
         statusBar.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
 
-        statusUpdater = () -> {
+        Runnable statusUpdater = () -> {
             int sp = systemPrompt.length();
             int doc = editor.getText().length();
             statusBar.setText(String.format("System: %,d chars    Document: %,d chars", sp, doc));
@@ -172,20 +197,122 @@ public class AIChatPanel extends JPanel {
         southPanel.add(inputPanel, BorderLayout.CENTER);
         southPanel.add(statusBar, BorderLayout.SOUTH);
 
-        add(chatScroll, BorderLayout.CENTER);
         add(southPanel, BorderLayout.SOUTH);
 
         sendBtn.addActionListener(e -> sendMessage());
         clearBtn.addActionListener(e -> {
             messages.clear();
-            chatPanel.removeAll();
-            chatPanel.revalidate();
-            chatPanel.repaint();
+            chatMessages.clear();
+            pulsing = false;
             if (llmClient instanceof GenericClient gc) {
                 GenericVendorConfig cfg = gc.getConfig();
                 if (cfg != null) cfg.resetGuid();
             }
+            renderChat();
         });
+    }
+
+    private void initChatDisplay() {
+        try {
+            jfxPanel = new javafx.embed.swing.JFXPanel();
+            add(jfxPanel, BorderLayout.CENTER);
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    javafx.scene.web.WebView webView = new javafx.scene.web.WebView();
+                    webEngine = webView.getEngine();
+
+                    // JavaScript-to-Java bridge for button clicks and copy
+                    chatBridge = new ChatBridge();
+                    webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+                        if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                            netscape.javascript.JSObject win = (netscape.javascript.JSObject) webEngine.executeScript("window");
+                            win.setMember("chatBridge", chatBridge);
+                            webViewReady = true;
+                        }
+                    });
+
+                    javafx.scene.Scene scene = new javafx.scene.Scene(webView);
+                    jfxPanel.setScene(scene);
+                    useWebView = true;
+                    renderChat();
+                } catch (Throwable t) {
+                    SwingUtilities.invokeLater(() -> {
+                        remove(jfxPanel);
+                        jfxPanel = null;
+                        useWebView = false;
+                        initFallback();
+                        revalidate();
+                        repaint();
+                    });
+                }
+            });
+        } catch (Throwable t) {
+            if (jfxPanel != null) {
+                remove(jfxPanel);
+                jfxPanel = null;
+            }
+            initFallback();
+        }
+    }
+
+    private void initFallback() {
+        fallbackPane = new JEditorPane();
+        fallbackPane.setContentType("text/html");
+        fallbackPane.setEditable(false);
+        fallbackPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        fallbackScroll = new JScrollPane(fallbackPane);
+        add(fallbackScroll, BorderLayout.CENTER);
+    }
+
+    /** JavaScript bridge for WebView callbacks. */
+    public class ChatBridge {
+        /** Called when user clicks Accept on a code approval bubble. */
+        public void acceptChanges(int index) {
+            SwingUtilities.invokeLater(() -> {
+                if (index >= 0 && index < chatMessages.size()) {
+                    ChatMessage msg = chatMessages.get(index);
+                    if (msg instanceof ApprovalMessage am) {
+                        msg.accepted = true;
+                        editor.setText(am.replacementMarkdown);
+                        renderChat();
+                    }
+                }
+            });
+        }
+
+        /** Called when user clicks Reject on a code approval bubble. */
+        public void rejectChanges(int index) {
+            SwingUtilities.invokeLater(() -> {
+                if (index >= 0 && index < chatMessages.size()) {
+                    ChatMessage msg = chatMessages.get(index);
+                    msg.rejected = true;
+                    renderChat();
+                }
+            });
+        }
+
+        /** Called when user clicks Copy on an AI response bubble. */
+        public void copyMarkdown(int index) {
+            SwingUtilities.invokeLater(() -> {
+                if (index >= 0 && index < chatMessages.size()) {
+                    ChatMessage msg = chatMessages.get(index);
+                    String md = (msg instanceof ApprovalMessage am) ? am.replacementMarkdown : msg.markdown;
+                    StringSelection sel = new StringSelection(md);
+                    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+                }
+            });
+        }
+
+        /** Called when a link is clicked. */
+        public void openLink(String url) {
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
+                } catch (Exception ex) {
+                    // Silently fail
+                }
+            });
+        }
     }
 
     /** Set or replace the LLM client at runtime (e.g., after preferences change). */
@@ -200,28 +327,18 @@ public class AIChatPanel extends JPanel {
 
     /** Update fonts after preferences change. */
     public void updateFont() {
-        Font font = new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize());
-        inputArea.setFont(font);
-        for (Component c : chatPanel.getComponents()) {
-            updateFontRecursive(c, font);
-        }
-        chatPanel.revalidate();
-        chatPanel.repaint();
-    }
-
-    private void updateFontRecursive(Component c, Font font) {
-        if (c instanceof JTextArea) c.setFont(font);
-        if (c instanceof JTextPane) c.setFont(font);
-        if (c instanceof Container) {
-            for (Component child : ((Container) c).getComponents()) updateFontRecursive(child, font);
-        }
+        inputArea.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
+        renderChat();
     }
 
     private void sendMessage() {
         String text = inputArea.getText().trim();
         if (text.isEmpty()) return;
         inputArea.setText("");
-        addUserBubble(text);
+
+        // Add user bubble
+        ChatMessage userMsg = new ChatMessage("user", text);
+        chatMessages.add(userMsg);
 
         // Invoke nag callback every 10 prompts
         promptCount++;
@@ -229,10 +346,7 @@ public class AIChatPanel extends JPanel {
             promptNagCallback.run();
         }
 
-        statusUpdater.run();
-
         String context = "Current markdown document:\n```markdown\n" + editor.getText() + "\n```";
-
         if (messages.isEmpty()) {
             messages.add(Map.of("role", "system", "content", systemPrompt));
         }
@@ -244,22 +358,28 @@ public class AIChatPanel extends JPanel {
         }
 
         sendBtn.setEnabled(false);
-        startPulse();
+        pulsing = true;
+        renderChat();
+
         final LLMClient client = llmClient;
         currentThread = new Thread(() -> {
             try {
                 String response = client.chat(messages, systemPrompt);
                 messages.add(Map.of("role", "assistant", "content", response));
                 SwingUtilities.invokeLater(() -> {
-                    stopPulse();
+                    pulsing = false;
                     processResponse(response);
                     sendBtn.setEnabled(true);
                 });
             } catch (Exception ex) {
                 SwingUtilities.invokeLater(() -> {
-                    stopPulse();
-                    if (!Thread.currentThread().isInterrupted())
-                        addAiBubble("Error (" + ex.getClass().getSimpleName() + "): " + ex.getMessage());
+                    pulsing = false;
+                    if (!Thread.currentThread().isInterrupted()) {
+                        ChatMessage errMsg = new ChatMessage("assistant",
+                            "Error (" + ex.getClass().getSimpleName() + "): " + ex.getMessage());
+                        chatMessages.add(errMsg);
+                    }
+                    renderChat();
                     sendBtn.setEnabled(true);
                 });
             }
@@ -267,214 +387,8 @@ public class AIChatPanel extends JPanel {
         currentThread.start();
     }
 
-    private void addUserBubble(String text) {
-        Color uColor = aiPreferences.getUserPromptColorObj();
-        JPanel bubble = new JPanel(new BorderLayout(8, 0)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(uColor);
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 16, 16));
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        bubble.setOpaque(false);
-        bubble.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 12));
-
-        JLabel icon = new JLabel(humanIcon);
-        icon.setVerticalAlignment(SwingConstants.TOP);
-        bubble.add(icon, BorderLayout.WEST);
-
-        JTextArea msg = new JTextArea(text);
-        msg.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
-        msg.setForeground(aiPreferences.getUserTextColorObj());
-        msg.setOpaque(false);
-        msg.setEditable(false);
-        msg.setLineWrap(true);
-        msg.setWrapStyleWord(true);
-        bubble.add(msg, BorderLayout.CENTER);
-
-        JPanel row = new JPanel(new BorderLayout());
-        row.setOpaque(false);
-        row.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-        row.add(bubble, BorderLayout.CENTER);
-
-        chatPanel.add(row);
-        chatPanel.revalidate();
-        scrollToBottom();
-    }
-
-    private void addAiBubble(String text) {
-        Color aiColor = aiPreferences.getAiResponseColorObj();
-        JPanel bubble = new JPanel(new BorderLayout(8, 0)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(aiColor);
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 16, 16));
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        bubble.setOpaque(false);
-        bubble.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 12));
-
-        JLabel icon = new JLabel(aiIcon);
-        icon.setVerticalAlignment(SwingConstants.TOP);
-        bubble.add(icon, BorderLayout.WEST);
-
-        JTextPane msg = new JTextPane();
-        msg.setOpaque(false);
-        msg.setEditable(false);
-        msg.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
-        msg.setForeground(aiPreferences.getAiTextColorObj());
-        renderStyledMessage(msg, text);
-        bubble.add(msg, BorderLayout.CENTER);
-
-        JPanel row = new JPanel(new BorderLayout());
-        row.setOpaque(false);
-        row.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-        row.add(bubble, BorderLayout.CENTER);
-
-        chatPanel.add(row);
-        chatPanel.revalidate();
-        scrollToBottom();
-    }
-
-    private void addCodeApprovalBubble(String explanation, String newMarkdown) {
-        if (!explanation.isEmpty()) {
-            addAiBubble(explanation);
-        } else {
-            // Show a summary so the user always sees something
-            int lines = newMarkdown.split("\n").length;
-            addAiBubble("Here's the updated document (" + lines + " lines). Review and accept or reject the changes.");
-        }
-
-        JPanel btnRow = new JPanel();
-        btnRow.setLayout(new BoxLayout(btnRow, BoxLayout.X_AXIS));
-        btnRow.setOpaque(false);
-        btnRow.setBorder(BorderFactory.createEmptyBorder(2, 14, 6, 6));
-        JLabel prompt = new JLabel("Apply changes to document?");
-        prompt.setFont(new Font(aiPreferences.getAiFontFamily(), Font.BOLD, aiPreferences.getAiFontSize()));
-        JButton allowBtn = new JButton("Accept");
-        JButton rejectBtn = new JButton("Reject");
-        allowBtn.addActionListener(e -> {
-            editor.setText(newMarkdown);
-            prompt.setText("Changes accepted.");
-            btnRow.remove(allowBtn);
-            btnRow.remove(rejectBtn);
-            btnRow.revalidate();
-            btnRow.repaint();
-            chatPanel.revalidate();
-        });
-        rejectBtn.addActionListener(e -> {
-            prompt.setText("Changes rejected.");
-            btnRow.remove(allowBtn);
-            btnRow.remove(rejectBtn);
-            btnRow.revalidate();
-            btnRow.repaint();
-            chatPanel.revalidate();
-        });
-        btnRow.add(prompt);
-        btnRow.add(Box.createHorizontalStrut(8));
-        btnRow.add(allowBtn);
-        btnRow.add(Box.createHorizontalStrut(4));
-        btnRow.add(rejectBtn);
-
-        chatPanel.add(btnRow);
-        chatPanel.revalidate();
-        scrollToBottom();
-    }
-
-    private void startPulse() {
-        JPanel row = new JPanel(new BorderLayout(8, 0));
-        row.setOpaque(false);
-        row.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-
-        pulsingAiLabel = new JLabel(aiIcon) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                if (pulseAlpha > 0) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    int cx = getWidth() / 2, cy = getHeight() / 2, r = Math.max(getWidth(), getHeight()) / 2 + 4;
-                    float[] dist = {0.3f, 1.0f};
-                    Color[] colors = {new Color(50, 130, 255, (int) (pulseAlpha * 160)), new Color(50, 130, 255, 0)};
-                    g2.setPaint(new RadialGradientPaint(cx, cy, r, dist, colors));
-                    g2.fillOval(cx - r, cy - r, r * 2, r * 2);
-                    g2.dispose();
-                }
-                super.paintComponent(g);
-            }
-        };
-        pulsingAiLabel.setVerticalAlignment(SwingConstants.TOP);
-        row.add(pulsingAiLabel, BorderLayout.WEST);
-
-        JLabel thinking = new JLabel("Thinking...");
-        thinking.setFont(new Font(aiPreferences.getAiFontFamily(), Font.ITALIC, aiPreferences.getAiFontSize()));
-        thinking.setForeground(Color.GRAY);
-        row.add(thinking, BorderLayout.CENTER);
-
-        JButton cancelBtn = new JButton("\u2715");
-        cancelBtn.setForeground(Color.RED);
-        cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.BOLD, 14f));
-        cancelBtn.setBorderPainted(false);
-        cancelBtn.setContentAreaFilled(false);
-        cancelBtn.setFocusPainted(false);
-        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        cancelBtn.setToolTipText("Cancel");
-        cancelBtn.addActionListener(e -> {
-            if (currentThread != null) currentThread.interrupt();
-            stopPulse();
-            sendBtn.setEnabled(true);
-        });
-        row.add(cancelBtn, BorderLayout.EAST);
-
-        chatPanel.add(row);
-        chatPanel.revalidate();
-        scrollToBottom();
-
-        pulseTimer = new Timer(80, new ActionListener() {
-            boolean increasing = true;
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (increasing) {
-                    pulseAlpha += 0.08f;
-                    if (pulseAlpha >= 1f) { pulseAlpha = 1f; increasing = false; }
-                } else {
-                    pulseAlpha -= 0.08f;
-                    if (pulseAlpha <= 0f) { pulseAlpha = 0f; increasing = true; }
-                }
-                if (pulsingAiLabel != null) pulsingAiLabel.repaint();
-            }
-        });
-        pulseTimer.start();
-    }
-
-    private void stopPulse() {
-        if (pulseTimer != null) { pulseTimer.stop(); pulseTimer = null; }
-        pulseAlpha = 0f;
-        if (pulsingAiLabel != null) pulsingAiLabel.repaint();
-        int count = chatPanel.getComponentCount();
-        if (count > 0) chatPanel.remove(count - 1);
-        chatPanel.revalidate();
-        chatPanel.repaint();
-    }
-
-    private void scrollToBottom() {
-        SwingUtilities.invokeLater(() -> {
-            JScrollBar v = chatScroll.getVerticalScrollBar();
-            v.setValue(v.getMaximum());
-        });
-    }
-
     private void processResponse(String response) {
-        // Normalize line endings to \n
+        // Normalize line endings
         String normalized = response.replace("\r\n", "\n").replace("\r", "\n");
 
         int codeStart = normalized.indexOf("```markdown\n");
@@ -484,15 +398,12 @@ public class AIChatPanel extends JPanel {
 
         if (codeStart >= 0) {
             int blockStart = normalized.indexOf("\n", codeStart) + 1;
-            // Find the LAST closing fence (```): the outer markdown block's closing fence
-            // is always the last one, since inner code blocks are nested within it
             int blockEnd = -1;
             int searchFrom = blockStart;
             while (searchFrom < normalized.length()) {
                 int candidate = normalized.indexOf("\n```", searchFrom);
                 if (candidate < 0) break;
                 int afterFence = candidate + 4;
-                // Check that after ``` there's only whitespace or end of string
                 if (afterFence >= normalized.length()) {
                     blockEnd = candidate;
                 } else {
@@ -512,11 +423,170 @@ public class AIChatPanel extends JPanel {
                     String after = normalized.substring(fenceEndPos).trim();
                     if (!after.isEmpty()) explanation += (explanation.isEmpty() ? "" : "\n") + after;
                 }
-                addCodeApprovalBubble(explanation, newMarkdown);
+                // Create approval message
+                ChatMessage approvalMsg = new ChatMessage("assistant",
+                    explanation.isEmpty() ? newMarkdown : explanation);
+                approvalMsg.isApproval = true;
+                // Store the full replacement markdown in the message
+                // We use a special field - store it as the markdown content
+                chatMessages.add(new ApprovalMessage(explanation, newMarkdown));
+                renderChat();
                 return;
             }
         }
-        addAiBubble(response);
+        ChatMessage aiMsg = new ChatMessage("assistant", response);
+        chatMessages.add(aiMsg);
+        renderChat();
+    }
+
+    /** Special message type for document replacement approvals. */
+    private static class ApprovalMessage extends ChatMessage {
+        final String explanation;
+        final String replacementMarkdown;
+
+        ApprovalMessage(String explanation, String replacementMarkdown) {
+            super("assistant", explanation.isEmpty()
+                ? "Here's the updated document. Review and accept or reject the changes."
+                : explanation);
+            this.explanation = explanation;
+            this.replacementMarkdown = replacementMarkdown;
+            this.isApproval = true;
+        }
+    }
+
+    /** Render the full chat as HTML and load into WebView or fallback. */
+    private void renderChat() {
+        String html = buildChatHtml();
+        if (useWebView && webEngine != null) {
+            javafx.application.Platform.runLater(() -> {
+                webEngine.loadContent(html);
+            });
+        } else if (fallbackPane != null) {
+            fallbackPane.setText(html);
+            SwingUtilities.invokeLater(() -> {
+                JScrollBar v = fallbackScroll.getVerticalScrollBar();
+                v.setValue(v.getMaximum());
+            });
+        }
+    }
+
+    private String buildChatHtml() {
+        String fontFamily = aiPreferences.getAiFontFamily();
+        int fontSize = aiPreferences.getAiFontSize();
+        String codeFontFamily = aiPreferences.getAiCodeFontFamily();
+        int codeFontSize = aiPreferences.getAiCodeFontSize();
+        String userBg = aiPreferences.getUserPromptColor();
+        String userText = aiPreferences.getUserTextColor();
+        String aiBg = aiPreferences.getAiResponseColor();
+        String aiText = aiPreferences.getAiTextColor();
+
+        StringBuilder html = new StringBuilder();
+        html.append("<html><head><meta charset=\"utf-8\"><style>");
+        // Dynamic styles that depend on preferences
+        html.append("body { font-family: '").append(fontFamily).append("', sans-serif; ");
+        html.append("font-size: ").append(fontSize).append("pt; }");
+        html.append(".user-bubble { background: ").append(userBg).append("; color: ").append(userText).append("; }");
+        html.append(".ai-bubble { background: ").append(aiBg).append("; color: ").append(aiText).append("; }");
+        html.append(".approval-btns button { font-size: ").append(fontSize).append("pt; }");
+        html.append("code, pre { font-family: '").append(codeFontFamily).append("', monospace; ");
+        html.append("font-size: ").append(codeFontSize).append("pt; }");
+        html.append("</style>");
+        // Static styles from resource file
+        html.append("<style>").append(loadCssResource()).append("</style>");
+        html.append("<script>");
+        html.append("MathJax = {");
+        html.append("  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },");
+        html.append("  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },");
+        html.append("  svg: { fontCache: 'global' }");
+        html.append("};");
+        html.append("</script>");
+        html.append("<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>");
+        html.append("<script>");
+        html.append("document.addEventListener('click', function(e) {");
+        html.append("  var a = e.target.closest('a');");
+        html.append("  if(a && a.href && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {");
+        html.append("    e.preventDefault();");
+        html.append("    if(window.chatBridge) window.chatBridge.openLink(a.href);");
+        html.append("  }");
+        html.append("});");
+        html.append("function acceptChanges(idx) { if(window.chatBridge) window.chatBridge.acceptChanges(idx); }");
+        html.append("function rejectChanges(idx) { if(window.chatBridge) window.chatBridge.rejectChanges(idx); }");
+        html.append("function copyMarkdown(idx) { if(window.chatBridge) window.chatBridge.copyMarkdown(idx); }");
+        html.append("</script>");
+        html.append("</head><body>");
+
+        // Render all chat messages
+        for (int i = 0; i < chatMessages.size(); i++) {
+            ChatMessage msg = chatMessages.get(i);
+            if ("user".equals(msg.role)) {
+                html.append("<div class=\"bubble-row\">");
+                html.append("<img class=\"bubble-icon\" src=\"").append(humanIconDataUri).append("\">");
+                html.append("<div class=\"bubble user-bubble bubble-content\">");
+                html.append(escapeHtml(msg.markdown));
+                html.append("</div></div>");
+            } else {
+                // AI message — render markdown as HTML
+                String renderedContent;
+                if (msg instanceof ApprovalMessage am) {
+                    renderedContent = renderMarkdownToHtml(am.explanation.isEmpty()
+                        ? "Here's the updated document. Review and accept or reject the changes."
+                        : am.explanation);
+                } else {
+                    renderedContent = renderMarkdownToHtml(msg.markdown);
+                }
+
+                html.append("<div class=\"bubble-row\">");
+                html.append("<img class=\"bubble-icon\" src=\"").append(aiIconDataUri).append("\">");
+                html.append("<div class=\"bubble ai-bubble bubble-content\">");
+                html.append("<button class=\"copy-btn\" onclick=\"copyMarkdown(").append(i).append(")\" title=\"Copy markdown\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"5\" y=\"5\" width=\"9\" height=\"9\" rx=\"1.5\"/><path d=\"M3 11V2.5A1.5 1.5 0 0 1 4.5 1H11\"/></svg></button>");
+                html.append(renderedContent);
+
+                // Approval buttons
+                if (msg.isApproval) {
+                    if (msg.accepted) {
+                        html.append("<div class=\"status-label\">✓ Changes accepted.</div>");
+                    } else if (msg.rejected) {
+                        html.append("<div class=\"status-label\">✗ Changes rejected.</div>");
+                    } else {
+                        html.append("<div class=\"approval-btns\">");
+                        html.append("<button class=\"accept-btn\" onclick=\"acceptChanges(").append(i).append(")\">Accept</button>");
+                        html.append("<button class=\"reject-btn\" onclick=\"rejectChanges(").append(i).append(")\">Reject</button>");
+                        html.append("</div>");
+                    }
+                }
+
+                html.append("</div></div>");
+            }
+        }
+
+        // Pulsing "thinking" indicator
+        if (pulsing) {
+            html.append("<div class=\"thinking\">Thinking...</div>");
+        }
+
+        // Auto-scroll to bottom
+        html.append("<script>window.onload = function() { window.scrollTo(0, document.body.scrollHeight); ");
+        html.append("if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise(); };</script>");
+
+        html.append("</body></html>");
+        return html.toString();
+    }
+
+    private String renderMarkdownToHtml(String markdown) {
+        if (markdown == null || markdown.isEmpty()) return "";
+        // Convert LaTeX-style math delimiters to dollar-sign delimiters before parsing
+        String converted = markdown.replaceAll("\\\\\\((.+?)\\\\\\)", "\\$$1\\$");
+        converted = converted.replaceAll("(?s)\\\\\\[(.+?)\\\\\\]", "\\$\\$$1\\$\\$");
+        Node document = mdParser.parse(converted);
+        return mdRenderer.render(document);
+    }
+
+    private static String escapeHtml(String text) {
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("\n", "<br>");
     }
 
     private String buildSystemPrompt() {
@@ -530,102 +600,27 @@ public class AIChatPanel extends JPanel {
         return "You are an AI writing assistant. Help users write and improve markdown documents.";
     }
 
-    private void renderStyledMessage(JTextPane pane, String text) {
-        StyledDocument doc = pane.getStyledDocument();
-        String fontName = aiPreferences.getAiFontFamily();
-        int fontSize = aiPreferences.getAiFontSize();
-        String codeFontName = aiPreferences.getAiCodeFontFamily();
-        int codeFontSize = aiPreferences.getAiCodeFontSize();
-
-        Style normal = doc.addStyle("normal", null);
-        StyleConstants.setFontFamily(normal, fontName);
-        StyleConstants.setFontSize(normal, fontSize);
-        StyleConstants.setForeground(normal, pane.getForeground());
-
-        Style bold = doc.addStyle("bold", normal);
-        StyleConstants.setBold(bold, true);
-
-        Style italic = doc.addStyle("italic", normal);
-        StyleConstants.setItalic(italic, true);
-
-        Style code = doc.addStyle("code", normal);
-        StyleConstants.setFontFamily(code, codeFontName);
-        StyleConstants.setFontSize(code, codeFontSize);
-
-        Style codeBlock = doc.addStyle("codeBlock", null);
-        StyleConstants.setFontFamily(codeBlock, codeFontName);
-        StyleConstants.setFontSize(codeBlock, codeFontSize);
-        StyleConstants.setForeground(codeBlock, pane.getForeground());
-
-        Style header = doc.addStyle("header", normal);
-        StyleConstants.setBold(header, true);
-        StyleConstants.setFontSize(header, fontSize + 4);
-
-        boolean inCodeBlock = false;
-        String[] lines = text.split("\n");
-        for (String line : lines) {
-            if (line.startsWith("```")) {
-                inCodeBlock = !inCodeBlock;
-                continue;
+    private static String loadIconAsDataUri(String resourcePath) {
+        try (var is = AIChatPanel.class.getResourceAsStream(resourcePath)) {
+            if (is != null) {
+                byte[] bytes = is.readAllBytes();
+                String base64 = java.util.Base64.getEncoder().encodeToString(bytes);
+                return "data:image/png;base64," + base64;
             }
-            if (inCodeBlock) {
-                insertText(doc, line + "\n", codeBlock);
-                continue;
-            }
-            if (line.startsWith("### ")) { insertText(doc, line.substring(4) + "\n", header); continue; }
-            if (line.startsWith("## ")) { insertText(doc, line.substring(3) + "\n", header); continue; }
-            if (line.startsWith("# ")) { insertText(doc, line.substring(2) + "\n", header); continue; }
-
-            String content = line;
-            if (line.startsWith("- ") || line.startsWith("* ")) content = "\u2022 " + line.substring(2);
-
-            renderInline(doc, content, normal, bold, italic, code);
-            insertText(doc, "\n", normal);
+        } catch (Exception e) {
+            // Fall through
         }
+        return "";
     }
 
-    private void renderInline(StyledDocument doc, String text, Style normal, Style bold, Style italic, Style code) {
-        int i = 0;
-        while (i < text.length()) {
-            // Inline code: `...`
-            if (text.charAt(i) == '`') {
-                int end = text.indexOf('`', i + 1);
-                if (end > i) {
-                    insertText(doc, text.substring(i + 1, end), code);
-                    i = end + 1;
-                    continue;
-                }
+    private static String loadCssResource() {
+        try (var is = AIChatPanel.class.getResourceAsStream("/ai_chat.css")) {
+            if (is != null) {
+                return new String(is.readAllBytes(), StandardCharsets.UTF_8);
             }
-            // Bold: **...**
-            if (i + 1 < text.length() && text.charAt(i) == '*' && text.charAt(i + 1) == '*') {
-                int end = text.indexOf("**", i + 2);
-                if (end > i) {
-                    insertText(doc, text.substring(i + 2, end), bold);
-                    i = end + 2;
-                    continue;
-                }
-            }
-            // Italic: *...*
-            if (text.charAt(i) == '*') {
-                int end = text.indexOf('*', i + 1);
-                if (end > i && !(i + 1 < text.length() && text.charAt(i + 1) == '*')) {
-                    insertText(doc, text.substring(i + 1, end), italic);
-                    i = end + 1;
-                    continue;
-                }
-            }
-            // Plain text until next special char
-            int next = text.length();
-            for (int j = i + 1; j < text.length(); j++) {
-                char c = text.charAt(j);
-                if (c == '`' || c == '*') { next = j; break; }
-            }
-            insertText(doc, text.substring(i, next), normal);
-            i = next;
+        } catch (Exception e) {
+            // Fall through
         }
-    }
-
-    private static void insertText(StyledDocument doc, String text, Style style) {
-        try { doc.insertString(doc.getLength(), text, style); } catch (BadLocationException ignored) {}
+        return "";
     }
 }
