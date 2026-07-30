@@ -119,6 +119,13 @@ public class FindDialog extends JDialog {
         // Enter key triggers Find Next
         searchField.addActionListener(e -> findNext());
 
+        // Escape key closes the dialog
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+            .put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0), "close");
+        getRootPane().getActionMap().put("close", new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { setVisible(false); }
+        });
+
         pack();
         setLocationRelativeTo(owner);
         setResizable(false);
