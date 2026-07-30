@@ -33,11 +33,12 @@ public class ReplaceDialog extends FindDialog {
     /**
      * Creates a Replace dialog attached to the given owner frame and text area.
      *
-     * @param owner    the parent frame
-     * @param textArea the text area to perform replacements on
+     * @param owner       the parent frame
+     * @param textArea    the text area to perform replacements on
+     * @param preferences the application preferences for storing recents
      */
-    public ReplaceDialog(JFrame owner, JTextArea textArea) {
-        super(owner, textArea, "Replace");
+    public ReplaceDialog(JFrame owner, JTextArea textArea, Preferences preferences) {
+        super(owner, textArea, preferences, "Replace");
     }
 
     /**
@@ -61,7 +62,8 @@ public class ReplaceDialog extends FindDialog {
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        topPanel.add(searchField = new JTextField(24), gbc);
+        searchField = new JTextField(24);
+        topPanel.add(createFieldWithRecents(searchField, true), gbc);
 
         // Replace label and field
         gbc.gridx = 0;
@@ -74,7 +76,7 @@ public class ReplaceDialog extends FindDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
         replaceField = new JTextField(24);
-        topPanel.add(replaceField, gbc);
+        topPanel.add(createFieldWithRecents(replaceField, false), gbc);
 
         return topPanel;
     }

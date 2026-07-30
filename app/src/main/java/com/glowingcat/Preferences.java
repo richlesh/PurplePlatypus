@@ -93,8 +93,17 @@ public class Preferences {
     /** Recently opened file paths (most recent first). */
     private java.util.List<String> recentFiles = new java.util.ArrayList<>();
 
+    /** Saved search expressions (most recent first). */
+    private java.util.List<String> searchRecents = new java.util.ArrayList<>();
+
+    /** Saved replace expressions (most recent first). */
+    private java.util.List<String> replaceRecents = new java.util.ArrayList<>();
+
     /** Maximum number of recent files to remember. */
     private static final transient int MAX_RECENT_FILES = 20;
+
+    /** Maximum number of search/replace recents to remember. */
+    private static final transient int MAX_SEARCH_RECENTS = 50;
 
     /** Window width. */
     private int windowWidth = 1200;
@@ -245,6 +254,52 @@ public class Preferences {
     public void clearRecentFiles() {
         if (recentFiles == null) recentFiles = new java.util.ArrayList<>();
         recentFiles.clear();
+    }
+
+    // --- Search/Replace Recents ---
+
+    /** Get the list of saved search expressions (most recent first). */
+    public java.util.List<String> getSearchRecents() {
+        if (searchRecents == null) searchRecents = new java.util.ArrayList<>();
+        return java.util.Collections.unmodifiableList(searchRecents);
+    }
+
+    /** Add a search expression to the recents (moves to front if already present). */
+    public void addSearchRecent(String expr) {
+        if (searchRecents == null) searchRecents = new java.util.ArrayList<>();
+        searchRecents.remove(expr);
+        searchRecents.add(0, expr);
+        while (searchRecents.size() > MAX_SEARCH_RECENTS) {
+            searchRecents.remove(searchRecents.size() - 1);
+        }
+    }
+
+    /** Remove a search expression from the recents. */
+    public void removeSearchRecent(String expr) {
+        if (searchRecents == null) searchRecents = new java.util.ArrayList<>();
+        searchRecents.remove(expr);
+    }
+
+    /** Get the list of saved replace expressions (most recent first). */
+    public java.util.List<String> getReplaceRecents() {
+        if (replaceRecents == null) replaceRecents = new java.util.ArrayList<>();
+        return java.util.Collections.unmodifiableList(replaceRecents);
+    }
+
+    /** Add a replace expression to the recents (moves to front if already present). */
+    public void addReplaceRecent(String expr) {
+        if (replaceRecents == null) replaceRecents = new java.util.ArrayList<>();
+        replaceRecents.remove(expr);
+        replaceRecents.add(0, expr);
+        while (replaceRecents.size() > MAX_SEARCH_RECENTS) {
+            replaceRecents.remove(replaceRecents.size() - 1);
+        }
+    }
+
+    /** Remove a replace expression from the recents. */
+    public void removeReplaceRecent(String expr) {
+        if (replaceRecents == null) replaceRecents = new java.util.ArrayList<>();
+        replaceRecents.remove(expr);
     }
 
     private static Path getPrefsPath() {
