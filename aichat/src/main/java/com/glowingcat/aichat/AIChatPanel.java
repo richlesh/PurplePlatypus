@@ -35,6 +35,7 @@ public class AIChatPanel extends JPanel {
     private final JButton sendBtn;
     private final DocumentEditor editor;
     private final AIChatPreferences aiPreferences;
+    private ChatColors chatColors;
     private final List<Map<String, String>> messages = new ArrayList<>();
     private final List<ChatMessage> chatMessages = new ArrayList<>();
     private final String systemPrompt;
@@ -88,6 +89,7 @@ public class AIChatPanel extends JPanel {
     public static class Builder {
         private DocumentEditor editor;
         private AIChatPreferences preferences;
+        private ChatColors chatColors;
         private LLMClient llmClient;
         private Runnable onPromptNag;
 
@@ -102,6 +104,12 @@ public class AIChatPanel extends JPanel {
         /** Set the AI chat preferences (required). */
         public Builder preferences(AIChatPreferences preferences) {
             this.preferences = preferences;
+            return this;
+        }
+
+        /** Set the chat bubble colors (optional; falls back to AIChatPreferences defaults). */
+        public Builder chatColors(ChatColors chatColors) {
+            this.chatColors = chatColors;
             return this;
         }
 
@@ -129,6 +137,7 @@ public class AIChatPanel extends JPanel {
         super(new BorderLayout());
         this.editor = builder.editor;
         this.aiPreferences = builder.preferences;
+        this.chatColors = builder.chatColors;
         this.llmClient = builder.llmClient;
         this.promptNagCallback = builder.onPromptNag;
         this.systemPrompt = buildSystemPrompt();
@@ -325,6 +334,12 @@ public class AIChatPanel extends JPanel {
         this.promptNagCallback = callback;
     }
 
+    /** Set or replace the chat colors at runtime and re-render. */
+    public void setChatColors(ChatColors colors) {
+        this.chatColors = colors;
+        renderChat();
+    }
+
     /** Update fonts after preferences change. */
     public void updateFont() {
         inputArea.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
@@ -475,10 +490,10 @@ public class AIChatPanel extends JPanel {
         int fontSize = aiPreferences.getAiFontSize();
         String codeFontFamily = aiPreferences.getAiCodeFontFamily();
         int codeFontSize = aiPreferences.getAiCodeFontSize();
-        String userBg = aiPreferences.getUserPromptColor();
-        String userText = aiPreferences.getUserTextColor();
-        String aiBg = aiPreferences.getAiResponseColor();
-        String aiText = aiPreferences.getAiTextColor();
+        String userBg = chatColors != null ? chatColors.getUserPromptColor() : aiPreferences.getUserPromptColor();
+        String userText = chatColors != null ? chatColors.getUserTextColor() : aiPreferences.getUserTextColor();
+        String aiBg = chatColors != null ? chatColors.getAiResponseColor() : aiPreferences.getAiResponseColor();
+        String aiText = chatColors != null ? chatColors.getAiTextColor() : aiPreferences.getAiTextColor();
 
         StringBuilder html = new StringBuilder();
         html.append("<html><head><meta charset=\"utf-8\"><style>");

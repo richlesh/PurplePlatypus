@@ -55,6 +55,10 @@ public class AIChatPreferencesDialog extends JDialog {
     };
 
     public AIChatPreferencesDialog(Window owner, AIChatPreferences prefs) {
+        this(owner, prefs, null);
+    }
+
+    public AIChatPreferencesDialog(Window owner, AIChatPreferences prefs, ChatColors colors) {
         super(owner, "AI Settings", ModalityType.APPLICATION_MODAL);
 
         String[] fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment()
@@ -91,10 +95,18 @@ public class AIChatPreferencesDialog extends JDialog {
         aiCodeFontSizeCombo = new JComboBox<>(FONT_SIZES);
         aiCodeFontSizeCombo.setSelectedItem(prefs.getAiCodeFontSize());
 
-        userPromptColor = new Color[]{prefs.getUserPromptColorObj()};
-        userTextColor = new Color[]{prefs.getUserTextColorObj()};
-        aiResponseColor = new Color[]{prefs.getAiResponseColorObj()};
-        aiTextColor = new Color[]{prefs.getAiTextColorObj()};
+        // Use ChatColors if provided, otherwise fall back to AIChatPreferences
+        if (colors != null) {
+            userPromptColor = new Color[]{Color.decode(colors.getUserPromptColor())};
+            userTextColor = new Color[]{Color.decode(colors.getUserTextColor())};
+            aiResponseColor = new Color[]{Color.decode(colors.getAiResponseColor())};
+            aiTextColor = new Color[]{Color.decode(colors.getAiTextColor())};
+        } else {
+            userPromptColor = new Color[]{prefs.getUserPromptColorObj()};
+            userTextColor = new Color[]{prefs.getUserTextColorObj()};
+            aiResponseColor = new Color[]{prefs.getAiResponseColorObj()};
+            aiTextColor = new Color[]{prefs.getAiTextColorObj()};
+        }
 
         // Build the panel
         JPanel mainPanel = buildPanel(prefs);
@@ -423,9 +435,17 @@ public class AIChatPreferencesDialog extends JDialog {
         prefs.setAiFontSize((Integer) aiFontSizeCombo.getSelectedItem());
         prefs.setAiCodeFontFamily((String) aiCodeFontCombo.getSelectedItem());
         prefs.setAiCodeFontSize((Integer) aiCodeFontSizeCombo.getSelectedItem());
-        prefs.setUserPromptColor(userPromptColor[0]);
-        prefs.setUserTextColor(userTextColor[0]);
-        prefs.setAiResponseColor(aiResponseColor[0]);
-        prefs.setAiTextColor(aiTextColor[0]);
     }
+
+    /** Get the selected user prompt bubble background color. */
+    public Color getSelectedUserPromptColor() { return userPromptColor[0]; }
+
+    /** Get the selected user prompt text color. */
+    public Color getSelectedUserTextColor() { return userTextColor[0]; }
+
+    /** Get the selected AI response bubble background color. */
+    public Color getSelectedAiResponseColor() { return aiResponseColor[0]; }
+
+    /** Get the selected AI response text color. */
+    public Color getSelectedAiTextColor() { return aiTextColor[0]; }
 }
