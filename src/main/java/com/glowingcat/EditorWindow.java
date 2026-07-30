@@ -44,6 +44,7 @@ public class EditorWindow {
     private final RSyntaxTextArea editorPane;
     private final UndoManager undoManager = new UndoManager();
     private AIChatPanel aiChatPanel;
+    private AIChatPreferences aiPreferences;
     private JSplitPane editorPreviewSplit;
     private JSplitPane mainSplit;
     private JLabel filePathLabel;
@@ -160,6 +161,8 @@ public class EditorWindow {
             aboutItem.addActionListener(e -> showAboutDialog());
             JMenuItem prefsItem = new JMenuItem("Settings...");
             prefsItem.addActionListener(e -> showPreferencesDialog());
+            JMenuItem aiSettingsItem = new JMenuItem("AI Settings...");
+            aiSettingsItem.addActionListener(e -> showAiSettingsDialog());
             JMenuItem licenseItem = new JMenuItem("License Key...");
             licenseItem.addActionListener(e -> showLicenseDialog());
             JMenuItem quitItem = new JMenuItem("Quit PurplePlatypus");
@@ -169,6 +172,7 @@ public class EditorWindow {
             appMenu.add(aboutItem);
             appMenu.addSeparator();
             appMenu.add(prefsItem);
+            appMenu.add(aiSettingsItem);
             appMenu.add(licenseItem);
             appMenu.addSeparator();
             appMenu.add(quitItem);
@@ -283,6 +287,12 @@ public class EditorWindow {
         convertLineEndingsItem = new JMenuItem("Convert to Windows Line Endings");
         convertLineEndingsItem.addActionListener(e -> convertLineEndings());
         editMenu.add(convertLineEndingsItem);
+        if (isMac) {
+            editMenu.addSeparator();
+            JMenuItem aiSettingsMenuItem = new JMenuItem("AI Settings...");
+            aiSettingsMenuItem.addActionListener(e -> showAiSettingsDialog());
+            editMenu.add(aiSettingsMenuItem);
+        }
         menuBar.add(editMenu);
 
         // Search menu
@@ -675,7 +685,8 @@ public class EditorWindow {
         editorPreviewSplit.setDividerLocation(600);
         editorPreviewSplit.setResizeWeight(0.5);
 
-        aiChatPanel = new AIChatPanel(editorPane, preferences);
+        aiPreferences = AIChatPreferences.load();
+        aiChatPanel = new AIChatPanel(editorPane, preferences, aiPreferences);
         mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorPreviewSplit, aiChatPanel);
         mainSplit.setResizeWeight(1.0);
         mainSplit.setDividerLocation(frame.getWidth() - 400);
@@ -2161,7 +2172,6 @@ public class EditorWindow {
             dialog.applyTo(preferences);
             preferences.save();
             editorPanel.applyPreferences(preferences);
-            if (aiChatPanel != null) aiChatPanel.updateFont();
             previewPanel.forceFullReload();
             updatePreview();
             // Update toolbar toggle button highlight colors
@@ -2170,6 +2180,16 @@ public class EditorWindow {
             if (syncScrollToggle.isSelected()) syncScrollToggle.setBackground(hlColor);
             if (previewToggle.isSelected()) previewToggle.setBackground(hlColor);
             if (aiToggle.isSelected()) aiToggle.setBackground(hlColor);
+        }
+    }
+
+    public void showAiSettingsDialog() {
+        AIChatPreferencesDialog dialog = new AIChatPreferencesDialog(frame, aiPreferences);
+        dialog.setVisible(true);
+        if (dialog.isConfirmed()) {
+            dialog.applyTo(aiPreferences);
+            aiPreferences.save();
+            if (aiChatPanel != null) aiChatPanel.updateFont();
         }
     }
 

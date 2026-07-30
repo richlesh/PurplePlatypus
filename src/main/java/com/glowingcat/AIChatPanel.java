@@ -27,6 +27,7 @@ public class AIChatPanel extends JPanel {
     private final JTextArea inputArea;
     private final JButton sendBtn;
     private final RSyntaxTextArea editorPane;
+    private final AIChatPreferences aiPreferences;
     private final Preferences preferences;
     private final List<Map<String, String>> messages = new ArrayList<>();
     private final String systemPrompt;
@@ -40,10 +41,11 @@ public class AIChatPanel extends JPanel {
     private int promptCount = 0;
     private GenericVendorConfig genericConfig;
 
-    public AIChatPanel(RSyntaxTextArea editorPane, Preferences preferences) {
+    public AIChatPanel(RSyntaxTextArea editorPane, Preferences preferences, AIChatPreferences aiPreferences) {
         super(new BorderLayout());
         this.editorPane = editorPane;
         this.preferences = preferences;
+        this.aiPreferences = aiPreferences;
         this.systemPrompt = buildSystemPrompt();
 
         // Load icons
@@ -76,7 +78,7 @@ public class AIChatPanel extends JPanel {
         chatScroll.getVerticalScrollBar().setUnitIncrement(16);
 
         inputArea = new JTextArea(3, 20);
-        inputArea.setFont(new Font(preferences.getAiFontFamily(), Font.PLAIN, preferences.getAiFontSize()));
+        inputArea.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
         inputArea.addKeyListener(new KeyAdapter() {
@@ -135,7 +137,7 @@ public class AIChatPanel extends JPanel {
 
     /** Update fonts after preferences change. */
     public void updateFont() {
-        Font font = new Font(preferences.getAiFontFamily(), Font.PLAIN, preferences.getAiFontSize());
+        Font font = new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize());
         inputArea.setFont(font);
         for (Component c : chatPanel.getComponents()) {
             updateFontRecursive(c, font);
@@ -196,7 +198,7 @@ public class AIChatPanel extends JPanel {
     }
 
     private void addUserBubble(String text) {
-        Color uColor = preferences.getUserPromptColorObj();
+        Color uColor = aiPreferences.getUserPromptColorObj();
         JPanel bubble = new JPanel(new BorderLayout(8, 0)) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -216,8 +218,8 @@ public class AIChatPanel extends JPanel {
         bubble.add(icon, BorderLayout.WEST);
 
         JTextArea msg = new JTextArea(text);
-        msg.setFont(new Font(preferences.getAiFontFamily(), Font.PLAIN, preferences.getAiFontSize()));
-        msg.setForeground(preferences.getUserTextColorObj());
+        msg.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
+        msg.setForeground(aiPreferences.getUserTextColorObj());
         msg.setOpaque(false);
         msg.setEditable(false);
         msg.setLineWrap(true);
@@ -235,7 +237,7 @@ public class AIChatPanel extends JPanel {
     }
 
     private void addAiBubble(String text) {
-        Color aiColor = preferences.getAiResponseColorObj();
+        Color aiColor = aiPreferences.getAiResponseColorObj();
         JPanel bubble = new JPanel(new BorderLayout(8, 0)) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -257,8 +259,8 @@ public class AIChatPanel extends JPanel {
         JTextPane msg = new JTextPane();
         msg.setOpaque(false);
         msg.setEditable(false);
-        msg.setFont(new Font(preferences.getAiFontFamily(), Font.PLAIN, preferences.getAiFontSize()));
-        msg.setForeground(preferences.getAiTextColorObj());
+        msg.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
+        msg.setForeground(aiPreferences.getAiTextColorObj());
         renderStyledMessage(msg, text);
         bubble.add(msg, BorderLayout.CENTER);
 
@@ -281,30 +283,62 @@ public class AIChatPanel extends JPanel {
             addAiBubble("Here's the updated document (" + lines + " lines). Review and accept or reject the changes.");
         }
 
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2)) {
+            @Override
+            public Dimension getPreferredSize() {
+                // FlowLayout doesn't account for wrapping; compute height based on actual width
+                int width = getWidth();
+                if (width == 0) width = getParent() != null ? getParent().getWidth() : 300;
+                if (width == 0) return super.getPreferredSize();
+                Insets insets = getInsets();
+                FlowLayout fl = (FlowLayout) getLayout();
+                int hgap = fl.getHgap();
+                int vgap = fl.getVgap();
+                int x = insets.left;
+                int rowHeight = 0;
+                int height = insets.top + vgap;
+                int maxWidth = width - insets.left - insets.right;
+                for (Component comp : getComponents()) {
+                    if (!comp.isVisible()) continue;
+                    Dimension d = comp.getPreferredSize();
+                    if (x > insets.left && x + d.width > maxWidth + insets.left) {
+                        height += rowHeight + vgap;
+                        x = insets.left;
+                        rowHeight = 0;
+                    }
+                    rowHeight = Math.max(rowHeight, d.height);
+                    x += d.width + hgap;
+                }
+                height += rowHeight + vgap + insets.bottom;
+                return new Dimension(width, height);
+            }
+        };
         btnRow.setOpaque(false);
         btnRow.setBorder(BorderFactory.createEmptyBorder(2, 14, 6, 6));
         JLabel prompt = new JLabel("Apply changes to document?");
-        prompt.setFont(new Font(preferences.getAiFontFamily(), Font.BOLD, preferences.getAiFontSize()));
-        JButton allowBtn = new JButton("Allow");
+        prompt.setFont(new Font(aiPreferences.getAiFontFamily(), Font.BOLD, aiPreferences.getAiFontSize()));
+        JButton allowBtn = new JButton("Accept");
         JButton rejectBtn = new JButton("Reject");
         allowBtn.addActionListener(e -> {
             editorPane.setText(newMarkdown);
-            allowBtn.setEnabled(false);
-            rejectBtn.setEnabled(false);
-            prompt.setText("Changes applied.");
+            prompt.setText("Changes accepted.");
+            btnRow.remove(allowBtn);
+            btnRow.remove(rejectBtn);
+            btnRow.revalidate();
+            btnRow.repaint();
+            chatPanel.revalidate();
         });
         rejectBtn.addActionListener(e -> {
-            allowBtn.setEnabled(false);
-            rejectBtn.setEnabled(false);
             prompt.setText("Changes rejected.");
+            btnRow.remove(allowBtn);
+            btnRow.remove(rejectBtn);
+            btnRow.revalidate();
+            btnRow.repaint();
+            chatPanel.revalidate();
         });
-        JPanel btnStack = new JPanel(new GridLayout(2, 1, 0, 2));
-        btnStack.setOpaque(false);
-        btnStack.add(allowBtn);
-        btnStack.add(rejectBtn);
         btnRow.add(prompt);
-        btnRow.add(btnStack);
+        btnRow.add(allowBtn);
+        btnRow.add(rejectBtn);
 
         chatPanel.add(btnRow);
         chatPanel.revalidate();
@@ -337,7 +371,7 @@ public class AIChatPanel extends JPanel {
         row.add(pulsingAiLabel, BorderLayout.WEST);
 
         JLabel thinking = new JLabel("Thinking...");
-        thinking.setFont(new Font(preferences.getAiFontFamily(), Font.ITALIC, preferences.getAiFontSize()));
+        thinking.setFont(new Font(aiPreferences.getAiFontFamily(), Font.ITALIC, aiPreferences.getAiFontSize()));
         thinking.setForeground(Color.GRAY);
         row.add(thinking, BorderLayout.CENTER);
 
@@ -457,9 +491,9 @@ public class AIChatPanel extends JPanel {
     }
 
     private String callLLM() throws Exception {
-        String vendor = preferences.getLlmVendor();
-        String apiKey = preferences.getLlmApiKey();
-        String model = preferences.getLlmModel();
+        String vendor = aiPreferences.getLlmVendor();
+        String apiKey = aiPreferences.getLlmApiKey();
+        String model = aiPreferences.getLlmModel();
 
         if ("Generic".equals(vendor)) {
             return callGeneric(apiKey, model);
@@ -471,7 +505,7 @@ public class AIChatPanel extends JPanel {
             case "Cerebras" -> "https://api.cerebras.ai/v1";
             case "DeepSeek" -> "https://api.deepseek.com/v1";
             case "Generic OpenAI API" -> {
-                String ep = preferences.getLlmEndpoint();
+                String ep = aiPreferences.getLlmEndpoint();
                 if (ep == null || ep.isBlank()) throw new RuntimeException("No endpoint configured for Generic OpenAI API");
                 if (ep.endsWith("/")) ep = ep.substring(0, ep.length() - 1);
                 yield ep;
@@ -598,8 +632,8 @@ public class AIChatPanel extends JPanel {
 
     private void renderStyledMessage(JTextPane pane, String text) {
         StyledDocument doc = pane.getStyledDocument();
-        String fontName = preferences.getAiFontFamily();
-        int fontSize = preferences.getAiFontSize();
+        String fontName = aiPreferences.getAiFontFamily();
+        int fontSize = aiPreferences.getAiFontSize();
 
         Style normal = doc.addStyle("normal", null);
         StyleConstants.setFontFamily(normal, fontName);
