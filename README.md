@@ -112,7 +112,7 @@ mvn compile
 ## Running
 
 ```bash
-mvn exec:java -Dexec.mainClass="com.glowingcat.Main"
+mvn install -q && mvn exec:java -pl app
 ```
 
 Or run `com.glowingcat.Main` directly from your IDE.

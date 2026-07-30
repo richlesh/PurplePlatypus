@@ -9,7 +9,8 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="PurplePlatypus" />
+        <module name="aichat" />
+        <module name="App" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="17" />

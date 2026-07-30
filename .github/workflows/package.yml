@@ -23,51 +23,51 @@ jobs:
         include:
           - os: macos-latest
             arch: arm64
-            icon: src/main/resources/app_icon.icns
-            doc_icon: src/main/resources/doc_icon.icns
-            textbundle_icon: src/main/resources/textbundle_icon.icns
+            icon: app/src/main/resources/app_icon.icns
+            doc_icon: app/src/main/resources/doc_icon.icns
+            textbundle_icon: app/src/main/resources/textbundle_icon.icns
             pkg_type: dmg
             label: macos-arm64
           - os: windows-latest
             arch: x64
-            icon: src/main/resources/app_icon.ico
-            doc_icon: src/main/resources/doc_icon.ico
-            textbundle_icon: src/main/resources/textbundle_icon.ico
+            icon: app/src/main/resources/app_icon.ico
+            doc_icon: app/src/main/resources/doc_icon.ico
+            textbundle_icon: app/src/main/resources/textbundle_icon.ico
             pkg_type: msi
             label: windows-x64
           - os: windows-11-arm
             arch: arm64
-            icon: src/main/resources/app_icon.ico
-            doc_icon: src/main/resources/doc_icon.ico
-            textbundle_icon: src/main/resources/textbundle_icon.ico
+            icon: app/src/main/resources/app_icon.ico
+            doc_icon: app/src/main/resources/doc_icon.ico
+            textbundle_icon: app/src/main/resources/textbundle_icon.ico
             pkg_type: msi
             label: windows-arm64
           - os: ubuntu-22.04
             arch: x64
-            icon: src/main/resources/app_icon_256.png
-            doc_icon: src/main/resources/doc_icon_256.png
-            textbundle_icon: src/main/resources/textbundle_icon_256.png
+            icon: app/src/main/resources/app_icon_256.png
+            doc_icon: app/src/main/resources/doc_icon_256.png
+            textbundle_icon: app/src/main/resources/textbundle_icon_256.png
             pkg_type: deb
             label: linux-x64-deb
           - os: ubuntu-22.04
             arch: x64
-            icon: src/main/resources/app_icon_256.png
-            doc_icon: src/main/resources/doc_icon_256.png
-            textbundle_icon: src/main/resources/textbundle_icon_256.png
+            icon: app/src/main/resources/app_icon_256.png
+            doc_icon: app/src/main/resources/doc_icon_256.png
+            textbundle_icon: app/src/main/resources/textbundle_icon_256.png
             pkg_type: rpm
             label: linux-x64-rpm
           - os: ubuntu-24.04-arm
             arch: arm64
-            icon: src/main/resources/app_icon_256.png
-            doc_icon: src/main/resources/doc_icon_256.png
-            textbundle_icon: src/main/resources/textbundle_icon_256.png
+            icon: app/src/main/resources/app_icon_256.png
+            doc_icon: app/src/main/resources/doc_icon_256.png
+            textbundle_icon: app/src/main/resources/textbundle_icon_256.png
             pkg_type: deb
             label: linux-arm64-deb
           - os: ubuntu-24.04-arm
             arch: arm64
-            icon: src/main/resources/app_icon_256.png
-            doc_icon: src/main/resources/doc_icon_256.png
-            textbundle_icon: src/main/resources/textbundle_icon_256.png
+            icon: app/src/main/resources/app_icon_256.png
+            doc_icon: app/src/main/resources/doc_icon_256.png
+            textbundle_icon: app/src/main/resources/textbundle_icon_256.png
             pkg_type: rpm
             label: linux-arm64-rpm
 
@@ -111,7 +111,7 @@ jobs:
         env:
           LICENSE_SALT: ${{ secrets.LICENSE_SALT }}
         run: |
-          cat > src/main/java/com/glowingcat/License.java <<EOF
+          cat > app/src/main/java/com/glowingcat/License.java <<EOF
           /*
            * (c) 2026 Glowing Cat Software
            */
@@ -137,7 +137,7 @@ jobs:
           fi
           mvn clean package -DskipTests=true $MAVEN_OPTS
           mkdir -p lib
-          cp target/PurplePlatypus-*.jar lib/
+          cp app/target/PurplePlatypus-*.jar lib/
           # Determine the actual jar filename for jpackage
           JARFILE=$(ls lib/PurplePlatypus-*.jar | head -1 | xargs basename)
           echo "JARFILE=$JARFILE" >> $GITHUB_ENV
@@ -369,7 +369,7 @@ jobs:
           mkdir -p "$DMG_DIR"
           cp -R PurplePlatypus.app "$DMG_DIR/"
           ln -s /Applications "$DMG_DIR/Applications"
-          cp src/main/resources/app_icon.icns "$DMG_DIR/.VolumeIcon.icns"
+          cp app/src/main/resources/app_icon.icns "$DMG_DIR/.VolumeIcon.icns"
           cp demo.textpack "$DMG_DIR/"
           cp -R config "$DMG_DIR/"
 
@@ -485,7 +485,7 @@ jobs:
         env:
           LICENSE_SALT: ${{ secrets.LICENSE_SALT }}
         run: |
-          cat > src/main/java/com/glowingcat/License.java <<EOF
+          cat > app/src/main/java/com/glowingcat/License.java <<EOF
           /*
            * (c) 2026 Glowing Cat Software
            */
@@ -504,7 +504,7 @@ jobs:
         run: |
           mvn clean package -DskipTests=true -Pexclude-javafx
           mkdir -p staging
-          cp target/PurplePlatypus-*.jar staging/PurplePlatypus.jar
+          cp app/target/PurplePlatypus-*.jar staging/PurplePlatypus.jar
 
       - name: Download JavaFX platform JARs
         run: |

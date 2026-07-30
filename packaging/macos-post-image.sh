@@ -24,8 +24,8 @@ fi
 echo "Patching Info.plist with UTI declarations..."
 
 # Copy document icon files into the app bundle Resources directory
-cp src/main/resources/doc_icon.icns "${RESOURCES_DIR}/doc_icon.icns"
-cp src/main/resources/textbundle_icon.icns "${RESOURCES_DIR}/textbundle_icon.icns"
+cp app/src/main/resources/doc_icon.icns "${RESOURCES_DIR}/doc_icon.icns"
+cp app/src/main/resources/textbundle_icon.icns "${RESOURCES_DIR}/textbundle_icon.icns"
 
 PLISTBUDDY="/usr/libexec/PlistBuddy"
 
