@@ -339,9 +339,12 @@ public class PreviewPanel extends JPanel {
             }
         }
 
+        String selColor = preferences != null ? preferences.getSelectionColor() : "#B482FF";
+
         return "<html><head><meta charset=\"utf-8\">" + baseTag + "<style>"
                 + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; }"
                 + "code, pre { font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"
+                + "::selection { background: " + selColor + "; }"
                 + "</style>"
                 + "<style>" + loadPreviewCss() + "</style>"
                 + "<script>"
@@ -362,6 +365,13 @@ public class PreviewPanel extends JPanel {
                 + "  if(a && a.href && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {"
                 + "    e.preventDefault();"
                 + "    if(window.java) window.java.openLink(a.href);"
+                + "  }"
+                + "});"
+                + "document.addEventListener('contextmenu', function(e) {"
+                + "  var sel = window.getSelection().toString();"
+                + "  if(sel && sel.trim().length > 0 && window.java) {"
+                + "    e.preventDefault();"
+                + "    window.java.findInSource(sel.trim());"
                 + "  }"
                 + "});</script>")
                 + "</head><body>" + bodyHtml + "</body></html>";
@@ -415,6 +425,49 @@ public class PreviewPanel extends JPanel {
     }
 
     /**
+     * Searches for and highlights text in the preview WebView using window.find().
+     * Scrolls the found text into view.
+     *
+     * @param text the plain text to search for
+     * @return true if found
+     */
+    public boolean findInPreview(String text) {
+        if (!useWebView || webEngine == null) return false;
+        // Escape single quotes for JavaScript string
+        String escaped = text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n");
+        javafx.application.Platform.runLater(() -> {
+            webEngine.executeScript("window.getSelection().removeAllRanges();");
+            webEngine.executeScript("window.find('" + escaped + "', false, false, true);");
+        });
+        return true;
+    }
+
+    /**
+     * Gets the currently selected text from the preview WebView.
+     *
+     * @return the selected text, or null if nothing is selected or WebView unavailable
+     */
+    public String getSelectedText() {
+        if (!useWebView || webEngine == null) return null;
+        try {
+            Object result = webEngine.executeScript("window.getSelection().toString()");
+            if (result instanceof String s && !s.isEmpty()) return s;
+        } catch (Exception e) {
+            // Silently fail
+        }
+        return null;
+    }
+
+    /**
+     * Sets a callback for "Find in Source" requests from the preview context menu.
+     */
+    public void setFindInSourceCallback(java.util.function.Consumer<String> callback) {
+        this.findInSourceCallback = callback;
+    }
+
+    private java.util.function.Consumer<String> findInSourceCallback;
+
+    /**
      * Bridge object exposed to JavaScript as window.java for scroll event callbacks
      * and external link opening.
      */
@@ -434,6 +487,15 @@ public class PreviewPanel extends JPanel {
                 java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
             } catch (Exception ex) {
                 // Silently fail
+            }
+        }
+
+        /**
+         * Called from JavaScript when the user selects "Find in Source" from the context menu.
+         */
+        public void findInSource(String text) {
+            if (findInSourceCallback != null && text != null && !text.isEmpty()) {
+                SwingUtilities.invokeLater(() -> findInSourceCallback.accept(text));
             }
         }
     }
