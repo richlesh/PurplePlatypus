@@ -224,6 +224,9 @@ public class PreviewPanel extends JPanel {
         mdMatcher.appendTail(mdSb);
         markdown = mdSb.toString();
 
+        // Convert grid/Pandoc-style tables to GFM pipe tables
+        markdown = convertGridTables(markdown);
+
         // Convert LaTeX-style math delimiters to dollar-sign delimiters before parsing
         // \(...\) → $...$ (inline math) — single line only
         markdown = markdown.replaceAll("\\\\\\((.+?)\\\\\\)", "\\$$1\\$");
@@ -498,6 +501,54 @@ public class PreviewPanel extends JPanel {
                 SwingUtilities.invokeLater(() -> findInSourceCallback.accept(text));
             }
         }
+    }
+
+    /**
+     * Converts grid/Pandoc-style tables to GFM pipe tables for rendering.
+     * Handles:
+     * - Row separators: +------+------+ (removed)
+     * - Header separators: +:=====+======:+ (converted to |:-----|------:|)
+     * - Data rows: | cell | cell | (kept as-is)
+     */
+    private static String convertGridTables(String markdown) {
+        String[] lines = markdown.split("\n", -1);
+        StringBuilder result = new StringBuilder();
+        boolean inTable = false;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].trim();
+
+            // Detect grid table lines starting with + and containing - or =
+            if (line.matches("^\\+[-=:+]+\\+$")) {
+                if (!inTable) {
+                    inTable = true;
+                }
+                // Check if this is a header separator (contains = signs)
+                if (line.contains("=")) {
+                    // Convert +=====+ to |-----|
+                    String converted = line.replace('+', '|');
+                    // Replace = with - but preserve : for alignment
+                    converted = converted.replace('=', '-');
+                    result.append(converted).append('\n');
+                }
+                // Row separators with just - are dropped (not needed in GFM)
+                continue;
+            }
+
+            // If we were in a table and hit a non-table line, end table mode
+            if (inTable && !line.startsWith("|") && !line.matches("^\\+[-=:+]+\\+$")) {
+                inTable = false;
+            }
+
+            result.append(lines[i]).append('\n');
+        }
+
+        // Remove trailing newline if original didn't have one
+        if (result.length() > 0 && !markdown.endsWith("\n")) {
+            result.setLength(result.length() - 1);
+        }
+
+        return result.toString();
     }
 
     private static String loadPreviewCss() {

@@ -37,6 +37,12 @@ public class Main {
      * and opens the first editor window.
      */
     public static void main(String[] args) {
+        // Single instance check — if another instance is running, pass files to it and exit
+        if (!SingleInstance.tryAcquire(args)) {
+            System.exit(0);
+            return;
+        }
+
         // Apply custom trust store settings before any HTTPS connections
         GenericVendorConfig.applyTrustStore();
 
@@ -53,6 +59,10 @@ public class Main {
         UIManager.put("MenuItem.afterCheckIconGap", 0);
         UIManager.put("MenuItem.checkIcon", null);
         UIManager.put("MenuItem.minimumTextOffset", 0);
+        UIManager.put("Menu.checkIconGap", 0);
+        UIManager.put("Menu.afterCheckIconGap", 0);
+        UIManager.put("Menu.checkIcon", null);
+        UIManager.put("Menu.minimumTextOffset", 0);
 
         // Initialize JavaFX toolkit and prevent it from exiting when windows close
         new JFXPanel();

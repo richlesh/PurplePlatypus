@@ -79,8 +79,14 @@ public class EditorWindow {
     private JMenuItem saveItem;
     private JLabel statsLabel;
 
+    /** Shared preferences instance across all windows. */
+    private static Preferences sharedPreferences;
+
     public EditorWindow() {
-        preferences = Preferences.load();
+        if (sharedPreferences == null) {
+            sharedPreferences = Preferences.load();
+        }
+        preferences = sharedPreferences;
         editorPanel = new EditorPanel(preferences);
         previewPanel = new PreviewPanel();
         editorPane = editorPanel.getTextArea();
@@ -296,6 +302,10 @@ public class EditorWindow {
         convertLineEndingsItem = new JMenuItem("Convert to Windows Line Endings");
         convertLineEndingsItem.addActionListener(e -> convertLineEndings());
         editMenu.add(convertLineEndingsItem);
+
+        JMenuItem cleanupTablesItem = new JMenuItem("Cleanup Pandoc Tables");
+        cleanupTablesItem.addActionListener(e -> cleanupPandocTables());
+        editMenu.add(cleanupTablesItem);
         if (isMac) {
             editMenu.addSeparator();
             JMenuItem aiSettingsMenuItem = new JMenuItem("AI Settings...");
@@ -1275,6 +1285,48 @@ public class EditorWindow {
         dirty = true;
         updateTitle();
         updateLineEndingsMenuItem();
+    }
+
+    /**
+     * Converts grid/Pandoc-style tables in the document to standard GFM pipe tables.
+     * Removes +---+ row separators and converts +:===+: header separators to |:---|.
+     */
+    private void cleanupPandocTables() {
+        String text = editorPane.getText();
+        String[] lines = text.split("\n", -1);
+        StringBuilder result = new StringBuilder();
+        boolean changed = false;
+
+        for (int i = 0; i < lines.length; i++) {
+            String trimmed = lines[i].trim();
+
+            if (trimmed.matches("^\\+[-=:+]+\\+$")) {
+                changed = true;
+                if (trimmed.contains("=")) {
+                    // Header separator: convert + to | and = to -
+                    String converted = trimmed.replace('+', '|').replace('=', '-');
+                    result.append(converted).append('\n');
+                }
+                // Row separators (only - signs) are dropped
+                continue;
+            }
+
+            result.append(lines[i]);
+            if (i < lines.length - 1) result.append('\n');
+        }
+
+        if (changed) {
+            int caretPos = editorPane.getCaretPosition();
+            String newText = result.toString();
+            editorPane.setText(newText);
+            editorPane.setCaretPosition(Math.min(caretPos, newText.length()));
+            dirty = true;
+            updateTitle();
+            updatePreview();
+        } else {
+            JOptionPane.showMessageDialog(frame, "No Pandoc-style tables found.",
+                "Cleanup Pandoc Tables", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
     /**
