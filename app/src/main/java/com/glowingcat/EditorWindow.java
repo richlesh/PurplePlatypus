@@ -1191,6 +1191,8 @@ public class EditorWindow {
     public void loadFileContent(File file, String content) {
         currentFile = file;
         windowsLineEndings = content.contains("\r\n");
+        // Normalize to Unix line endings for the editor; restore on save if needed
+        content = content.replace("\r\n", "\n").replace("\r", "\n");
         lastModifiedOnDisk = file.lastModified();
         previewPanel.forceFullReload();
         editorPane.setText(content);
@@ -1262,6 +1264,14 @@ public class EditorWindow {
      */
     private void convertLineEndings() {
         windowsLineEndings = !windowsLineEndings;
+        // Ensure editor text is clean (no stray \r characters)
+        String text = editorPane.getText();
+        if (text.contains("\r")) {
+            int caretPos = editorPane.getCaretPosition();
+            text = text.replace("\r\n", "\n").replace("\r", "\n");
+            editorPane.setText(text);
+            editorPane.setCaretPosition(Math.min(caretPos, text.length()));
+        }
         dirty = true;
         updateTitle();
         updateLineEndingsMenuItem();
@@ -1306,6 +1316,7 @@ public class EditorWindow {
             try {
                 String content = new String(Files.readAllBytes(currentFile.toPath()), StandardCharsets.UTF_8);
                 windowsLineEndings = content.contains("\r\n");
+                content = content.replace("\r\n", "\n").replace("\r", "\n");
                 lastModifiedOnDisk = currentFile.lastModified();
                 previewPanel.forceFullReload();
                 editorPane.setText(content);
