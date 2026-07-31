@@ -1,6 +1,6 @@
 ![app_icon_256](app/src/main/resources/app_icon_256.png)
 
-# PurplePlatypus 1.4.0
+# PurplePlatypus 1.5.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
@@ -16,9 +16,10 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Cross-platform** — Runs on macOS (ARM64), Windows (x64, ARM64), and Linux (x64, ARM64)
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
-- **Toolbar** — Status bar showing the full file path with document statistics, toggle buttons to show/hide invisible characters, synchronized scrolling, preview, and AI panels
+- **Toolbar** — Status bar showing the full file path with document statistics, toggle buttons for word wrap, invisible characters, synchronized scrolling, preview, and AI panels
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
 - **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt`/`.textbundle`/`.textpack` files, and save your work
+- **Recent files** — File > Recents menu shows recently opened documents; selecting one brings its window to front if already open
 - **TextBundle support** — Open and export `.textbundle` packages with images in the `assets/` subfolder; `.textbundle` directories appear as selectable files in the Open dialog on all platforms
 - **TextPack support** — Open and export `.textpack` files (compressed TextBundle archives); Save is disabled for files opened from a TextPack (use Save As or Export instead)
 - **Dirty checking** — Prompts to save unsaved changes when closing a window or quitting the application
@@ -40,6 +41,9 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Count** — Quickly count the number of matches in the document or selection
 - **Replace** — Find and replace with Replace, Replace and Find, and Replace All operations
 - **Escape sequences in Find/Replace** — "Interpret Escapes" option processes `\t`, `\n`, `\r`, `\\`, and `\uXXXX` in find and replace fields
+- **Search/Replace recents** — Save frequently used search and replace expressions with +/- buttons; recall them from a dropdown menu
+- **Find in Preview** — Search for selected editor text in the rendered preview (⇧⌘F); right-click selected preview text to find it in the source
+- **Go to Line** — Jump to a specific line number in the source (⇧⌘J)
 - **Line ending conversion** — Detect and convert between Unix (`\n`) and Windows (`\r\n`) line endings via the Edit menu; line ending format is preserved on save
 - **Show invisible characters** — Toggle button in the toolbar to reveal spaces (dots), tabs (arrows), and line endings (paragraph marks)
 - **Document statistics** — Live display of line count, word count, and character count in the toolbar, updated as you type
@@ -62,6 +66,8 @@ The built-in AI chat panel helps you write and improve markdown content:
 - Help with technical writing, blog posts, documentation, and READMEs
 
 When the AI suggests a complete document replacement, you're given Allow/Reject buttons to accept or decline the changes.
+
+The AI chat panel renders responses with full markdown support (tables, code blocks, math, links) via an embedded WebView with MathJax. A copy button on each AI response copies the raw markdown to the clipboard. For large documents, the AI returns efficient unified diffs instead of full replacements, reducing token usage and response time.
 
 Configure your LLM provider in Preferences (vendor, model, and API key). For custom or corporate APIs, select the "Generic" vendor and use "Configure..." to define a YAML configuration with custom endpoints, headers, authentication, and response parsing.
 
