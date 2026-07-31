@@ -316,6 +316,11 @@ public class EditorWindow {
 
         searchMenu.add(findItem);
         searchMenu.add(replaceItem);
+        searchMenu.addSeparator();
+        JMenuItem findInPreviewItem = new JMenuItem("Find in Preview");
+        findInPreviewItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
+        findInPreviewItem.addActionListener(e -> findInPreview());
+        searchMenu.add(findInPreviewItem);
         menuBar.add(searchMenu);
 
         // Markdown menu
@@ -895,6 +900,26 @@ public class EditorWindow {
             }
             SwingUtilities.invokeLater(() -> syncScrolling = false);
         });
+
+        // "Find in Source" callback from preview right-click
+        previewPanel.setFindInSourceCallback(text -> findInSource(text));
+
+        // Editor right-click context menu
+        JPopupMenu editorContextMenu = new JPopupMenu();
+        JMenuItem ctxCut = new JMenuItem("Cut");
+        ctxCut.addActionListener(e -> editorPane.cut());
+        JMenuItem ctxCopy = new JMenuItem("Copy");
+        ctxCopy.addActionListener(e -> editorPane.copy());
+        JMenuItem ctxPaste = new JMenuItem("Paste");
+        ctxPaste.addActionListener(e -> editorPane.paste());
+        JMenuItem ctxFindInPreview = new JMenuItem("Find in Preview");
+        ctxFindInPreview.addActionListener(e -> findInPreview());
+        editorContextMenu.add(ctxCut);
+        editorContextMenu.add(ctxCopy);
+        editorContextMenu.add(ctxPaste);
+        editorContextMenu.addSeparator();
+        editorContextMenu.add(ctxFindInPreview);
+        editorPane.setPopupMenu(editorContextMenu);
 
         // Drag-and-drop: insert markdown image link when an image file is dropped onto the editor
         new DropTarget(editorPane, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
@@ -2297,6 +2322,48 @@ public class EditorWindow {
     }
 
     // --- Dialogs ---
+
+    private void findInPreview() {
+        String selected = editorPane.getSelectedText();
+        if (selected == null || selected.trim().isEmpty()) return;
+        // Strip markdown markup for plain text search
+        String plainText = stripMarkup(selected.trim());
+        previewPanel.findInPreview(plainText);
+    }
+
+    private void findInSource(String text) {
+        if (text == null || text.trim().isEmpty()) return;
+        String searchText = text.trim();
+        String content = editorPane.getText();
+        // Search for the plain text in the source
+        int idx = content.indexOf(searchText);
+        if (idx < 0) {
+            // Try case-insensitive
+            idx = content.toLowerCase().indexOf(searchText.toLowerCase());
+        }
+        if (idx >= 0) {
+            editorPane.setCaretPosition(idx);
+            editorPane.moveCaretPosition(idx + searchText.length());
+            editorPane.requestFocusInWindow();
+        }
+    }
+
+    /** Strips common markdown markup from text for plain text matching. */
+    private static String stripMarkup(String text) {
+        // Remove bold/italic markers
+        String result = text.replaceAll("\\*{1,3}([^*]+)\\*{1,3}", "$1");
+        // Remove strikethrough
+        result = result.replaceAll("~~([^~]+)~~", "$1");
+        // Remove inline code
+        result = result.replaceAll("`([^`]+)`", "$1");
+        // Remove link syntax [text](url)
+        result = result.replaceAll("\\[([^]]+)]\\([^)]+\\)", "$1");
+        // Remove image syntax ![alt](url)
+        result = result.replaceAll("!\\[([^]]*)]\\([^)]+\\)", "$1");
+        // Remove heading markers
+        result = result.replaceAll("^#{1,6}\\s+", "");
+        return result.trim();
+    }
 
     private void showFindDialog() {
         if (findDialog == null) findDialog = new FindDialog(frame, editorPane, preferences);
