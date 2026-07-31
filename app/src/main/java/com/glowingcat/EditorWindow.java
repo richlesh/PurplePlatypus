@@ -56,6 +56,7 @@ public class EditorWindow {
     private JToggleButton aiToggle;
     private JToggleButton syncScrollToggle;
     private JToggleButton hiddenCharsToggle;
+    private JToggleButton wordWrapToggle;
     private boolean previewVisible = true;
     private boolean aiVisible = true;
     private boolean syncScrollEnabled = false;
@@ -605,6 +606,48 @@ public class EditorWindow {
         statsLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8));
         togglePanel.add(statsLabel);
 
+        // Word wrap toggle button
+        wordWrapToggle = new JToggleButton();
+        wordWrapToggle.setUI(new BasicToggleButtonUI());
+        wordWrapToggle.setToolTipText("Word Wrap");
+        wordWrapToggle.setIcon(new Icon() {
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(c.getForeground());
+                g2.setStroke(new BasicStroke(1.5f));
+                // Three horizontal lines with a wrap arrow on the last
+                g2.drawLine(x + 3, y + 5, x + 17, y + 5);
+                g2.drawLine(x + 3, y + 10, x + 17, y + 10);
+                g2.drawLine(x + 3, y + 15, x + 13, y + 15);
+                // Wrap arrow curving back
+                g2.drawArc(x + 13, y + 10, 8, 10, 270, 180);
+                // Arrow head
+                g2.drawLine(x + 13, y + 15, x + 13, y + 12);
+                g2.drawLine(x + 13, y + 15, x + 16, y + 15);
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return 20; }
+            @Override public int getIconHeight() { return 20; }
+        });
+        wordWrapToggle.setSelected(true);
+        wordWrapToggle.setFocusPainted(false);
+        wordWrapToggle.setBorderPainted(false);
+        wordWrapToggle.setContentAreaFilled(true);
+        wordWrapToggle.setOpaque(true);
+        wordWrapToggle.setBackground(preferences.getButtonHighlightColorObj());
+        wordWrapToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        wordWrapToggle.setPreferredSize(new Dimension(28, 28));
+        wordWrapToggle.addActionListener(e -> {
+            boolean wrap = wordWrapToggle.isSelected();
+            wordWrapToggle.setBackground(wrap ? preferences.getButtonHighlightColorObj() : null);
+            wordWrapToggle.setContentAreaFilled(wrap);
+            wordWrapToggle.setOpaque(wrap);
+            editorPane.setLineWrap(wrap);
+            editorPane.setWrapStyleWord(wrap);
+        });
+        togglePanel.add(wordWrapToggle);
+
         // Hidden characters toggle button
         ImageIcon hiddenCharsIconFull = null;
         var hiddenCharsUrl = getClass().getClassLoader().getResource("hidden_chars.png");
@@ -618,6 +661,7 @@ public class EditorWindow {
         hiddenCharsToggle.setBorderPainted(false);
         hiddenCharsToggle.setContentAreaFilled(false);
         hiddenCharsToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        hiddenCharsToggle.setPreferredSize(new Dimension(28, 28));
         hiddenCharsToggle.addActionListener(e -> {
             hiddenCharsVisible = hiddenCharsToggle.isSelected();
             hiddenCharsToggle.setBackground(hiddenCharsVisible ? preferences.getButtonHighlightColorObj() : null);
@@ -641,6 +685,7 @@ public class EditorWindow {
         syncScrollToggle.setBorderPainted(false);
         syncScrollToggle.setContentAreaFilled(false);
         syncScrollToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        syncScrollToggle.setPreferredSize(new Dimension(28, 28));
         syncScrollToggle.addActionListener(e -> {
             syncScrollEnabled = syncScrollToggle.isSelected();
             syncScrollToggle.setBackground(syncScrollEnabled ? preferences.getButtonHighlightColorObj() : null);
@@ -664,6 +709,7 @@ public class EditorWindow {
         previewToggle.setOpaque(true);
         previewToggle.setBackground(preferences.getButtonHighlightColorObj());
         previewToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        previewToggle.setPreferredSize(new Dimension(28, 28));
         previewToggle.addActionListener(e -> togglePreview());
         togglePanel.add(previewToggle);
 
@@ -682,6 +728,7 @@ public class EditorWindow {
         aiToggle.setOpaque(true);
         aiToggle.setBackground(preferences.getButtonHighlightColorObj());
         aiToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        aiToggle.setPreferredSize(new Dimension(28, 28));
         aiToggle.addActionListener(e -> toggleAI());
         togglePanel.add(aiToggle);
 
@@ -2280,6 +2327,7 @@ public class EditorWindow {
             updatePreview();
             // Update toolbar toggle button highlight colors
             Color hlColor = preferences.getButtonHighlightColorObj();
+            if (wordWrapToggle.isSelected()) wordWrapToggle.setBackground(hlColor);
             if (hiddenCharsToggle.isSelected()) hiddenCharsToggle.setBackground(hlColor);
             if (syncScrollToggle.isSelected()) syncScrollToggle.setBackground(hlColor);
             if (previewToggle.isSelected()) previewToggle.setBackground(hlColor);
