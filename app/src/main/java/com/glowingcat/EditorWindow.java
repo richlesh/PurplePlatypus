@@ -303,9 +303,30 @@ public class EditorWindow {
         convertLineEndingsItem.addActionListener(e -> convertLineEndings());
         editMenu.add(convertLineEndingsItem);
 
-        JMenuItem cleanupTablesItem = new JMenuItem("Cleanup Pandoc Tables");
+        JMenuItem cleanupTablesItem = new JMenuItem("Cleanup Tables");
         cleanupTablesItem.addActionListener(e -> cleanupPandocTables());
         editMenu.add(cleanupTablesItem);
+
+        JMenuItem htmlEncodeItem = new JMenuItem("HTML Encode");
+        htmlEncodeItem.addActionListener(e -> htmlEncodeNonAscii());
+        editMenu.add(htmlEncodeItem);
+
+        JMenuItem zapGremlinsItem = new JMenuItem("Zap Gremlins...");
+        zapGremlinsItem.addActionListener(e -> zapGremlins());
+        editMenu.add(zapGremlinsItem);
+
+        // Update menu item text based on selection when Edit menu opens
+        editMenu.addMenuListener(new javax.swing.event.MenuListener() {
+            @Override public void menuSelected(javax.swing.event.MenuEvent e) {
+                boolean hasSel = editorPane.getSelectionStart() != editorPane.getSelectionEnd();
+                cleanupTablesItem.setText(hasSel ? "Cleanup Tables in Selection" : "Cleanup Tables");
+                zapGremlinsItem.setText(hasSel ? "Zap Gremlins in Selection..." : "Zap Gremlins...");
+                htmlEncodeItem.setText(hasSel ? "HTML Encode Selection" : "HTML Encode");
+            }
+            @Override public void menuDeselected(javax.swing.event.MenuEvent e) {}
+            @Override public void menuCanceled(javax.swing.event.MenuEvent e) {}
+        });
+
         if (isMac) {
             editMenu.addSeparator();
             JMenuItem aiSettingsMenuItem = new JMenuItem("AI Settings...");
@@ -1292,7 +1313,11 @@ public class EditorWindow {
      * Removes +---+ row separators and converts +:===+: header separators to |:---|.
      */
     private void cleanupPandocTables() {
-        String text = editorPane.getText();
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        boolean hasSel = selStart != selEnd;
+
+        String text = hasSel ? editorPane.getSelectedText() : editorPane.getText();
         String[] lines = text.split("\n", -1);
         StringBuilder result = new StringBuilder();
         boolean changed = false;
@@ -1303,11 +1328,9 @@ public class EditorWindow {
             if (trimmed.matches("^\\+[-=:+]+\\+$")) {
                 changed = true;
                 if (trimmed.contains("=")) {
-                    // Header separator: convert + to | and = to -
                     String converted = trimmed.replace('+', '|').replace('=', '-');
                     result.append(converted).append('\n');
                 }
-                // Row separators (only - signs) are dropped
                 continue;
             }
 
@@ -1316,16 +1339,217 @@ public class EditorWindow {
         }
 
         if (changed) {
-            int caretPos = editorPane.getCaretPosition();
             String newText = result.toString();
-            editorPane.setText(newText);
-            editorPane.setCaretPosition(Math.min(caretPos, newText.length()));
+            if (hasSel) {
+                editorPane.replaceSelection(newText);
+            } else {
+                int caretPos = editorPane.getCaretPosition();
+                editorPane.setText(newText);
+                editorPane.setCaretPosition(Math.min(caretPos, newText.length()));
+            }
             dirty = true;
             updateTitle();
             updatePreview();
         } else {
             JOptionPane.showMessageDialog(frame, "No Pandoc-style tables found.",
                 "Cleanup Pandoc Tables", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    /**
+     * Shows the Zap Gremlins dialog and applies checked substitutions if the user clicks Zap.
+     */
+    private void zapGremlins() {
+        ZapGremlinsDialog dialog = new ZapGremlinsDialog(frame, preferences);
+        dialog.setVisible(true);
+        if (dialog.isZapped()) {
+            int selStart = editorPane.getSelectionStart();
+            int selEnd = editorPane.getSelectionEnd();
+            boolean hasSel = selStart != selEnd;
+
+            String text = hasSel ? editorPane.getSelectedText() : editorPane.getText();
+            int count = 0;
+            for (String[] rule : preferences.getGremlins()) {
+                if ("true".equals(rule[0]) && !rule[1].isEmpty()) {
+                    String before = text;
+                    text = text.replace(rule[1], rule[2]);
+                    if (!text.equals(before)) {
+                        count += countOccurrences(before, rule[1]);
+                    }
+                }
+            }
+            if (count > 0) {
+                if (hasSel) {
+                    editorPane.replaceSelection(text);
+                } else {
+                    int caretPos = editorPane.getCaretPosition();
+                    editorPane.setText(text);
+                    editorPane.setCaretPosition(Math.min(caretPos, text.length()));
+                }
+                dirty = true;
+                updateTitle();
+                updatePreview();
+                JOptionPane.showMessageDialog(frame,
+                    count + " substitution" + (count != 1 ? "s" : "") + " made.",
+                    "Zap Gremlins", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(frame, "No gremlin characters found.",
+                    "Zap Gremlins", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+
+    private static int countOccurrences(String text, String search) {
+        int count = 0;
+        int idx = 0;
+        while ((idx = text.indexOf(search, idx)) >= 0) {
+            count++;
+            idx += search.length();
+        }
+        return count;
+    }
+
+    /** Named HTML5 entities for common non-ASCII characters. */
+    private static final java.util.Map<Character, String> HTML_ENTITIES = new java.util.LinkedHashMap<>();
+    static {
+        HTML_ENTITIES.put('\u00A0', "&nbsp;");
+        HTML_ENTITIES.put('\u00A1', "&iexcl;");
+        HTML_ENTITIES.put('\u00A2', "&cent;");
+        HTML_ENTITIES.put('\u00A3', "&pound;");
+        HTML_ENTITIES.put('\u00A4', "&curren;");
+        HTML_ENTITIES.put('\u00A5', "&yen;");
+        HTML_ENTITIES.put('\u00A6', "&brvbar;");
+        HTML_ENTITIES.put('\u00A7', "&sect;");
+        HTML_ENTITIES.put('\u00A8', "&uml;");
+        HTML_ENTITIES.put('\u00A9', "&copy;");
+        HTML_ENTITIES.put('\u00AA', "&ordf;");
+        HTML_ENTITIES.put('\u00AB', "&laquo;");
+        HTML_ENTITIES.put('\u00AC', "&not;");
+        HTML_ENTITIES.put('\u00AD', "&shy;");
+        HTML_ENTITIES.put('\u00AE', "&reg;");
+        HTML_ENTITIES.put('\u00AF', "&macr;");
+        HTML_ENTITIES.put('\u00B0', "&deg;");
+        HTML_ENTITIES.put('\u00B1', "&plusmn;");
+        HTML_ENTITIES.put('\u00B2', "&sup2;");
+        HTML_ENTITIES.put('\u00B3', "&sup3;");
+        HTML_ENTITIES.put('\u00B4', "&acute;");
+        HTML_ENTITIES.put('\u00B5', "&micro;");
+        HTML_ENTITIES.put('\u00B6', "&para;");
+        HTML_ENTITIES.put('\u00B7', "&middot;");
+        HTML_ENTITIES.put('\u00B8', "&cedil;");
+        HTML_ENTITIES.put('\u00B9', "&sup1;");
+        HTML_ENTITIES.put('\u00BA', "&ordm;");
+        HTML_ENTITIES.put('\u00BB', "&raquo;");
+        HTML_ENTITIES.put('\u00BC', "&frac14;");
+        HTML_ENTITIES.put('\u00BD', "&frac12;");
+        HTML_ENTITIES.put('\u00BE', "&frac34;");
+        HTML_ENTITIES.put('\u00BF', "&iquest;");
+        HTML_ENTITIES.put('\u00D7', "&times;");
+        HTML_ENTITIES.put('\u00F7', "&divide;");
+        HTML_ENTITIES.put('\u0192', "&fnof;");
+        HTML_ENTITIES.put('\u2013', "&ndash;");
+        HTML_ENTITIES.put('\u2014', "&mdash;");
+        HTML_ENTITIES.put('\u2018', "&lsquo;");
+        HTML_ENTITIES.put('\u2019', "&rsquo;");
+        HTML_ENTITIES.put('\u201A', "&sbquo;");
+        HTML_ENTITIES.put('\u201C', "&ldquo;");
+        HTML_ENTITIES.put('\u201D', "&rdquo;");
+        HTML_ENTITIES.put('\u201E', "&bdquo;");
+        HTML_ENTITIES.put('\u2020', "&dagger;");
+        HTML_ENTITIES.put('\u2021', "&Dagger;");
+        HTML_ENTITIES.put('\u2022', "&bull;");
+        HTML_ENTITIES.put('\u2026', "&hellip;");
+        HTML_ENTITIES.put('\u2030', "&permil;");
+        HTML_ENTITIES.put('\u2032', "&prime;");
+        HTML_ENTITIES.put('\u2033', "&Prime;");
+        HTML_ENTITIES.put('\u2039', "&lsaquo;");
+        HTML_ENTITIES.put('\u203A', "&rsaquo;");
+        HTML_ENTITIES.put('\u2044', "&frasl;");
+        HTML_ENTITIES.put('\u20AC', "&euro;");
+        HTML_ENTITIES.put('\u2122', "&trade;");
+        HTML_ENTITIES.put('\u2190', "&larr;");
+        HTML_ENTITIES.put('\u2191', "&uarr;");
+        HTML_ENTITIES.put('\u2192', "&rarr;");
+        HTML_ENTITIES.put('\u2193', "&darr;");
+        HTML_ENTITIES.put('\u2194', "&harr;");
+        HTML_ENTITIES.put('\u21B5', "&crarr;");
+        HTML_ENTITIES.put('\u2200', "&forall;");
+        HTML_ENTITIES.put('\u2202', "&part;");
+        HTML_ENTITIES.put('\u2203', "&exist;");
+        HTML_ENTITIES.put('\u2205', "&empty;");
+        HTML_ENTITIES.put('\u2207', "&nabla;");
+        HTML_ENTITIES.put('\u2208', "&isin;");
+        HTML_ENTITIES.put('\u2209', "&notin;");
+        HTML_ENTITIES.put('\u220B', "&ni;");
+        HTML_ENTITIES.put('\u220F', "&prod;");
+        HTML_ENTITIES.put('\u2211', "&sum;");
+        HTML_ENTITIES.put('\u2212', "&minus;");
+        HTML_ENTITIES.put('\u221A', "&radic;");
+        HTML_ENTITIES.put('\u221E', "&infin;");
+        HTML_ENTITIES.put('\u2220', "&ang;");
+        HTML_ENTITIES.put('\u2227', "&and;");
+        HTML_ENTITIES.put('\u2228', "&or;");
+        HTML_ENTITIES.put('\u2229', "&cap;");
+        HTML_ENTITIES.put('\u222A', "&cup;");
+        HTML_ENTITIES.put('\u222B', "&int;");
+        HTML_ENTITIES.put('\u2248', "&asymp;");
+        HTML_ENTITIES.put('\u2260', "&ne;");
+        HTML_ENTITIES.put('\u2261', "&equiv;");
+        HTML_ENTITIES.put('\u2264', "&le;");
+        HTML_ENTITIES.put('\u2265', "&ge;");
+        HTML_ENTITIES.put('\u25CA', "&loz;");
+        HTML_ENTITIES.put('\u2660', "&spades;");
+        HTML_ENTITIES.put('\u2663', "&clubs;");
+        HTML_ENTITIES.put('\u2665', "&hearts;");
+        HTML_ENTITIES.put('\u2666', "&diams;");
+    }
+
+    /**
+     * Encodes non-ASCII characters in the document as HTML entities.
+     * Uses named entities where available (HTML5 standard), otherwise numeric code points.
+     */
+    private void htmlEncodeNonAscii() {
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        boolean hasSel = selStart != selEnd;
+
+        String text = hasSel ? editorPane.getSelectedText() : editorPane.getText();
+        StringBuilder result = new StringBuilder(text.length());
+        int count = 0;
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c > 127) {
+                String entity = HTML_ENTITIES.get(c);
+                if (entity != null) {
+                    result.append(entity);
+                } else {
+                    result.append("&#x").append(String.format("%04X", (int) c)).append(";");
+                }
+                count++;
+            } else {
+                result.append(c);
+            }
+        }
+
+        if (count > 0) {
+            String newText = result.toString();
+            if (hasSel) {
+                editorPane.replaceSelection(newText);
+            } else {
+                int caretPos = editorPane.getCaretPosition();
+                editorPane.setText(newText);
+                editorPane.setCaretPosition(Math.min(caretPos, newText.length()));
+            }
+            dirty = true;
+            updateTitle();
+            updatePreview();
+            JOptionPane.showMessageDialog(frame,
+                count + " character" + (count != 1 ? "s" : "") + " encoded.",
+                "HTML Encode", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(frame, "No non-ASCII characters found.",
+                "HTML Encode", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
