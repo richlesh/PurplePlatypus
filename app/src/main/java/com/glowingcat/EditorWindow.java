@@ -321,6 +321,11 @@ public class EditorWindow {
         findInPreviewItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         findInPreviewItem.addActionListener(e -> findInPreview());
         searchMenu.add(findInPreviewItem);
+        searchMenu.addSeparator();
+        JMenuItem gotoLineItem = new JMenuItem("Go to Line...");
+        gotoLineItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_J, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
+        gotoLineItem.addActionListener(e -> gotoLine());
+        searchMenu.add(gotoLineItem);
         menuBar.add(searchMenu);
 
         // Markdown menu
@@ -2322,6 +2327,25 @@ public class EditorWindow {
     }
 
     // --- Dialogs ---
+
+    private void gotoLine() {
+        int totalLines = editorPane.getLineCount();
+        String input = JOptionPane.showInputDialog(frame,
+            "Line number (1\u2013" + totalLines + "):", "Go to Line", JOptionPane.PLAIN_MESSAGE);
+        if (input == null || input.trim().isEmpty()) return;
+        try {
+            int line = Integer.parseInt(input.trim());
+            if (line < 1) line = 1;
+            if (line > totalLines) line = totalLines;
+            int offset = editorPane.getLineStartOffset(line - 1);
+            editorPane.setCaretPosition(offset);
+            editorPane.requestFocusInWindow();
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(frame, "Invalid line number.", "Go to Line", JOptionPane.WARNING_MESSAGE);
+        } catch (javax.swing.text.BadLocationException ex) {
+            // Silently fail
+        }
+    }
 
     private void findInPreview() {
         String selected = editorPane.getSelectedText();
