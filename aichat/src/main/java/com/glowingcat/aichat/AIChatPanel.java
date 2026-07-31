@@ -572,7 +572,11 @@ public class AIChatPanel extends JPanel {
         html.append("});");
         html.append("function acceptChanges(idx) { if(window.chatBridge) window.chatBridge.acceptChanges(idx); }");
         html.append("function rejectChanges(idx) { if(window.chatBridge) window.chatBridge.rejectChanges(idx); }");
-        html.append("function copyMarkdown(idx) { if(window.chatBridge) window.chatBridge.copyMarkdown(idx); }");
+        html.append("function copyMarkdown(idx) {");
+        html.append("  if(window.chatBridge) window.chatBridge.copyMarkdown(idx);");
+        html.append("  var btn = event.currentTarget;");
+        html.append("  btn.innerHTML = '<svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 8.5L6.5 12L13 4\"/></svg>';");
+        html.append("}");
         html.append("</script>");
         html.append("</head><body>");
 

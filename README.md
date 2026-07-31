@@ -1,6 +1,6 @@
 ![app_icon_256](app/src/main/resources/app_icon_256.png)
 
-# PurplePlatypus 1.5.0
+# PurplePlatypus 1.6.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
@@ -45,6 +45,10 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Find in Preview** — Search for selected editor text in the rendered preview (⇧⌘F); right-click selected preview text to find it in the source
 - **Go to Line** — Jump to a specific line number in the source (⇧⌘J)
 - **Line ending conversion** — Detect and convert between Unix (`\n`) and Windows (`\r\n`) line endings via the Edit menu; line ending format is preserved on save
+- **Cleanup Pandoc Tables** — Convert grid/Pandoc-style tables to standard GFM pipe tables (also auto-converted in preview)
+- **Zap Gremlins** — Configurable substitution of Unicode characters (smart quotes, em-dashes, non-breaking spaces, etc.) with ASCII equivalents; user-editable rules saved to preferences
+- **HTML Encode** — Convert non-ASCII characters to HTML entities (named where available per HTML5, otherwise numeric code points)
+- **Selection-aware editing** — Cleanup Pandoc Tables, Zap Gremlins, and HTML Encode operate on the selection if text is selected, or the full document otherwise
 - **Show invisible characters** — Toggle button in the toolbar to reveal spaces (dots), tabs (arrows), and line endings (paragraph marks)
 - **Document statistics** — Live display of line count, word count, and character count in the toolbar, updated as you type
 - **External change detection** — Detects when a file is modified on disk by another program and prompts to reload or keep current changes

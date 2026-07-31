@@ -99,6 +99,9 @@ public class Preferences {
     /** Saved replace expressions (most recent first). */
     private java.util.List<String> replaceRecents = new java.util.ArrayList<>();
 
+    /** Gremlin character substitution rules: each entry is [enabled, search, replacement]. */
+    private java.util.List<String[]> gremlins = null;
+
     /** Maximum number of recent files to remember. */
     private static final transient int MAX_RECENT_FILES = 20;
 
@@ -300,6 +303,39 @@ public class Preferences {
     public void removeReplaceRecent(String expr) {
         if (replaceRecents == null) replaceRecents = new java.util.ArrayList<>();
         replaceRecents.remove(expr);
+    }
+
+    // --- Gremlin Substitutions ---
+
+    /** Get the list of gremlin substitution rules. Returns default set if none configured. */
+    public java.util.List<String[]> getGremlins() {
+        if (gremlins == null) {
+            gremlins = getDefaultGremlins();
+        }
+        return gremlins;
+    }
+
+    /** Set the gremlin substitution rules. */
+    public void setGremlins(java.util.List<String[]> gremlins) {
+        this.gremlins = gremlins;
+    }
+
+    /** Default gremlin substitutions for common Unicode characters. */
+    private static java.util.List<String[]> getDefaultGremlins() {
+        java.util.List<String[]> defaults = new java.util.ArrayList<>();
+        defaults.add(new String[]{"true", "\u2013", "--"});       // En-Dash → --
+        defaults.add(new String[]{"true", "\u2014", "---"});      // Em-Dash → ---
+        defaults.add(new String[]{"true", "\u00A0", " "});        // Non-breaking space → space
+        defaults.add(new String[]{"true", "\u2018", "'"});        // Left single quote → '
+        defaults.add(new String[]{"true", "\u2019", "'"});        // Right single quote → '
+        defaults.add(new String[]{"true", "\u201C", "\""});       // Left double quote → "
+        defaults.add(new String[]{"true", "\u201D", "\""});       // Right double quote → "
+        defaults.add(new String[]{"true", "\u2026", "..."});      // Ellipsis → ...
+        defaults.add(new String[]{"true", "\u00B7", "*"});        // Middle dot → *
+        defaults.add(new String[]{"true", "\u2022", "*"});        // Bullet → *
+        defaults.add(new String[]{"true", "\u00AB", "\""});       // Left guillemet → "
+        defaults.add(new String[]{"true", "\u00BB", "\""});       // Right guillemet → "
+        return defaults;
     }
 
     private static Path getPrefsPath() {
