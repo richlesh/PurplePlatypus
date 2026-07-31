@@ -126,6 +126,21 @@ public class FindDialog extends JDialog {
             @Override public void actionPerformed(java.awt.event.ActionEvent e) { setVisible(false); }
         });
 
+        // Re-capture selection bounds when dialog gains focus with "Find in selection" checked
+        addWindowFocusListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowGainedFocus(java.awt.event.WindowEvent e) {
+                if (findInSelectionBox.isSelected()) {
+                    int start = textArea.getSelectionStart();
+                    int end = textArea.getSelectionEnd();
+                    if (start != end) {
+                        selectionStart = start;
+                        selectionEnd = end;
+                    }
+                }
+            }
+        });
+
         pack();
         setLocationRelativeTo(owner);
         setResizable(false);
