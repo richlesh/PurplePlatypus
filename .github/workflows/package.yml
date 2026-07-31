@@ -40,7 +40,7 @@ jobs:
             icon: app/src/main/resources/app_icon.ico
             doc_icon: app/src/main/resources/doc_icon.ico
             textbundle_icon: app/src/main/resources/textbundle_icon.ico
-            pkg_type: msi
+            pkg_type: exe
             label: windows-arm64
           - os: ubuntu-22.04
             arch: x64
@@ -418,7 +418,7 @@ jobs:
           signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_SIGNING_CERTIFICATE_PROFILE_NAME }}
           files-folder: ${{ github.workspace }}
-          files-folder-filter: msi
+          files-folder-filter: msi,exe
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -428,6 +428,7 @@ jobs:
         run: |
           for f in *.dmg; do [ -f "$f" ] && mv "$f" "${f%.dmg}-${{ matrix.arch }}.dmg" || true; done
           for f in *.msi; do [ -f "$f" ] && mv "$f" "${f%.msi}-${{ matrix.arch }}.msi" || true; done
+          for f in *.exe; do [ -f "$f" ] && mv "$f" "${f%.exe}-${{ matrix.arch }}.exe" || true; done
 
       - name: Create config zip (Windows)
         if: runner.os == 'Windows'
@@ -443,6 +444,7 @@ jobs:
           path: |
             *.dmg
             *.msi
+            *.exe
             *.deb
             *.rpm
             PurplePlatypus-Configs.zip
@@ -456,6 +458,7 @@ jobs:
           files: |
             *.dmg
             *.msi
+            *.exe
             *.deb
             *.rpm
             PurplePlatypus-Configs.zip
