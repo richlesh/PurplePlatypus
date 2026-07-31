@@ -459,6 +459,10 @@ public class EditorWindow {
         markdownMenu.add(blockCodeItem);
         markdownMenu.add(inlineMathItem);
         markdownMenu.add(blockMathItem);
+
+        JMenuItem mermaidItem = new JMenuItem("Mermaid Graph");
+        mermaidItem.addActionListener(e -> wrapBlock("```mermaid\n", "\n```"));
+        markdownMenu.add(mermaidItem);
         markdownMenu.addSeparator();
 
         JMenuItem h1Item = new JMenuItem("Heading 1");
