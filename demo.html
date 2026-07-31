@@ -1,4 +1,122 @@
-<html><head><meta charset="utf-8"><style>body { font-family: 'Calibri', sans-serif; font-size: 16pt; padding: 10px; line-height: 1.6; overflow-x: hidden; }h1, h2, h3 { color: #333; }code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: 'JetBrains Mono NL', monospace; font-size: 14pt; }pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; font-family: 'JetBrains Mono NL', monospace; font-size: 14pt; line-height: 1.4; }pre code { background: none; padding: 0; border-radius: 0; }blockquote { border-left: 4px solid #ccc; margin-left: 0; padding-left: 16px; color: #666; }table { border-collapse: collapse; margin: 12px auto; }th, td { border: 1px solid #ddd; padding: 6px 12px; }td[align=left], th[align=left] { text-align: left; }td[align=center], th[align=center] { text-align: center; }td[align=right], th[align=right] { text-align: right; }th { background-color: #f0f0f0; font-weight: bold; }tr:nth-child(even) { background-color: #f9f9f9; }img { max-width: 75%; display: block; margin: 12px auto; }a { color: #0366d6; }li { margin: 0; padding: 0; }li p { margin: 0; display: inline; }ul, ol { padding-left: 24px; }input[type=checkbox] { margin-right: 6px; vertical-align: middle; }li:has(> input[type=checkbox]) { list-style-type: none; }mjx-container { overflow: visible !important; display: inline-block; vertical-align: middle; }mjx-container[display=true] { display: block; text-align: center; margin: 1em 0 !important; }mjx-container svg { overflow: visible; }</style><script>MathJax = {  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },  svg: { fontCache: 'global' }};</script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script></head><body><h1 id="markdown-feature-demo">Markdown Feature Demo</h1>
+<html><head><meta charset="utf-8"><style>body { font-family: 'Calibri', sans-serif; font-size: 16pt; }code, pre { font-family: 'JetBrains Mono NL', monospace; font-size: 12pt; }::selection { background: #b482ff; }</style><style>/* Preview Panel Styles */
+
+body {
+    padding: 10px;
+    padding-right: 18px;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+h1, h2, h3 {
+    color: #333;
+}
+
+code {
+    color: #333333;
+    background: #dddddd;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+pre {
+    color: #333333;
+    background: #dddddd;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    line-height: 1.4;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+}
+
+blockquote {
+    border-left: 4px solid #ccc;
+    margin-left: 0;
+    padding-left: 16px;
+    color: #333333;
+}
+
+table {
+    color: #333333;
+    border-collapse: collapse;
+    margin: 12px auto;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 6px 12px;
+}
+
+td[align=left], th[align=left] { text-align: left; }
+td[align=center], th[align=center] { text-align: center; }
+td[align=right], th[align=right] { text-align: right; }
+
+th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+img {
+    max-width: 75%;
+    display: block;
+    margin: 12px auto;
+}
+
+a {
+    color: #0366d6;
+}
+
+li {
+    margin: 0;
+    padding: 0;
+}
+
+li p {
+    margin: 0;
+    display: inline;
+}
+
+ul, ol {
+    padding-left: 24px;
+}
+
+input[type=checkbox] {
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+li:has(> input[type=checkbox]) {
+    list-style-type: none;
+}
+
+mjx-container {
+    overflow: visible !important;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+mjx-container[display=true] {
+    display: block;
+    text-align: center;
+    margin: 1em 0 !important;
+}
+
+mjx-container svg {
+    overflow: visible;
+}
+</style><script>MathJax = {  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },  svg: { fontCache: 'global' }};</script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script><script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script><script>mermaid.initialize({startOnLoad: false, theme: 'default'});document.addEventListener('DOMContentLoaded', function(){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){var pre=el.parentElement;var div=document.createElement('div');div.className='mermaid';div.textContent=el.textContent;pre.parentElement.replaceChild(div,pre);});mermaid.run();});</script></head><body><h1 id="markdown-feature-demo">Markdown Feature Demo</h1>
 <p>Welcome to a comprehensive demonstration of <strong>Markdown</strong> features supported by PurplePlatypus.</p>
 <hr />
 <h2 id="1-headings">1. Headings</h2>
@@ -56,11 +174,11 @@
 </ul>
 <hr />
 <h2 id="4-links-and-images">4. Links and Images</h2>
-<p>Visit <a href="https://github.com">PurplePlatypus on GitHub</a> for more info.</p>
+<p>Visit <a href="https://github.com/richlesh/PurplePlatypus">PurplePlatypus on GitHub</a> for more info.</p>
 <p>You can also use reference-style links like <a href="#6-code-blocks">this one</a> to headings.</p>
 <p>You can also use reference-style links like <a href="#my-target">this one</a> to arbitrary named anchor using HTML.</p>
-<p><img src="src/main/resources/app_icon_256.png" alt="Placeholder Image" /></p>
-<p><a id="my-target"></a><a href="https://example.com">https://example.com</a> &quot;Example Website&quot;</p>
+<p><img src="app/src/main/resources/app_icon_256.png" alt="Placeholder Image" /></p>
+<p><a id="my-target"></a><a href="https://glowingcat.com">https://glowingcat.com</a> &quot;Example Website&quot;</p>
 <hr />
 <h2 id="5-blockquotes">5. Blockquotes</h2>
 <blockquote>
@@ -144,7 +262,7 @@
 </tr>
 </tbody>
 </table>
-<p>Cells can also contain <strong>formatting</strong>, <code>code</code>, and <a href="https://example.com">links</a>:</p>
+<p>Cells can also contain <strong>formatting</strong>, <code>code</code>, and <a href="https://glowingcat.com">links</a>:</p>
 <table>
 <thead>
 <tr>
@@ -172,17 +290,17 @@
 <tr>
 <td>Link</td>
 <td><code>[label](url)</code></td>
-<td><a href="https://example.com">label</a></td>
+<td><a href="https://glowingcat.com">label</a></td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h2 id="8-images">8. Images</h2>
 <p>Image Support</p>
-<p><img src="src/main/resources/app_icon_256.png" alt="Purple Platypus" /></p>
+<p><img src="app/src/main/resources/app_icon_256.png" alt="Purple Platypus" /></p>
 <p>Image Style Attributes</p>
-<p><img src="src/main/resources/app_icon_256.png" alt="Purple Platypus" width="25%" /></p>
-<h2 id="purple-platypus"><img src="src/main/resources/app_icon_256.png" alt="Purple Platypus" width="100" /></h2>
+<p><img src="app/src/main/resources/app_icon_256.png" alt="Purple Platypus" width="25%" /></p>
+<h2 id="purple-platypus"><img src="app/src/main/resources/app_icon_256.png" alt="Purple Platypus" width="100" /></h2>
 <h2 id="9-math-notation-latex">9. Math Notation (LaTeX)</h2>
 <p>You can write inline math using single dollar signs, like $E = mc^2$ or the golden ratio $\varphi = \frac{1 + \sqrt{5}}{2}$.</p>
 <p>For larger expressions, use block math with double dollar signs:</p>
@@ -206,6 +324,38 @@ $$</p>
 <hr />
 <h2 id="10-footnotes">10. Footnotes</h2>
 <p>This is a line with a footnote<sup class="footnote-ref"><a href="#fn-1" id="fnref-1" data-footnote-ref>1</a></sup></p>
+<hr />
+<h2 id="11-mermaid-charts-and-diagrams">11. Mermaid Charts and Diagrams</h2>
+<p>Support for Mermaid Charts and Diagrams using a simple markdown format.</p>
+<pre><code class="language-mermaid">graph TD
+    A[CEO] --&gt; B[CTO]
+    A --&gt; C[CFO]
+    A --&gt; D[CMO]
+    B --&gt; E[Engineering Lead]
+    B --&gt; F[QA Lead]
+</code></pre>
+<pre><code class="language-mermaid">classDiagram
+Class01 &lt;|-- AveryLongClass : Cool
+Class03 *-- Class04
+Class05 o-- Class06
+Class07 .. Class08
+Class09 --&gt; C2 : Where am i?
+Class09 --* C3
+Class09 --|&gt; Class07
+Class07 : equals()
+Class07 : Object[] elementData
+Class01 : size()
+Class01 : int chimp
+Class01 : int gorilla
+Class08 &lt;--&gt; C2: Cool label
+</code></pre>
+<pre><code class="language-mermaid">erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    CUSTOMER }|..|{ DELIVERY-ADDRESS : uses
+
+</code></pre>
+<p>For more information, see the <a href="https://mermaid.js.org/intro/syntax-reference.html">Mermaid syntax documentation</a>.</p>
 <hr />
 <h2 id="11-horizontal-rules">11. Horizontal Rules</h2>
 <p>Use three or more dashes, asterisks, or underscores:</p>

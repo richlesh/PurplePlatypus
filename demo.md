@@ -71,7 +71,7 @@ You can also use reference-style links like [this one](#6-code-blocks) to headin
 
 You can also use reference-style links like [this one](#my-target) to arbitrary named anchor using HTML.
 
-![Placeholder Image](src/main/resources/app_icon_256.png)
+![Placeholder Image](app/src/main/resources/app_icon_256.png)
 
 <a id="my-target"></a>https://glowingcat.com "Example Website"
 
@@ -136,13 +136,13 @@ Cells can also contain **formatting**, `code`, and [links](https://glowingcat.co
 
 Image Support
 
-![Purple Platypus](src/main/resources/app_icon_256.png)
+![Purple Platypus](app/src/main/resources/app_icon_256.png)
 
 Image Style Attributes
 
-![Purple Platypus](src/main/resources/app_icon_256.png){width=25%}
+![Purple Platypus](app/src/main/resources/app_icon_256.png){width=25%}
 
-![Purple Platypus](src/main/resources/app_icon_256.png){width=100}
+![Purple Platypus](app/src/main/resources/app_icon_256.png){width=100}
 ---
 
 ## 9. Math Notation (LaTeX)
@@ -184,6 +184,48 @@ Greek letters and subscripts can be mixed inline too, such as $\alpha_1, \beta_2
 This is a line with a footnote[^1]
 
 [^1]: Here is the footnote.
+
+---
+
+## 11. Mermaid Charts and Diagrams
+
+Support for Mermaid Charts and Diagrams using a simple markdown format.
+
+```mermaid
+graph TD
+    A[CEO] --> B[CTO]
+    A --> C[CFO]
+    A --> D[CMO]
+    B --> E[Engineering Lead]
+    B --> F[QA Lead]
+```
+
+```mermaid
+classDiagram
+Class01 <|-- AveryLongClass : Cool
+Class03 *-- Class04
+Class05 o-- Class06
+Class07 .. Class08
+Class09 --> C2 : Where am i?
+Class09 --* C3
+Class09 --|> Class07
+Class07 : equals()
+Class07 : Object[] elementData
+Class01 : size()
+Class01 : int chimp
+Class01 : int gorilla
+Class08 <--> C2: Cool label
+```
+
+```mermaid
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    CUSTOMER }|..|{ DELIVERY-ADDRESS : uses
+
+```
+
+For more information, see the [Mermaid syntax documentation](https://mermaid.js.org/intro/syntax-reference.html).
 
 ---
 
