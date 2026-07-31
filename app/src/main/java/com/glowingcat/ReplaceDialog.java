@@ -134,9 +134,9 @@ public class ReplaceDialog extends FindDialog {
         boolean useRegex = regexBox.isSelected();
         String replaceText = replaceField.getText();
 
-        // Process escape sequences if enabled (not applicable in regex mode)
-        if (!useRegex && escapesBox.isSelected()) {
-            searchText = processEscapes(searchText);
+        // Process escape sequences if enabled
+        if (escapesBox.isSelected()) {
+            if (!useRegex) searchText = processEscapes(searchText);
             replaceText = processEscapes(replaceText);
         }
 
@@ -205,9 +205,9 @@ public class ReplaceDialog extends FindDialog {
         boolean matchCase = matchCaseBox.isSelected();
         boolean useRegex = regexBox.isSelected();
 
-        // Process escape sequences if enabled (not applicable in regex mode)
-        if (!useRegex && escapesBox.isSelected()) {
-            searchText = processEscapes(searchText);
+        // Process escape sequences if enabled
+        if (escapesBox.isSelected()) {
+            if (!useRegex) searchText = processEscapes(searchText);
             replaceText = processEscapes(replaceText);
         }
 
