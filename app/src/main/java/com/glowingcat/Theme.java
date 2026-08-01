@@ -24,7 +24,7 @@ public class Theme {
     );
 
     public static final Theme DARK = new Theme(
-        new Color(30, 30, 30),      // editorBackground
+        new Color(30, 30, 30),         // editorBackground
         new Color(212, 212, 212),   // editorForeground
         new Color(37, 37, 38),      // toolbarBackground
         new Color(204, 204, 204),   // toolbarForeground

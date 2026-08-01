@@ -877,9 +877,11 @@ public class EditorWindow {
             } else {
                 UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatLightLaf());
             }
-            // Update all open windows
+            // Update all open windows and their dialogs
             for (EditorWindow w : openInstances) {
                 SwingUtilities.updateComponentTreeUI(w.frame);
+                if (w.findDialog != null) SwingUtilities.updateComponentTreeUI(w.findDialog);
+                if (w.replaceDialog != null) SwingUtilities.updateComponentTreeUI(w.replaceDialog);
                 w.frame.repaint();
             }
         } catch (Exception e) {
@@ -904,6 +906,10 @@ public class EditorWindow {
         } catch (Exception e) {
             // Fall back to manual colors
         }
+        // Re-apply user's font preferences (RSTA theme overrides font)
+        editorPanel.applyPreferences(preferences);
+        // Override editor background to match theme
+        editorPane.setBackground(theme.editorBackground);
 
         // Line numbers
         var scrollPane = editorPanel.getScrollPane();
