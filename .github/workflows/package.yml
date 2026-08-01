@@ -279,17 +279,20 @@ jobs:
                 dpkg-deb -R "$DEB_FILE" "$TMPDIR"
                 sed -i 's/^Depends:.*/Depends: xdg-utils/' "$TMPDIR/DEBIAN/control"
 
-                # Ensure icon is installed to system icon directories
+                # Fix .desktop file icon reference and ensure it's in /usr/share/applications
+                DESKTOP_FILE=$(find "$TMPDIR" -type f -name "*.desktop" | head -1)
+                if [ -n "$DESKTOP_FILE" ]; then
+                  sed -i 's|^Icon=.*|Icon=purpleplatypus|' "$DESKTOP_FILE"
+                  # Ensure .desktop file is in the standard applications directory
+                  mkdir -p "$TMPDIR/usr/share/applications"
+                  cp "$DESKTOP_FILE" "$TMPDIR/usr/share/applications/purpleplatypus-PurplePlatypus.desktop"
+                fi
+
+                # Install icon to system icon directories and pixmaps
                 mkdir -p "$TMPDIR/usr/share/icons/hicolor/256x256/apps"
                 cp ${{ matrix.icon }} "$TMPDIR/usr/share/icons/hicolor/256x256/apps/purpleplatypus.png"
                 mkdir -p "$TMPDIR/usr/share/pixmaps"
                 cp ${{ matrix.icon }} "$TMPDIR/usr/share/pixmaps/purpleplatypus.png"
-
-                # Fix .desktop file icon reference if needed
-                DESKTOP_FILE=$(find "$TMPDIR" -type f -name "*.desktop" | head -1)
-                if [ -n "$DESKTOP_FILE" ]; then
-                  sed -i 's|^Icon=.*|Icon=purpleplatypus|' "$DESKTOP_FILE"
-                fi
 
                 # Add postinst script to copy demo.textpack to user Desktop and update icon cache
                 cat > "$TMPDIR/DEBIAN/postinst" <<'POSTINST'
@@ -298,18 +301,26 @@ jobs:
           if command -v gtk-update-icon-cache &>/dev/null; then
             gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
           fi
+          # Update desktop database
+          if command -v update-desktop-database &>/dev/null; then
+            update-desktop-database /usr/share/applications 2>/dev/null || true
+          fi
           # Copy demo.textpack and config folder to the Desktop of the user who initiated the install
           REAL_USER="${SUDO_USER:-$USER}"
           if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
             USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
-            DESKTOP="$USER_HOME/Desktop"
-            if [ -d "$DESKTOP" ]; then
-              cp /opt/purpleplatypus/demo.textpack "$DESKTOP/"
-              chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/demo.textpack"
-              if [ -d /opt/purpleplatypus/config ]; then
-                cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs"
-                chown -R "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/PurplePlatypus Configs"
-              fi
+            # Use xdg-user-dir if available, fall back to ~/Desktop
+            DESKTOP=""
+            if command -v sudo &>/dev/null; then
+              DESKTOP=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP 2>/dev/null)
+            fi
+            DESKTOP="${DESKTOP:-$USER_HOME/Desktop}"
+            mkdir -p "$DESKTOP"
+            cp /opt/purpleplatypus/demo.textpack "$DESKTOP/"
+            chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/demo.textpack"
+            if [ -d /opt/purpleplatypus/config ]; then
+              cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs"
+              chown -R "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/PurplePlatypus Configs"
             fi
           fi
           exit 0
@@ -317,6 +328,97 @@ jobs:
                 chmod 755 "$TMPDIR/DEBIAN/postinst"
                 dpkg-deb -b "$TMPDIR" "$DEB_FILE"
                 rm -rf "$TMPDIR"
+              fi
+            fi
+
+            # Fix RPM: inject %post scriptlet to copy demo.textpack to Desktop and update icon cache
+            if [ "${{ matrix.pkg_type }}" = "rpm" ]; then
+              RPM_FILE=$(ls purpleplatypus-*.rpm 2>/dev/null | head -1)
+              if [ -n "$RPM_FILE" ]; then
+                RPMTMP=$(mktemp -d)
+                # Extract RPM contents
+                cd "$RPMTMP"
+                rpm2cpio "$GITHUB_WORKSPACE/$RPM_FILE" | cpio -idmv 2>/dev/null
+
+                # Fix .desktop file icon reference
+                DESKTOP_FILE=$(find . -type f -name "*.desktop" | head -1)
+                if [ -n "$DESKTOP_FILE" ]; then
+                  sed -i 's|^Icon=.*|Icon=purpleplatypus|' "$DESKTOP_FILE"
+                  # Ensure .desktop file is in the standard applications directory
+                  mkdir -p ./usr/share/applications
+                  cp "$DESKTOP_FILE" ./usr/share/applications/purpleplatypus-PurplePlatypus.desktop
+                fi
+
+                # Install icon to system icon directories and pixmaps
+                mkdir -p ./usr/share/icons/hicolor/256x256/apps
+                cp "$GITHUB_WORKSPACE/${{ matrix.icon }}" ./usr/share/icons/hicolor/256x256/apps/purpleplatypus.png
+                mkdir -p ./usr/share/pixmaps
+                cp "$GITHUB_WORKSPACE/${{ matrix.icon }}" ./usr/share/pixmaps/purpleplatypus.png
+
+                # Build file list for the RPM
+                find . -type f -o -type l | sed 's|^\.|/|' | sort > /tmp/rpm-filelist.txt
+                find . -type d | sed 's|^\.|%dir /|' | grep -v '^\%dir /$' | sort >> /tmp/rpm-filelist.txt
+
+                # Get metadata from original RPM
+                RPM_VERSION=$(rpm -qp --queryformat '%{VERSION}' "$GITHUB_WORKSPACE/$RPM_FILE")
+                RPM_RELEASE=$(rpm -qp --queryformat '%{RELEASE}' "$GITHUB_WORKSPACE/$RPM_FILE")
+                RPM_ARCH=$(rpm -qp --queryformat '%{ARCH}' "$GITHUB_WORKSPACE/$RPM_FILE")
+
+                # Create spec file with inline %post scriptlet
+                printf '%s\n' \
+                  "Name:           purpleplatypus" \
+                  "Version:        ${RPM_VERSION}" \
+                  "Release:        ${RPM_RELEASE}" \
+                  "Summary:        A lightweight desktop Markdown editor with live preview" \
+                  "License:        GPLv3" \
+                  "Vendor:         Glowing Cat" \
+                  "Requires:       xdg-utils" \
+                  "AutoReqProv:    no" \
+                  "" \
+                  "%description" \
+                  "A lightweight desktop Markdown editor with live preview" \
+                  "" \
+                  "%post" \
+                  "if command -v gtk-update-icon-cache >/dev/null 2>&1; then" \
+                  "  gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true" \
+                  "fi" \
+                  "if command -v update-desktop-database >/dev/null 2>&1; then" \
+                  "  update-desktop-database /usr/share/applications 2>/dev/null || true" \
+                  "fi" \
+                  'REAL_USER="${SUDO_USER:-$USER}"' \
+                  'if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then' \
+                  '  USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)' \
+                  '  DESKTOP=""' \
+                  '  if command -v sudo >/dev/null 2>&1; then' \
+                  '    DESKTOP=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP 2>/dev/null)' \
+                  '  fi' \
+                  '  DESKTOP="${DESKTOP:-$USER_HOME/Desktop}"' \
+                  '  mkdir -p "$DESKTOP"' \
+                  '  cp /opt/purpleplatypus/demo.textpack "$DESKTOP/"' \
+                  '  chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/demo.textpack"' \
+                  '  if [ -d /opt/purpleplatypus/config ]; then' \
+                  '    cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs"' \
+                  '    chown -R "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/PurplePlatypus Configs"' \
+                  '  fi' \
+                  'fi' \
+                  "" \
+                  "%files -f /tmp/rpm-filelist.txt" \
+                  > /tmp/purpleplatypus.spec
+
+                # Rebuild RPM with post-install script
+                rpmbuild -bb /tmp/purpleplatypus.spec \
+                  --buildroot "$RPMTMP" \
+                  --define "_rpmdir $GITHUB_WORKSPACE" \
+                  --define "_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm"
+
+                cd "$GITHUB_WORKSPACE"
+                # Remove old RPM and rename new one if needed
+                NEW_RPM=$(ls purpleplatypus-${RPM_VERSION}-${RPM_RELEASE}.${RPM_ARCH}.rpm 2>/dev/null | head -1)
+                if [ -n "$NEW_RPM" ] && [ "$NEW_RPM" != "$RPM_FILE" ]; then
+                  rm -f "$RPM_FILE"
+                  mv "$NEW_RPM" "$RPM_FILE"
+                fi
+                rm -rf "$RPMTMP"
               fi
             fi
           else
