@@ -48,21 +48,27 @@ public class Main {
 
         System.setProperty("apple.laf.useScreenMenuBar", "true");
         System.setProperty("apple.awt.application.name", "PurplePlatypus");
+
+        // Use FlatLaf — load light or dark based on saved preference
+        Preferences prefs = Preferences.load();
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            if (prefs.isDarkMode()) {
+                UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatDarkLaf());
+            } else {
+                UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatLightLaf());
+            }
         } catch (Exception e) {
-            // Fall back to default cross-platform L&F
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception ex) {
+                // Fall back to default
+            }
         }
 
-        // Remove extra left padding in Windows menus (reserved for icons/checkmarks)
-        UIManager.put("MenuItem.checkIconGap", 0);
-        UIManager.put("MenuItem.afterCheckIconGap", 0);
-        UIManager.put("MenuItem.checkIcon", null);
-        UIManager.put("MenuItem.minimumTextOffset", 0);
-        UIManager.put("Menu.checkIconGap", 0);
-        UIManager.put("Menu.afterCheckIconGap", 0);
-        UIManager.put("Menu.checkIcon", null);
-        UIManager.put("Menu.minimumTextOffset", 0);
+        // Match scroll bar width to WebView scrollbars (15px)
+        UIManager.put("ScrollBar.width", 15);
+        UIManager.put("ScrollBar.thumbArc", 10);
+        UIManager.put("ScrollBar.trackArc", 10);
 
         // Initialize JavaFX toolkit and prevent it from exiting when windows close
         new JFXPanel();
@@ -110,7 +116,6 @@ public class Main {
             copyDemoFileToDesktop();
 
             // Show splash screen if not licensed
-            Preferences prefs = Preferences.load();
             if (!LicenseDialog.isLicensed(prefs)) {
                 SplashScreen.show();
             }

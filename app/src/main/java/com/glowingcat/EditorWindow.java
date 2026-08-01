@@ -57,6 +57,8 @@ public class EditorWindow {
     private JToggleButton syncScrollToggle;
     private JToggleButton hiddenCharsToggle;
     private JToggleButton wordWrapToggle;
+    private JToggleButton darkModeToggle;
+    private JPanel toolbar;
     private boolean previewVisible = true;
     private boolean aiVisible = true;
     private boolean syncScrollEnabled = false;
@@ -151,6 +153,12 @@ public class EditorWindow {
         dirty = false;
 
         frame.setLocationRelativeTo(null);
+
+        // Apply editor/preview/AI dark theme if saved in preferences
+        if (preferences.isDarkMode()) {
+            applyTheme(Theme.DARK);
+        }
+
         frame.setVisible(true);
         frame.toFront();
         frame.requestFocus();
@@ -631,7 +639,7 @@ public class EditorWindow {
 
     private void buildLayout() {
         // --- Toolbar / status bar at top ---
-        JPanel toolbar = new JPanel(new BorderLayout());
+        toolbar = new JPanel(new BorderLayout());
         toolbar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY),
             BorderFactory.createEmptyBorder(4, 8, 4, 8)
@@ -777,6 +785,50 @@ public class EditorWindow {
         aiToggle.addActionListener(e -> toggleAI());
         togglePanel.add(aiToggle);
 
+        // Dark mode toggle button (moon/sun)
+        darkModeToggle = new JToggleButton();
+        darkModeToggle.setUI(new BasicToggleButtonUI());
+        darkModeToggle.setToolTipText("Toggle Dark Mode");
+        darkModeToggle.setSelected(preferences.isDarkMode());
+        darkModeToggle.setIcon(new Icon() {
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(c.getForeground());
+                if (darkModeToggle.isSelected()) {
+                    // Sun icon (light mode switch) — yellow
+                    g2.setColor(new Color(255, 200, 0));
+                    int cx = x + 10, cy = y + 10;
+                    g2.fillOval(cx - 4, cy - 4, 8, 8);
+                    g2.setStroke(new BasicStroke(1.5f));
+                    for (int i = 0; i < 8; i++) {
+                        double angle = Math.toRadians(i * 45);
+                        int x1 = cx + (int)(6 * Math.cos(angle));
+                        int y1 = cy + (int)(6 * Math.sin(angle));
+                        int x2 = cx + (int)(8 * Math.cos(angle));
+                        int y2 = cy + (int)(8 * Math.sin(angle));
+                        g2.drawLine(x1, y1, x2, y2);
+                    }
+                } else {
+                    // Crescent moon icon (dark mode switch)
+                    g2.fillOval(x + 5, y + 3, 12, 12);
+                    g2.setColor(darkModeToggle.getBackground() != null ? darkModeToggle.getBackground() : c.getBackground());
+                    g2.fillOval(x + 9, y + 2, 10, 10);
+                }
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return 20; }
+            @Override public int getIconHeight() { return 20; }
+        });
+        darkModeToggle.setFocusPainted(false);
+        darkModeToggle.setBorderPainted(false);
+        darkModeToggle.setContentAreaFilled(false);
+        darkModeToggle.setOpaque(false);
+        darkModeToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        darkModeToggle.setPreferredSize(new Dimension(28, 28));
+        darkModeToggle.addActionListener(e -> toggleDarkMode());
+        togglePanel.add(darkModeToggle);
+
         toolbar.add(togglePanel, BorderLayout.EAST);
         frame.add(toolbar, BorderLayout.NORTH);
 
@@ -811,6 +863,64 @@ public class EditorWindow {
         mainSplit.setDividerLocation(frame.getWidth() - 400);
 
         frame.add(mainSplit, BorderLayout.CENTER);
+    }
+
+    private void toggleDarkMode() {
+        boolean dark = darkModeToggle.isSelected();
+        preferences.setDarkMode(dark);
+        preferences.save();
+
+        // Switch FlatLaf theme
+        try {
+            if (dark) {
+                UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatDarkLaf());
+            } else {
+                UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatLightLaf());
+            }
+            // Update all open windows
+            for (EditorWindow w : openInstances) {
+                SwingUtilities.updateComponentTreeUI(w.frame);
+                w.frame.repaint();
+            }
+        } catch (Exception e) {
+            // Fall back to manual theme
+        }
+
+        applyTheme(dark ? Theme.DARK : Theme.LIGHT);
+    }
+
+    private void applyTheme(Theme theme) {
+        // Editor — apply RSyntaxTextArea theme
+        try {
+            String themePath = "dark".equals(theme.rsyntaxTheme)
+                ? "/org/fife/ui/rsyntaxtextarea/themes/dark.xml"
+                : "/org/fife/ui/rsyntaxtextarea/themes/default.xml";
+            var is = getClass().getResourceAsStream(themePath);
+            if (is != null) {
+                org.fife.ui.rsyntaxtextarea.Theme rstaTheme =
+                    org.fife.ui.rsyntaxtextarea.Theme.load(is);
+                rstaTheme.apply(editorPane);
+            }
+        } catch (Exception e) {
+            // Fall back to manual colors
+        }
+
+        // Line numbers
+        var scrollPane = editorPanel.getScrollPane();
+        scrollPane.getGutter().setBackground(theme.lineNumberBackground);
+        scrollPane.getGutter().setLineNumberColor(theme.lineNumberForeground);
+
+        // Dark mode toggle icon needs repaint
+        darkModeToggle.repaint();
+
+        // Preview panel — force full reload to apply CSS
+        previewPanel.forceFullReload();
+        updatePreview();
+
+        // AI chat panel
+        if (aiChatPanel != null) {
+            aiChatPanel.setDarkMode(preferences.isDarkMode());
+        }
     }
 
     private void togglePreview() {
