@@ -61,6 +61,7 @@ public class AIChatPanel extends JPanel {
     private int promptCount = 0;
     private LLMClient llmClient;
     private Runnable promptNagCallback;
+    private boolean darkMode = false;
 
     /** Internal chat message record. */
     private static class ChatMessage {
@@ -362,6 +363,12 @@ public class AIChatPanel extends JPanel {
         renderChat();
     }
 
+    /** Set dark mode and re-render the chat. */
+    public void setDarkMode(boolean dark) {
+        this.darkMode = dark;
+        renderChat();
+    }
+
     /** Update fonts after preferences change. */
     public void updateFont() {
         inputArea.setFont(new Font(aiPreferences.getAiFontFamily(), Font.PLAIN, aiPreferences.getAiFontSize()));
@@ -553,7 +560,7 @@ public class AIChatPanel extends JPanel {
         html.append("font-size: ").append(codeFontSize).append("pt; }");
         html.append("</style>");
         // Static styles from resource file
-        html.append("<style>").append(loadCssResource()).append("</style>");
+        html.append("<style>").append(loadCssResource(darkMode)).append("</style>");
         html.append("<script>");
         html.append("MathJax = {");
         html.append("  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },");
@@ -678,8 +685,9 @@ public class AIChatPanel extends JPanel {
         return "";
     }
 
-    private static String loadCssResource() {
-        try (var is = AIChatPanel.class.getResourceAsStream("/ai_chat.css")) {
+    private static String loadCssResource(boolean dark) {
+        String path = dark ? "/ai_chat_dark.css" : "/ai_chat.css";
+        try (var is = AIChatPanel.class.getResourceAsStream(path)) {
             if (is != null) {
                 return new String(is.readAllBytes(), StandardCharsets.UTF_8);
             }

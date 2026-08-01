@@ -126,6 +126,9 @@ public class Preferences {
     /** Whether the AI chat pane is visible. */
     private boolean aiVisible = true;
 
+    /** Whether dark mode is enabled. */
+    private boolean darkMode = false;
+
     // --- License ---
 
     /** License email address. */
@@ -227,6 +230,8 @@ public class Preferences {
     public void setPreviewVisible(boolean previewVisible) { this.previewVisible = previewVisible; }
     public boolean isAiVisible() { return aiVisible; }
     public void setAiVisible(boolean aiVisible) { this.aiVisible = aiVisible; }
+    public boolean isDarkMode() { return darkMode; }
+    public void setDarkMode(boolean darkMode) { this.darkMode = darkMode; }
 
     // --- License getters/setters ---
 

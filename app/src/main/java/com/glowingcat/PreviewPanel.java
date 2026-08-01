@@ -364,7 +364,7 @@ public class PreviewPanel extends JPanel {
                 + "code, pre { font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"
                 + "::selection { background: " + selColor + "; }"
                 + "</style>"
-                + "<style>" + loadPreviewCss() + "</style>"
+                + "<style>" + loadPreviewCss(preferences != null && preferences.isDarkMode()) + "</style>"
                 + "<script>"
                 + "MathJax = {"
                 + "  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },"
@@ -374,7 +374,7 @@ public class PreviewPanel extends JPanel {
                 + "</script>"
                 + "<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>"
                 + "<script src=\"https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js\"></script>"
-                + "<script>mermaid.initialize({startOnLoad: false, theme: 'default'});"
+                + "<script>mermaid.initialize({startOnLoad: false, theme: '" + (preferences != null && preferences.isDarkMode() ? "dark" : "default") + "'});"
                 + "document.addEventListener('DOMContentLoaded', function(){"
                 + "document.querySelectorAll('pre code.language-mermaid').forEach(function(el){"
                 + "var pre=el.parentElement;var div=document.createElement('div');"
@@ -574,8 +574,9 @@ public class PreviewPanel extends JPanel {
         return result.toString();
     }
 
-    private static String loadPreviewCss() {
-        try (var is = PreviewPanel.class.getResourceAsStream("/preview.css")) {
+    private static String loadPreviewCss(boolean dark) {
+        String path = dark ? "/preview_dark.css" : "/preview.css";
+        try (var is = PreviewPanel.class.getResourceAsStream(path)) {
             if (is != null) {
                 return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             }
