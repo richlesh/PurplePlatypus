@@ -15,7 +15,7 @@ public class AppVersion {
     private static final String VERSION;
 
     static {
-        String v = "1.3.1"; // fallback
+        String v = "DEVELOPMENT"; // fallback
         try (InputStream is = AppVersion.class.getResourceAsStream("/version.properties")) {
             if (is != null) {
                 Properties props = new Properties();
@@ -31,7 +31,7 @@ public class AppVersion {
         VERSION = v;
     }
 
-    /** Returns the application version string (e.g. "1.3.1"). */
+    /** Returns the application version string (e.g. "1.2.3"). */
     public static String get() {
         return VERSION;
     }
