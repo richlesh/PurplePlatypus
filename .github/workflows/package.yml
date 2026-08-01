@@ -279,10 +279,16 @@ jobs:
                 dpkg-deb -R "$DEB_FILE" "$TMPDIR"
                 sed -i 's/^Depends:.*/Depends: xdg-utils/' "$TMPDIR/DEBIAN/control"
 
-                # Fix .desktop file icon reference and ensure it's in /usr/share/applications
+                # Fix .desktop file icon and categories, and ensure it's in /usr/share/applications
                 DESKTOP_FILE=$(find "$TMPDIR" -type f -name "*.desktop" | head -1)
                 if [ -n "$DESKTOP_FILE" ]; then
                   sed -i 's|^Icon=.*|Icon=purpleplatypus|' "$DESKTOP_FILE"
+                  # Fix Categories for Development and Office menu sections
+                  if grep -q '^Categories=' "$DESKTOP_FILE"; then
+                    sed -i 's|^Categories=.*|Categories=Development;Office;TextEditor;|' "$DESKTOP_FILE"
+                  else
+                    echo 'Categories=Development;Office;TextEditor;' >> "$DESKTOP_FILE"
+                  fi
                   # Ensure .desktop file is in the standard applications directory
                   mkdir -p "$TMPDIR/usr/share/applications"
                   cp "$DESKTOP_FILE" "$TMPDIR/usr/share/applications/purpleplatypus-PurplePlatypus.desktop"
@@ -295,36 +301,34 @@ jobs:
                 cp ${{ matrix.icon }} "$TMPDIR/usr/share/pixmaps/purpleplatypus.png"
 
                 # Add postinst script to copy demo.textpack to user Desktop and update icon cache
-                cat > "$TMPDIR/DEBIAN/postinst" <<'POSTINST'
-          #!/bin/bash
-          # Update icon cache
-          if command -v gtk-update-icon-cache &>/dev/null; then
-            gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
-          fi
-          # Update desktop database
-          if command -v update-desktop-database &>/dev/null; then
-            update-desktop-database /usr/share/applications 2>/dev/null || true
-          fi
-          # Copy demo.textpack and config folder to the Desktop of the user who initiated the install
-          REAL_USER="${SUDO_USER:-$USER}"
-          if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
-            USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
-            # Use xdg-user-dir if available, fall back to ~/Desktop
-            DESKTOP=""
-            if command -v sudo &>/dev/null; then
-              DESKTOP=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP 2>/dev/null)
-            fi
-            DESKTOP="${DESKTOP:-$USER_HOME/Desktop}"
-            mkdir -p "$DESKTOP"
-            cp /opt/purpleplatypus/demo.textpack "$DESKTOP/"
-            chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/demo.textpack"
-            if [ -d /opt/purpleplatypus/config ]; then
-              cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs"
-              chown -R "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/PurplePlatypus Configs"
-            fi
-          fi
-          exit 0
-          POSTINST
+                printf '%s\n' '#!/bin/bash' \
+                  '# Update icon cache' \
+                  'if command -v gtk-update-icon-cache &>/dev/null; then' \
+                  '  gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true' \
+                  'fi' \
+                  '# Update desktop database' \
+                  'if command -v update-desktop-database &>/dev/null; then' \
+                  '  update-desktop-database /usr/share/applications 2>/dev/null || true' \
+                  'fi' \
+                  '# Copy demo.textpack and config folder to the Desktop of the user who initiated the install' \
+                  'REAL_USER="${SUDO_USER:-$USER}"' \
+                  'if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then' \
+                  '  USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)' \
+                  '  # Use xdg-user-dir if available, fall back to ~/Desktop' \
+                  '  DESKTOP=""' \
+                  '  if command -v sudo &>/dev/null; then' \
+                  '    DESKTOP=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP 2>/dev/null)' \
+                  '  fi' \
+                  '  DESKTOP="${DESKTOP:-$USER_HOME/Desktop}"' \
+                  '  mkdir -p "$DESKTOP"' \
+                  '  cp /opt/purpleplatypus/demo.textpack "$DESKTOP/"' \
+                  '  chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/demo.textpack"' \
+                  '  if [ -d /opt/purpleplatypus/config ]; then' \
+                  '    cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs"' \
+                  '    chown -R "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/PurplePlatypus Configs"' \
+                  '  fi' \
+                  'fi' \
+                  'exit 0' > "$TMPDIR/DEBIAN/postinst"
                 chmod 755 "$TMPDIR/DEBIAN/postinst"
                 dpkg-deb -b "$TMPDIR" "$DEB_FILE"
                 rm -rf "$TMPDIR"
@@ -340,10 +344,16 @@ jobs:
                 cd "$RPMTMP"
                 rpm2cpio "$GITHUB_WORKSPACE/$RPM_FILE" | cpio -idmv 2>/dev/null
 
-                # Fix .desktop file icon reference
+                # Fix .desktop file icon and categories
                 DESKTOP_FILE=$(find . -type f -name "*.desktop" | head -1)
                 if [ -n "$DESKTOP_FILE" ]; then
                   sed -i 's|^Icon=.*|Icon=purpleplatypus|' "$DESKTOP_FILE"
+                  # Fix Categories for Development and Office menu sections
+                  if grep -q '^Categories=' "$DESKTOP_FILE"; then
+                    sed -i 's|^Categories=.*|Categories=Development;Office;TextEditor;|' "$DESKTOP_FILE"
+                  else
+                    echo 'Categories=Development;Office;TextEditor;' >> "$DESKTOP_FILE"
+                  fi
                   # Ensure .desktop file is in the standard applications directory
                   mkdir -p ./usr/share/applications
                   cp "$DESKTOP_FILE" ./usr/share/applications/purpleplatypus-PurplePlatypus.desktop
@@ -385,20 +395,29 @@ jobs:
                   "if command -v update-desktop-database >/dev/null 2>&1; then" \
                   "  update-desktop-database /usr/share/applications 2>/dev/null || true" \
                   "fi" \
-                  'REAL_USER="${SUDO_USER:-$USER}"' \
+                  '# Find the real user: try SUDO_USER, then logname, then who' \
+                  'REAL_USER="${SUDO_USER:-}"' \
+                  'if [ -z "$REAL_USER" ]; then' \
+                  '  REAL_USER=$(logname 2>/dev/null || true)' \
+                  'fi' \
+                  'if [ -z "$REAL_USER" ] || [ "$REAL_USER" = "root" ]; then' \
+                  '  REAL_USER=$(who | grep -v root | head -1 | awk "{print \$1}" || true)' \
+                  'fi' \
                   'if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then' \
                   '  USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)' \
                   '  DESKTOP=""' \
-                  '  if command -v sudo >/dev/null 2>&1; then' \
-                  '    DESKTOP=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP 2>/dev/null)' \
+                  '  if command -v xdg-user-dir >/dev/null 2>&1; then' \
+                  '    DESKTOP=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP 2>/dev/null || true)' \
                   '  fi' \
                   '  DESKTOP="${DESKTOP:-$USER_HOME/Desktop}"' \
-                  '  mkdir -p "$DESKTOP"' \
-                  '  cp /opt/purpleplatypus/demo.textpack "$DESKTOP/"' \
-                  '  chown "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/demo.textpack"' \
-                  '  if [ -d /opt/purpleplatypus/config ]; then' \
-                  '    cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs"' \
-                  '    chown -R "$REAL_USER":"$(id -gn "$REAL_USER")" "$DESKTOP/PurplePlatypus Configs"' \
+                  '  if [ -d "$DESKTOP" ] || [ -d "$USER_HOME" ]; then' \
+                  '    mkdir -p "$DESKTOP"' \
+                  '    cp /opt/purpleplatypus/demo.textpack "$DESKTOP/" 2>/dev/null || true' \
+                  '    chown "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo.textpack" 2>/dev/null || true' \
+                  '    if [ -d /opt/purpleplatypus/config ]; then' \
+                  '      cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs" 2>/dev/null || true' \
+                  '      chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/PurplePlatypus Configs" 2>/dev/null || true' \
+                  '    fi' \
                   '  fi' \
                   'fi' \
                   "" \

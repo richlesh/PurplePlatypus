@@ -141,27 +141,91 @@ public class Main {
      */
     private static void copyDemoFileToDesktop() {
         try {
-            // Determine the application install directory
-            Path appDir = Path.of(System.getProperty("user.dir"));
+            // Determine the application install directory.
+            // On Windows jpackage installs, user.dir points to the user's home (not the install dir),
+            // so we resolve relative to the running JAR's location instead.
+            Path appDir;
+            try {
+                Path jarPath = Path.of(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                appDir = jarPath.getParent();
+            } catch (Exception e) {
+                appDir = Path.of(System.getProperty("user.dir"));
+            }
 
             // On packaged installs, the app dir contains demo.textpack
             // Also check common Linux install location
             Path demoSource = appDir.resolve("demo.textpack");
             if (!Files.exists(demoSource)) {
+                // On Windows, jpackage places input files in the 'app' subdirectory
+                demoSource = appDir.getParent() != null ? appDir.getParent().resolve("app").resolve("demo.textpack") : demoSource;
+            }
+            if (!Files.exists(demoSource)) {
                 demoSource = Path.of("/opt/purpleplatypus/demo.textpack");
             }
             if (!Files.exists(demoSource)) return;
 
-            // Determine Desktop path
-            Path desktop = Path.of(System.getProperty("user.home"), "Desktop");
-            if (!Files.isDirectory(desktop)) return;
+            // Determine Desktop path — use xdg-user-dir on Linux if available
+            Path desktop = getDesktopPath();
+            if (desktop == null || !Files.isDirectory(desktop)) return;
 
             Path demoDest = desktop.resolve("demo.textpack");
             if (Files.exists(demoDest)) return; // Already copied
 
             Files.copy(demoSource, demoDest, StandardCopyOption.COPY_ATTRIBUTES);
+
+            // Also copy config folder if present
+            Path configSource = demoSource.getParent().resolve("config");
+            if (Files.isDirectory(configSource)) {
+                Path configDest = desktop.resolve("PurplePlatypus Configs");
+                if (!Files.exists(configDest)) {
+                    copyDirectory(configSource, configDest);
+                }
+            }
         } catch (IOException | SecurityException e) {
             // Best effort — don't disrupt app launch
         }
+    }
+
+    /**
+     * Returns the path to the user's Desktop directory.
+     * On Linux, uses xdg-user-dir if available; otherwise falls back to ~/Desktop.
+     */
+    private static Path getDesktopPath() {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (os.contains("linux")) {
+            try {
+                Process proc = new ProcessBuilder("xdg-user-dir", "DESKTOP")
+                        .redirectErrorStream(true).start();
+                String output = new String(proc.getInputStream().readAllBytes()).trim();
+                proc.waitFor();
+                if (!output.isEmpty() && proc.exitValue() == 0) {
+                    Path xdgDesktop = Path.of(output);
+                    if (Files.isDirectory(xdgDesktop)) {
+                        return xdgDesktop;
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fall through to default
+            }
+        }
+        return Path.of(System.getProperty("user.home"), "Desktop");
+    }
+
+    /**
+     * Recursively copies a directory tree.
+     */
+    private static void copyDirectory(Path source, Path target) throws IOException {
+        Files.walkFileTree(source, new java.nio.file.SimpleFileVisitor<Path>() {
+            @Override
+            public java.nio.file.FileVisitResult preVisitDirectory(Path dir, java.nio.file.attribute.BasicFileAttributes attrs) throws IOException {
+                Files.createDirectories(target.resolve(source.relativize(dir)));
+                return java.nio.file.FileVisitResult.CONTINUE;
+            }
+            @Override
+            public java.nio.file.FileVisitResult visitFile(Path file, java.nio.file.attribute.BasicFileAttributes attrs) throws IOException {
+                Files.copy(file, target.resolve(source.relativize(file)), StandardCopyOption.COPY_ATTRIBUTES);
+                return java.nio.file.FileVisitResult.CONTINUE;
+            }
+        });
     }
 }
