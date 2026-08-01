@@ -137,6 +137,153 @@ Or run `com.glowingcat.Main` directly from your IDE.
 - **SnakeYAML** — YAML parsing for Generic vendor configuration
 - **java.net.http** — HTTP client for LLM API calls
 
+## Class Diagram
+
+A high-level overview of PurplePlatypus's main classes and their relationships:
+
+```mermaid
+classDiagram
+    class Main {
+        +main(String[] args) void
+    }
+
+    class EditorFrame {
+        -EditorPane editorPane
+        -PreviewPane previewPane
+        -AIChatPanel aiChatPanel
+        -Toolbar toolbar
+        +openFile(File file) void
+        +saveFile() void
+    }
+
+    class EditorPane {
+        -RSyntaxTextArea textArea
+        -DocumentStatistics statistics
+        +getText() String
+        +setText(String text) void
+        +insertImageLink(Path imagePath) void
+    }
+
+    class PreviewPane {
+        -WebView webView
+        -JEditorPane fallbackPane
+        +render(String markdown) void
+    }
+
+    class MarkdownRenderer {
+        -Parser parser
+        -HtmlRenderer renderer
+        +render(String markdown) String
+    }
+
+    class AIChatPanel {
+        -LLMClient llmClient
+        +sendMessage(String prompt) void
+        +applySuggestion() void
+    }
+
+    class LLMClient {
+        -String vendor
+        -String model
+        -String apiKey
+        +complete(String prompt) String
+        +completeChat(List~Message~ messages) String
+    }
+
+    class GenericLLMVendor {
+        -YamlConfiguration config
+        +buildEndpoint(String path) String
+        +fetchToken() String
+    }
+
+    class Toolbar {
+        -StatusBar statusBar
+        +togglePreview() void
+        +toggleAIPanel() void
+        +toggleWordWrap() void
+    }
+
+    class StatusBar {
+        -String filePath
+        +updateStatistics(int lines, int words, int chars) void
+    }
+
+    class DocumentStatistics {
+        -int lines
+        -int words
+        -int characters
+        +update(String text) void
+    }
+
+    class FileOperations {
+        +open(File file) void
+        +save(File file) void
+        +saveAs() void
+    }
+
+    class TextBundleHandler {
+        +open(Path bundle) void
+        +export(Path bundle) void
+    }
+
+    class TextPackHandler {
+        +open(Path pack) void
+        +export(Path pack) void
+    }
+
+    class ExportHandler {
+        +exportHtml() void
+        +exportPdf() void
+        +exportRtf() void
+        +exportTextBundle() void
+        +exportTextPack() void
+        +exportPlainText() void
+    }
+
+    class FindReplaceDialog {
+        -boolean matchCase
+        -boolean regex
+        +findNext() void
+        +replaceAll() void
+    }
+
+    class RecentFilesManager {
+        -List~File~ recentFiles
+        +add(File file) void
+    }
+
+    class PreferencesManager {
+        +getFont() Font
+        +getLlmSettings() LLMSettings
+        +save() void
+    }
+
+    class WindowManager {
+        +cascadeAll() void
+        +tileAll() void
+        +nextWindow() void
+    }
+
+    Main --> EditorFrame
+    EditorFrame *-- EditorPane
+    EditorFrame *-- PreviewPane
+    EditorFrame *-- AIChatPanel
+    EditorFrame *-- Toolbar
+    EditorFrame --> FindReplaceDialog
+    EditorFrame --> FileOperations
+    EditorFrame --> RecentFilesManager
+    EditorFrame --> PreferencesManager
+    EditorFrame --> WindowManager
+    EditorPane *-- DocumentStatistics
+    EditorPane *-- RSyntaxTextArea
+    PreviewPane --> MarkdownRenderer
+    AIChatPanel --> LLMClient
+    LLMClient --> GenericLLMVendor
+    FileOperations --> TextBundleHandler
+    FileOperations --> TextPackHandler
+    FileOperations --> ExportHandler
+```
+
 ---
 
 ## License
