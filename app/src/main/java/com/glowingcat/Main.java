@@ -142,29 +142,43 @@ public class Main {
     private static void copyDemoFileToDesktop() {
         try {
             // Determine the application install directory.
-            // On Windows jpackage installs, user.dir points to the user's home (not the install dir),
-            // so we resolve relative to the running JAR's location instead.
-            Path appDir;
-            try {
-                Path jarPath = Path.of(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-                appDir = jarPath.getParent();
-            } catch (Exception e) {
-                appDir = Path.of(System.getProperty("user.dir"));
+            // On jpackage installs, the code source location may not be a filesystem path
+            // (modules are in the jlink'd runtime). Use multiple strategies to find the install dir.
+            Path appDir = null;
+
+            // Strategy 1: jpackage.app-path property (set by jpackage launcher on all platforms)
+            String appPath = System.getProperty("jpackage.app-path");
+            if (appPath != null && !appPath.isEmpty()) {
+                // Points to the executable, e.g. C:\Program Files\PurplePlatypus\PurplePlatypus.exe
+                appDir = Path.of(appPath).getParent();
             }
 
-            // On packaged installs, the app dir contains demo.textpack
-            // Also check common Linux install location
-            Path demoSource = appDir.resolve("demo.textpack");
-            if (!Files.exists(demoSource)) {
-                // On Windows, jpackage places input files in the 'app' subdirectory
-                demoSource = appDir.getParent() != null ? appDir.getParent().resolve("app").resolve("demo.textpack") : demoSource;
+            // Strategy 2: Derive from java.home (bundled runtime is inside the install dir)
+            if (appDir == null || !Files.isDirectory(appDir)) {
+                // java.home points to e.g. C:\Program Files\PurplePlatypus\runtime
+                // or /opt/purpleplatypus/lib/runtime
+                Path javaHome = Path.of(System.getProperty("java.home"));
+                Path candidate = javaHome.getParent(); // up from runtime/
+                if (candidate != null && Files.isDirectory(candidate)) {
+                    appDir = candidate;
+                }
             }
-            if (!Files.exists(demoSource)) {
-                demoSource = Path.of("/opt/purpleplatypus/demo.textpack");
-            }
-            if (!Files.exists(demoSource)) return;
 
-            // Determine Desktop path — use xdg-user-dir on Linux if available
+            // Strategy 3: Code source location (works when running from IDE/Maven)
+            if (appDir == null || !Files.isDirectory(appDir)) {
+                try {
+                    Path jarPath = Path.of(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                    appDir = jarPath.getParent();
+                } catch (Exception e) {
+                    appDir = Path.of(System.getProperty("user.dir"));
+                }
+            }
+
+            // Search for demo.textpack in likely locations
+            Path demoSource = findDemoFile(appDir);
+            if (demoSource == null) return;
+
+            // Determine Desktop path — use xdg-user-dir on Linux, shell folder on Windows
             Path desktop = getDesktopPath();
             if (desktop == null || !Files.isDirectory(desktop)) return;
 
@@ -187,8 +201,44 @@ public class Main {
     }
 
     /**
+     * Searches for demo.textpack in likely install locations relative to the app directory.
+     */
+    private static Path findDemoFile(Path appDir) {
+        if (appDir == null) return null;
+
+        // Direct: appDir/demo.textpack (Linux app-image root)
+        Path candidate = appDir.resolve("demo.textpack");
+        if (Files.exists(candidate)) return candidate;
+
+        // Windows/jpackage: appDir/app/demo.textpack (input files in app/ subdir)
+        candidate = appDir.resolve("app").resolve("demo.textpack");
+        if (Files.exists(candidate)) return candidate;
+
+        // If appDir is the runtime dir, check sibling app/ dir
+        // e.g. /opt/purpleplatypus/lib/runtime -> /opt/purpleplatypus/lib/app/
+        candidate = appDir.resolve("lib").resolve("app").resolve("demo.textpack");
+        if (Files.exists(candidate)) return candidate;
+
+        // Parent's app/ dir (if we're inside lib/runtime or similar)
+        if (appDir.getParent() != null) {
+            candidate = appDir.getParent().resolve("app").resolve("demo.textpack");
+            if (Files.exists(candidate)) return candidate;
+            candidate = appDir.getParent().resolve("demo.textpack");
+            if (Files.exists(candidate)) return candidate;
+        }
+
+        // Linux standard install location
+        candidate = Path.of("/opt/purpleplatypus/demo.textpack");
+        if (Files.exists(candidate)) return candidate;
+
+        return null;
+    }
+
+    /**
      * Returns the path to the user's Desktop directory.
-     * On Linux, uses xdg-user-dir if available; otherwise falls back to ~/Desktop.
+     * On Linux, uses xdg-user-dir if available.
+     * On Windows, uses FileSystemView to handle OneDrive Desktop redirection.
+     * Falls back to ~/Desktop.
      */
     private static Path getDesktopPath() {
         String os = System.getProperty("os.name", "").toLowerCase();
@@ -202,6 +252,23 @@ public class Main {
                     Path xdgDesktop = Path.of(output);
                     if (Files.isDirectory(xdgDesktop)) {
                         return xdgDesktop;
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fall through to default
+            }
+        } else if (os.contains("win")) {
+            try {
+                // Use PowerShell to get the actual Desktop path (handles OneDrive redirection)
+                Process proc = new ProcessBuilder("powershell", "-NoProfile", "-Command",
+                        "[Environment]::GetFolderPath('Desktop')")
+                        .redirectErrorStream(true).start();
+                String output = new String(proc.getInputStream().readAllBytes()).trim();
+                proc.waitFor();
+                if (!output.isEmpty() && proc.exitValue() == 0) {
+                    Path winDesktop = Path.of(output);
+                    if (Files.isDirectory(winDesktop)) {
+                        return winDesktop;
                     }
                 }
             } catch (Exception ignored) {
