@@ -286,7 +286,7 @@ jobs:
                 cp ${{ matrix.icon }} "$TMPDIR/usr/share/pixmaps/purpleplatypus.png"
 
                 # Fix .desktop file icon reference if needed
-                DESKTOP_FILE=$(find "$TMPDIR" -name "*.desktop" | head -1)
+                DESKTOP_FILE=$(find "$TMPDIR" -type f -name "*.desktop" | head -1)
                 if [ -n "$DESKTOP_FILE" ]; then
                   sed -i 's|^Icon=.*|Icon=purpleplatypus|' "$DESKTOP_FILE"
                 fi
