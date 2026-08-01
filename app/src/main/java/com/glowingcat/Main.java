@@ -180,7 +180,16 @@ public class Main {
 
             // Determine Desktop path — use xdg-user-dir on Linux, shell folder on Windows
             Path desktop = getDesktopPath();
-            if (desktop == null || !Files.isDirectory(desktop)) return;
+            if (desktop == null) return;
+
+            // Create Desktop directory if it doesn't exist (common on fresh Linux installs)
+            if (!Files.isDirectory(desktop)) {
+                try {
+                    Files.createDirectories(desktop);
+                } catch (IOException e) {
+                    return; // Can't create Desktop directory
+                }
+            }
 
             Path demoDest = desktop.resolve("demo.textpack");
             if (Files.exists(demoDest)) return; // Already copied
@@ -237,7 +246,7 @@ public class Main {
     /**
      * Returns the path to the user's Desktop directory.
      * On Linux, uses xdg-user-dir if available.
-     * On Windows, uses FileSystemView to handle OneDrive Desktop redirection.
+     * On Windows, uses PowerShell to handle OneDrive Desktop redirection.
      * Falls back to ~/Desktop.
      */
     private static Path getDesktopPath() {
@@ -249,10 +258,7 @@ public class Main {
                 String output = new String(proc.getInputStream().readAllBytes()).trim();
                 proc.waitFor();
                 if (!output.isEmpty() && proc.exitValue() == 0) {
-                    Path xdgDesktop = Path.of(output);
-                    if (Files.isDirectory(xdgDesktop)) {
-                        return xdgDesktop;
-                    }
+                    return Path.of(output);
                 }
             } catch (Exception ignored) {
                 // Fall through to default
@@ -266,10 +272,7 @@ public class Main {
                 String output = new String(proc.getInputStream().readAllBytes()).trim();
                 proc.waitFor();
                 if (!output.isEmpty() && proc.exitValue() == 0) {
-                    Path winDesktop = Path.of(output);
-                    if (Files.isDirectory(winDesktop)) {
-                        return winDesktop;
-                    }
+                    return Path.of(output);
                 }
             } catch (Exception ignored) {
                 // Fall through to default
