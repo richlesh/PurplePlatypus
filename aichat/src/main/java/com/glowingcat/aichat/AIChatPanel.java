@@ -849,8 +849,8 @@ public class AIChatPanel extends JPanel {
         html.append("<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/")
             .append(darkMode ? "github-dark" : "github").append(".min.css\">");
         html.append("<script src=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js\"></script>");
-        html.append("<script src=\"https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js\"></script>");
-        html.append("<script>mermaid.initialize({startOnLoad: false, theme: '").append(darkMode ? "dark" : "default").append("'});</script>");
+        html.append("<script src=\"https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js\"></script>");
+        html.append("<script>if(window.mermaid){mermaid.initialize({startOnLoad: false, theme: '").append(darkMode ? "dark" : "default").append("'});}</script>");
         html.append("<script>");
         html.append("document.addEventListener('click', function(e) {");
         html.append("  var a = e.target.closest('a');");
@@ -867,12 +867,12 @@ public class AIChatPanel extends JPanel {
         html.append("  btn.innerHTML = '<svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 8.5L6.5 12L13 4\"/></svg>';");
         html.append("}");
         html.append("document.addEventListener('DOMContentLoaded', function() {");
-        html.append("  document.querySelectorAll('pre code.language-mermaid').forEach(function(el){");
+        html.append("  if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){");
         html.append("    var pre=el.parentElement;var div=document.createElement('div');");
         html.append("    div.className='mermaid';div.textContent=el.textContent;");
         html.append("    pre.parentElement.replaceChild(div,pre);});");
-        html.append("  mermaid.run();");
-        html.append("  hljs.highlightAll();");
+        html.append("  mermaid.run();}");
+        html.append("  if(window.hljs){hljs.highlightAll();}");
         html.append("});");
         html.append("</script>");
         html.append("</head><body>");
