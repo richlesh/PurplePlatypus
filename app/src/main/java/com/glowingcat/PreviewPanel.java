@@ -291,6 +291,9 @@ public class PreviewPanel extends JPanel {
                                 .replace("\r", "\\r")
                                 .replace("</", "<\\/");
                         webEngine.executeScript("document.body.innerHTML = '" + escaped + "';");
+                        // Re-highlight code blocks
+                        webEngine.executeScript(
+                            "if(window.hljs){document.querySelectorAll('pre code').forEach(function(el){hljs.highlightElement(el);});}");
                         // Re-typeset MathJax if present
                         webEngine.executeScript(
                             "if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();");
@@ -359,12 +362,17 @@ public class PreviewPanel extends JPanel {
 
         String selColor = preferences != null ? preferences.getSelectionColor() : "#B482FF";
 
+        boolean dark = preferences != null && preferences.isDarkMode();
+
         return "<html><head><meta charset=\"utf-8\">" + baseTag + "<style>"
                 + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; }"
                 + "code, pre { font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"
                 + "::selection { background: " + selColor + "; }"
                 + "</style>"
-                + "<style>" + loadPreviewCss(preferences != null && preferences.isDarkMode()) + "</style>"
+                + "<style>" + loadPreviewCss(dark) + "</style>"
+                + "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/"
+                + (dark ? "github-dark" : "github") + ".min.css\">"
+                + "<script src=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js\"></script>"
                 + "<script>"
                 + "MathJax = {"
                 + "  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },"
@@ -374,8 +382,9 @@ public class PreviewPanel extends JPanel {
                 + "</script>"
                 + "<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>"
                 + "<script src=\"https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js\"></script>"
-                + "<script>mermaid.initialize({startOnLoad: false, theme: '" + (preferences != null && preferences.isDarkMode() ? "dark" : "default") + "'});"
+                + "<script>mermaid.initialize({startOnLoad: false, theme: '" + (dark ? "dark" : "default") + "'});"
                 + "document.addEventListener('DOMContentLoaded', function(){"
+                + "hljs.highlightAll();"
                 + "document.querySelectorAll('pre code.language-mermaid').forEach(function(el){"
                 + "var pre=el.parentElement;var div=document.createElement('div');"
                 + "div.className='mermaid';div.textContent=el.textContent;"
