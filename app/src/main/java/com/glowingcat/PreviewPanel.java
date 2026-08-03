@@ -291,19 +291,19 @@ public class PreviewPanel extends JPanel {
                                 .replace("\r", "\\r")
                                 .replace("</", "<\\/");
                         webEngine.executeScript("document.body.innerHTML = '" + escaped + "';");
-                        // Re-highlight code blocks
-                        webEngine.executeScript(
-                            "if(window.hljs){document.querySelectorAll('pre code').forEach(function(el){hljs.highlightElement(el);});}");
-                        // Re-typeset MathJax if present
-                        webEngine.executeScript(
-                            "if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();");
-                        // Render Mermaid diagrams
+                        // Render Mermaid diagrams (before hljs so they don't get highlighted)
                         webEngine.executeScript(
                             "if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){"
                             + "var pre=el.parentElement;var div=document.createElement('div');"
                             + "div.className='mermaid';div.textContent=el.textContent;"
                             + "pre.parentElement.replaceChild(div,pre);});"
                             + "mermaid.run();}");
+                        // Re-highlight code blocks (skip mermaid)
+                        webEngine.executeScript(
+                            "if(window.hljs){document.querySelectorAll('pre code').forEach(function(el){hljs.highlightElement(el);});}");
+                        // Re-typeset MathJax if present
+                        webEngine.executeScript(
+                            "if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();");
                     } else {
                         // First load: write the full page (head + body) to establish
                         // styles, scripts, and the scroll event listener
@@ -384,12 +384,12 @@ public class PreviewPanel extends JPanel {
                 + "<script src=\"https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js\"></script>"
                 + "<script>mermaid.initialize({startOnLoad: false, theme: '" + (dark ? "dark" : "default") + "'});"
                 + "document.addEventListener('DOMContentLoaded', function(){"
-                + "hljs.highlightAll();"
                 + "document.querySelectorAll('pre code.language-mermaid').forEach(function(el){"
                 + "var pre=el.parentElement;var div=document.createElement('div');"
                 + "div.className='mermaid';div.textContent=el.textContent;"
                 + "pre.parentElement.replaceChild(div,pre);});"
-                + "mermaid.run();});</script>"
+                + "mermaid.run();"
+                + "hljs.highlightAll();});</script>"
                 + (forExport ? "" :
                    "<script>window.addEventListener('scroll', function() {"
                 + "  var ratio = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);"
