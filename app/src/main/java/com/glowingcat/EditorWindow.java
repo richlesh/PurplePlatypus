@@ -7,6 +7,7 @@ import com.glowingcat.aichat.AIChatPanel;
 import com.glowingcat.aichat.AIChatPreferences;
 import com.glowingcat.aichat.AIChatPreferencesDialog;
 import com.glowingcat.aichat.LLMClientFactory;
+import com.glowingcat.aichat.DocumentEditor;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import javax.swing.*;
@@ -839,7 +840,7 @@ public class EditorWindow {
 
         aiPreferences = AIChatPreferences.load();
         aiChatPanel = AIChatPanel.builder()
-            .editor(new com.glowingcat.aichat.DocumentEditor() {
+            .editor(new DocumentEditor() {
                 @Override public String getText() { return editorPane.getText(); }
                 @Override public void setText(String text) {
                     editorPane.setText(text);
@@ -847,13 +848,6 @@ public class EditorWindow {
                 }
             })
             .preferences(aiPreferences)
-            .chatColors(new com.glowingcat.aichat.ChatColors() {
-                @Override public String getUserPromptColor() { return preferences.getUserPromptColor(); }
-                @Override public String getUserTextColor() { return preferences.getUserTextColor(); }
-                @Override public String getAiResponseColor() { return preferences.getAiResponseColor(); }
-                @Override public String getAiTextColor() { return preferences.getAiTextColor(); }
-            })
-            .llmClient(com.glowingcat.aichat.LLMClientFactory.create(aiPreferences))
             .onPromptNag(() -> {
                 if (!LicenseDialog.isLicensed(preferences)) SplashScreen.show();
             })
@@ -2834,28 +2828,18 @@ public class EditorWindow {
     }
 
     public void showAiSettingsDialog() {
-        com.glowingcat.aichat.ChatColors currentColors = new com.glowingcat.aichat.ChatColors() {
-            @Override public String getUserPromptColor() { return preferences.getUserPromptColor(); }
-            @Override public String getUserTextColor() { return preferences.getUserTextColor(); }
-            @Override public String getAiResponseColor() { return preferences.getAiResponseColor(); }
-            @Override public String getAiTextColor() { return preferences.getAiTextColor(); }
-        };
-        AIChatPreferencesDialog dialog = new AIChatPreferencesDialog(frame, aiPreferences, currentColors);
+        AIChatPreferencesDialog dialog = new AIChatPreferencesDialog(frame, aiPreferences);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
             dialog.applyTo(aiPreferences);
+            aiPreferences.setUserPromptColor(dialog.getSelectedUserPromptColor());
+            aiPreferences.setUserTextColor(dialog.getSelectedUserTextColor());
+            aiPreferences.setAiResponseColor(dialog.getSelectedAiResponseColor());
+            aiPreferences.setAiTextColor(dialog.getSelectedAiTextColor());
             aiPreferences.save();
-            // Save colors to app preferences
-            preferences.setUserPromptColor(dialog.getSelectedUserPromptColor());
-            preferences.setUserTextColor(dialog.getSelectedUserTextColor());
-            preferences.setAiResponseColor(dialog.getSelectedAiResponseColor());
-            preferences.setAiTextColor(dialog.getSelectedAiTextColor());
-            preferences.save();
             if (aiChatPanel != null) {
                 aiChatPanel.setLlmClient(LLMClientFactory.create(aiPreferences));
                 aiChatPanel.updateFont();
-                // Colors update automatically since ChatColors reads from preferences
-                aiChatPanel.setChatColors(currentColors);
             }
         }
     }

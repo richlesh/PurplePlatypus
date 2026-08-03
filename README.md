@@ -87,7 +87,7 @@ The Generic vendor supports any LLM API through a YAML configuration file (`~/.g
 - **Model discovery** — Configurable models endpoint with custom field extraction
 - **Variables** — `${AUTH_TOKEN}`, `${MODEL}`, `${PROMPT}`, `${MESSAGES}`, `${MESSAGES_NO_SYSTEM}`, `${SYSTEM_PROMPT}`, `${GUID}`
 
-Sample configurations for Amazon Bedrock, Anthropic, IBM watsonx.ai, Microsoft Azure, and OpenAI are included in the `config/` folder.
+Sample configurations for Amazon Bedrock, Anthropic, IBM watsonx.ai, Microsoft Azure, and OpenAI are included in the `aichat/src/main/resources/config/` folder.
 
 ## Export Formats
 

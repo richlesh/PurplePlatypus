@@ -12,11 +12,35 @@
     <name>PurplePlatypus Parent</name>
 
     <properties>
+        <app.version>1.6.0</app.version>
+        <copyright.years>2025–2026</copyright.years>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <commonmark.version>0.24.0</commonmark.version>
-        <javafx.version>24</javafx.version>
+        <javafx.version>21.0.7</javafx.version>
+        <javafx.scope>provided</javafx.scope>
     </properties>
+
+    <profiles>
+        <!-- Active by default for local development — makes JavaFX available at runtime -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <javafx.scope>compile</javafx.scope>
+            </properties>
+        </profile>
+        <!-- Use for release/packaging builds: mvn -P release -->
+        <profile>
+            <id>release</id>
+            <properties>
+                <javafx.scope>provided</javafx.scope>
+                <javafx.platform>linux</javafx.platform>
+            </properties>
+        </profile>
+    </profiles>
 
     <modules>
         <module>aichat</module>
