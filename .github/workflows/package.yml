@@ -192,7 +192,6 @@ jobs:
           # Include demo.textpack in lib for Windows installer
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp demo.textpack lib/
-            cp -R config lib/
           fi
           # Ensure WiX is on PATH for Windows builds
           if [ -d "$GITHUB_WORKSPACE/wix" ]; then
@@ -244,9 +243,6 @@ jobs:
 
             # Include demo.textpack in the app image
             cp demo.textpack PurplePlatypus/
-
-            # Include config folder in the app image
-            cp -R config PurplePlatypus/
 
             # Ensure icon is in the app image for the second jpackage pass
             cp ${{ matrix.icon }} PurplePlatypus/lib/PurplePlatypus.png
@@ -328,10 +324,6 @@ jobs:
                   '  mkdir -p "$DESKTOP"' \
                   '  cp /opt/purpleplatypus/demo.textpack "$DESKTOP/" 2>/dev/null || true' \
                   '  chown "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo.textpack" 2>/dev/null || true' \
-                  '  if [ -d /opt/purpleplatypus/config ]; then' \
-                  '    cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs" 2>/dev/null || true' \
-                  '    chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/PurplePlatypus Configs" 2>/dev/null || true' \
-                  '  fi' \
                   'fi' \
                   'exit 0' > "$TMPDIR/DEBIAN/postinst"
                 chmod 755 "$TMPDIR/DEBIAN/postinst"
@@ -419,10 +411,6 @@ jobs:
                   '    mkdir -p "$DESKTOP"' \
                   '    cp /opt/purpleplatypus/demo.textpack "$DESKTOP/" 2>/dev/null || true' \
                   '    chown "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo.textpack" 2>/dev/null || true' \
-                  '    if [ -d /opt/purpleplatypus/config ]; then' \
-                  '      cp -R /opt/purpleplatypus/config "$DESKTOP/PurplePlatypus Configs" 2>/dev/null || true' \
-                  '      chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/PurplePlatypus Configs" 2>/dev/null || true' \
-                  '    fi' \
                   '  fi' \
                   'fi' \
                   "" \
@@ -517,7 +505,6 @@ jobs:
           ln -s /Applications "$DMG_DIR/Applications"
           cp app/src/main/resources/app_icon.icns "$DMG_DIR/.VolumeIcon.icns"
           cp demo.textpack "$DMG_DIR/"
-          cp -R config "$DMG_DIR/"
 
           hdiutil create -volname PurplePlatypus -srcfolder "$DMG_DIR" -ov -format UDRW /tmp/purpleplatypus-rw.dmg
           hdiutil attach /tmp/purpleplatypus-rw.dmg -mountpoint /tmp/dmg-vol
@@ -576,13 +563,6 @@ jobs:
           for f in *.msi; do [ -f "$f" ] && mv "$f" "${f%.msi}-${{ matrix.arch }}.msi" || true; done
           for f in *.exe; do [ -f "$f" ] && mv "$f" "${f%.exe}-${{ matrix.arch }}.exe" || true; done
 
-      - name: Create config zip (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          cp -R config "PurplePlatypus Configs"
-          7z a "PurplePlatypus-Configs.zip" "PurplePlatypus Configs"
-
       - name: Upload package artifact
         uses: actions/upload-artifact@v7
         with:
@@ -593,7 +573,6 @@ jobs:
             *.exe
             *.deb
             *.rpm
-            PurplePlatypus-Configs.zip
 
       - name: Attach to release
         if: inputs.version != ''
@@ -607,7 +586,6 @@ jobs:
             *.exe
             *.deb
             *.rpm
-            PurplePlatypus-Configs.zip
 
   java-zip:
     runs-on: ubuntu-22.04
