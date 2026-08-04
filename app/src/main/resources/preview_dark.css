@@ -96,8 +96,25 @@ tr:nth-child(odd) {
 
 img {
     max-width: 75%;
-    display: block;
-    margin: 12px auto;
+    display: inline;
+    margin: 12px 0;
+}
+
+figure {
+    margin: 16px 0;
+    padding: 0;
+    text-align: center;
+}
+
+figure img {
+    display: inline;
+}
+
+figcaption {
+    font-style: italic;
+    color: #999999;
+    margin-top: 6px;
+    font-size: 0.9em;
 }
 
 a {

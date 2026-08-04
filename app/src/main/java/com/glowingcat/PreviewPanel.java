@@ -81,7 +81,10 @@ public class PreviewPanel extends JPanel {
                 YamlFrontMatterExtension.create()
         );
         parser = Parser.builder().extensions(extensions).build();
-        renderer = HtmlRenderer.builder().extensions(extensions).build();
+        renderer = HtmlRenderer.builder()
+                .extensions(extensions)
+                .nodeRendererFactory(new FigureNodeRenderer.Factory())
+                .build();
 
         // Try to initialize JavaFX WebView; fall back to JEditorPane if it fails
         if (initWebView()) {

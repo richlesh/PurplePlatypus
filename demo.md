@@ -136,13 +136,32 @@ Cells can also contain **formatting**, `code`, and [links](https://glowingcat.co
 
 Image Support
 
+
+
+<div style="text-align: center;">
+
 ![Purple Platypus](app/src/main/resources/app_icon_256.png)
+
+*Default size*
+
+</div>
 
 Image Style Attributes
 
+<div style="text-align: center;">
+
 ![Purple Platypus](app/src/main/resources/app_icon_256.png){width=25%}
+*width=25%*
+
+</div>
+
+<div style="text-align: center;">
 
 ![Purple Platypus](app/src/main/resources/app_icon_256.png){width=100}
+*width=100*
+
+</div>
+
 ---
 
 ## 9. Math Notation (LaTeX)
@@ -257,7 +276,8 @@ share your work wherever it needs to go.
 | **Markdown** | `.md`     | Keeping the raw source, portable and editable |
 | **RTF** | `.rtf` | Rich Text Format |
 | **Plain Text** | `.txt` | Plain Text Format (loses formatting) |
-| **TextBundle** | `.textbundle` | Bundle of Markdown file and images |
+| **TextBundle** | `.textbundle` | Bundle/Folder of Markdown file and images |
+| **TextPack** | `.textpack` | ZIP file of Markdown file and images |
 
 ### HTML
 

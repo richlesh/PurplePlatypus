@@ -399,10 +399,15 @@ public class EditorWindow {
         insItem.addActionListener(e -> wrapSelection("++", "++"));
 
         markdownMenu.add(boldItem);
+
+        JMenuItem centerItem = new JMenuItem("Center");
+        centerItem.addActionListener(e -> wrapBlock("<div style=\"text-align: center;\">\n\n", "\n\n</div>"));
+        markdownMenu.add(centerItem);
+
         markdownMenu.add(italicItem);
         markdownMenu.add(strikethroughItem);
-        markdownMenu.add(superscriptItem);
         markdownMenu.add(subscriptItem);
+        markdownMenu.add(superscriptItem);
         markdownMenu.add(insItem);
         markdownMenu.addSeparator();
 
@@ -2616,7 +2621,6 @@ public class EditorWindow {
         String altText = selectedText != null ? selectedText : "";
         String imgPath = "";
         String imgWidth = "";
-        String caption = "";
         boolean center = false;
         int replaceStart = selStart, replaceEnd = selEnd;
 
@@ -2648,15 +2652,6 @@ public class EditorWindow {
                                 }
                             }
                             attrEnd = searchFrom + braceClose + 1;
-                        }
-                    }
-                    // Check for *caption* after the image markup
-                    int afterImg = attrEnd - searchFrom;
-                    if (afterImg < region.length() && region.charAt(afterImg) == '*') {
-                        int captionEnd = region.indexOf('*', afterImg + 1);
-                        if (captionEnd >= 0) {
-                            caption = region.substring(afterImg + 1, captionEnd);
-                            attrEnd = searchFrom + captionEnd + 1;
                         }
                     }
                     // Check if wrapped in <div ...>...</div>
@@ -2696,7 +2691,7 @@ public class EditorWindow {
             idx = bb + 1;
         }
 
-        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, imgWidth, caption, center, currentFile);
+        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, imgWidth, center, currentFile);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
             String imgMarkdown = "![" + dialog.getAltText() + "](" + dialog.getImagePath() + ")";
@@ -2704,17 +2699,12 @@ public class EditorWindow {
             if (!width.isEmpty()) {
                 imgMarkdown += "{width=" + width + "}";
             }
-            String dialogCaption = dialog.getCaption();
             boolean dialogCenter = dialog.isCenter();
 
             String markdown;
-            if (dialogCenter || !dialogCaption.isEmpty()) {
-                // Use div-wrapped template
-                String divOpen = dialogCenter
-                    ? "<div style=\"text-align: center;\">\n\n"
-                    : "<div>\n\n";
-                String captionPart = dialogCaption.isEmpty() ? "" : "*" + dialogCaption + "*";
-                markdown = divOpen + imgMarkdown + captionPart + "\n\n</div>";
+            if (dialogCenter) {
+                // Center: wrap in div
+                markdown = "<div style=\"text-align: center;\">\n\n" + imgMarkdown + "\n\n</div>";
             } else {
                 markdown = imgMarkdown;
             }
