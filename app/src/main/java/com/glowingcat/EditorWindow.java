@@ -80,6 +80,7 @@ public class EditorWindow {
     private JMenu recentsMenu;
     private JMenuItem convertLineEndingsItem;
     private JMenuItem saveItem;
+    private JMenuItem saveAsItem;
     private JLabel statsLabel;
 
     /** Shared preferences instance across all windows. */
@@ -219,7 +220,7 @@ public class EditorWindow {
         saveItem.addActionListener(e -> saveFile());
         this.saveItem = saveItem;
 
-        JMenuItem saveAsItem = new JMenuItem("Save As...");
+        saveAsItem = new JMenuItem("Save As...");
         saveAsItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         saveAsItem.addActionListener(e -> saveFileAs());
 
