@@ -845,12 +845,11 @@ public class AIChatPanel extends JPanel {
         html.append("  svg: { fontCache: 'global' }");
         html.append("};");
         html.append("</script>");
-        html.append("<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>");
-        html.append("<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/")
-            .append(darkMode ? "github-dark" : "github").append(".min.css\">");
-        html.append("<script src=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js\"></script>");
-        html.append("<script src=\"https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js\"></script>");
+        html.append("<style>").append(WebResources.highlightCss(darkMode)).append("</style>");
+        html.append("<script>").append(WebResources.highlightJs()).append("</script>");
+        html.append("<script>").append(WebResources.mermaidJs()).append("</script>");
         html.append("<script>if(window.mermaid){mermaid.initialize({startOnLoad: false, theme: '").append(darkMode ? "dark" : "default").append("'});}</script>");
+        html.append("<script>").append(WebResources.mathjaxJs()).append("</script>");
         html.append("<script>");
         html.append("document.addEventListener('click', function(e) {");
         html.append("  var a = e.target.closest('a');");

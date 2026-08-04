@@ -26,6 +26,8 @@ public class ImageDialog extends JDialog {
     private final JTextField altTextField;
     private final JTextField pathField;
     private final JTextField widthField;
+    private final JTextField captionField;
+    private final JCheckBox centerCheckBox;
     private final JFrame ownerFrame;
     private final File documentFile;
     private boolean confirmed = false;
@@ -64,6 +66,21 @@ public class ImageDialog extends JDialog {
      * @param documentFile  the current document file (used to compute relative paths), may be null
      */
     public ImageDialog(JFrame owner, String altText, String existingPath, String existingWidth, File documentFile) {
+        this(owner, altText, existingPath, existingWidth, "", false, documentFile);
+    }
+
+    /**
+     * Creates the Image dialog with pre-filled image path, width, caption, and center state.
+     *
+     * @param owner           the parent frame
+     * @param altText         the alt text to pre-fill, may be null
+     * @param existingPath    the existing image path to pre-fill, may be null or empty
+     * @param existingWidth   the existing width value to pre-fill, may be null or empty
+     * @param existingCaption the existing caption to pre-fill, may be null or empty
+     * @param existingCenter  whether the image is centered
+     * @param documentFile    the current document file (used to compute relative paths), may be null
+     */
+    public ImageDialog(JFrame owner, String altText, String existingPath, String existingWidth, String existingCaption, boolean existingCenter, File documentFile) {
         super(owner, "Insert Image", true);
         this.ownerFrame = owner;
         this.documentFile = documentFile;
@@ -152,6 +169,33 @@ public class ImageDialog extends JDialog {
         }
         contentPanel.add(widthField, gbc);
 
+        // Caption field
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 0;
+        contentPanel.add(new JLabel("Caption:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        captionField = new JTextField(30);
+        if (existingCaption != null && !existingCaption.isEmpty()) {
+            captionField.setText(existingCaption);
+        }
+        contentPanel.add(captionField, gbc);
+
+        // Center checkbox
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.gridwidth = 3;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 0;
+        centerCheckBox = new JCheckBox("Center", existingCenter);
+        contentPanel.add(centerCheckBox, gbc);
+
         add(contentPanel, BorderLayout.CENTER);
 
         // Buttons
@@ -238,5 +282,15 @@ public class ImageDialog extends JDialog {
             return "";
         }
         return widthField.getText().trim();
+    }
+
+    /** Returns the caption entered by the user, or empty string if blank. */
+    public String getCaption() {
+        return captionField.getText().trim();
+    }
+
+    /** Returns whether the Center checkbox is selected. */
+    public boolean isCenter() {
+        return centerCheckBox.isSelected();
     }
 }

@@ -2,6 +2,7 @@
  * (c) 2026 Glowing Cat Software
  */
 package com.glowingcat;
+import com.glowingcat.aichat.WebResources;
 
 import org.commonmark.Extension;
 import org.commonmark.ext.autolink.AutolinkExtension;
@@ -55,6 +56,11 @@ public class PreviewPanel extends JPanel {
     private boolean webViewInitialLoadDone = false;
     // The last head/style content used, to detect when a full reload is needed
     private String lastHeadHtml = "";
+
+    // Track which libraries were loaded in the current page to detect when a full reload is needed
+    private boolean loadedMathJax = false;
+    private boolean loadedHighlightJs = false;
+    private boolean loadedMermaid = false;
 
     // Strong reference to prevent GC of the JavaScript bridge object
     private ScrollBridge scrollBridge;
@@ -272,18 +278,32 @@ public class PreviewPanel extends JPanel {
             html = sb.toString();
         }
 
-        String styledHtml = getStyledHtml(html, currentFile, preferences, false);
+        String styledHtml = getStyledHtml(html, currentFile, preferences, false, markdown);
         lastHtml = styledHtml;
+
+        // Detect which libraries are needed
+        boolean needsMathJax = markdown.contains("$");
+        boolean needsMermaid = markdown.contains("```mermaid");
+        boolean needsHighlightJs = java.util.regex.Pattern.compile("```(?!mermaid)\\w").matcher(markdown).find();
 
         if (useWebView) {
             final String bodyContent = html;
+            final String fullHtml = styledHtml;
+            // Check if a full reload is needed because new libraries are required
+            final boolean forceReload = (needsMathJax && !loadedMathJax)
+                    || (needsHighlightJs && !loadedHighlightJs)
+                    || (needsMermaid && !loadedMermaid);
             // Capture scroll ratio on the EDT before switching to the FX thread
             final double scrollRatio = (scrollRatioSupplier != null) ? scrollRatioSupplier.getAsDouble() : -1;
+            // Update loaded state
+            if (needsMathJax) loadedMathJax = true;
+            if (needsHighlightJs) loadedHighlightJs = true;
+            if (needsMermaid) loadedMermaid = true;
             javafx.application.Platform.runLater(() -> {
                 if (webEngine != null) {
                     // After the initial page load, update only the body via JavaScript
                     // to avoid resetting scroll position (which causes flashing)
-                    if (webViewInitialLoadDone) {
+                    if (webViewInitialLoadDone && !forceReload) {
                         String escaped = bodyContent
                                 .replace("\\", "\\\\")
                                 .replace("'", "\\'")
@@ -305,18 +325,19 @@ public class PreviewPanel extends JPanel {
                         webEngine.executeScript(
                             "if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();");
                     } else {
-                        // First load: write the full page (head + body) to establish
-                        // styles, scripts, and the scroll event listener
+                        // First load or forced reload: write the full page (head + body)
+                        // to establish styles, scripts, and the scroll event listener
                         pendingScrollRatio = scrollRatio;
                         try {
                             if (tempHtmlFile == null) {
                                 tempHtmlFile = java.io.File.createTempFile("purpleplatypus_preview", ".html");
                                 tempHtmlFile.deleteOnExit();
                             }
-                            java.nio.file.Files.writeString(tempHtmlFile.toPath(), styledHtml, java.nio.charset.StandardCharsets.UTF_8);
+                            java.nio.file.Files.writeString(tempHtmlFile.toPath(), fullHtml, java.nio.charset.StandardCharsets.UTF_8);
+                            webViewInitialLoadDone = false;
                             webEngine.load(tempHtmlFile.toURI().toString());
                         } catch (Exception ex) {
-                            webEngine.loadContent(styledHtml);
+                            webEngine.loadContent(fullHtml);
                         }
                     }
                 }
@@ -344,8 +365,18 @@ public class PreviewPanel extends JPanel {
 
     /**
      * Builds styled HTML from the given body content.
+     * When called for export, includes all libraries (MathJax, highlight.js, mermaid).
      */
     public String getStyledHtml(String bodyHtml, File currentFile, Preferences preferences, boolean forExport) {
+        return getStyledHtml(bodyHtml, currentFile, preferences, forExport, null);
+    }
+
+    /**
+     * Builds styled HTML from the given body content.
+     * When markdown source is provided, conditionally includes libraries based on content.
+     * When forExport is true or markdown is null, includes all libraries.
+     */
+    public String getStyledHtml(String bodyHtml, File currentFile, Preferences preferences, boolean forExport, String markdown) {
         String fontFamily = preferences != null ? preferences.getPreviewFontFamily() : "SansSerif";
         int fontSize = preferences != null ? preferences.getPreviewFontSize() : 14;
         String codeFontFamily = preferences != null ? preferences.getPreviewCodeFontFamily() : "Monospaced";
@@ -364,52 +395,111 @@ public class PreviewPanel extends JPanel {
 
         boolean dark = preferences != null && preferences.isDarkMode();
 
-        return "<html><head><meta charset=\"utf-8\">" + baseTag + "<style>"
-                + "body { font-family: '" + fontFamily + "', sans-serif; font-size: " + fontSize + "pt; }"
-                + "code, pre { font-family: '" + codeFontFamily + "', monospace; font-size: " + codeFontSize + "pt; }"
-                + "::selection { background: " + selColor + "; }"
-                + "</style>"
-                + "<style>" + loadPreviewCss(dark) + "</style>"
-                + "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/"
-                + (dark ? "github-dark" : "github") + ".min.css\">"
-                + "<script src=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js\"></script>"
-                + "<script>"
-                + "MathJax = {"
-                + "  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },"
-                + "  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },"
-                + "  svg: { fontCache: 'global' }"
-                + "};"
-                + "</script>"
-                + "<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>"
-                + "<script src=\"https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js\"></script>"
-                + "<script>if(window.mermaid){mermaid.initialize({startOnLoad: false, theme: '" + (dark ? "dark" : "default") + "'});}"
-                + "document.addEventListener('DOMContentLoaded', function(){"
-                + "if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){"
-                + "var pre=el.parentElement;var div=document.createElement('div');"
-                + "div.className='mermaid';div.textContent=el.textContent;"
-                + "pre.parentElement.replaceChild(div,pre);});"
-                + "mermaid.run();}"
-                + "if(window.hljs){hljs.highlightAll();}});</script>"
-                + (forExport ? "" :
-                   "<script>window.addEventListener('scroll', function() {"
-                + "  var ratio = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);"
-                + "  if(window.java) window.java.onScroll(ratio);"
-                + "});"
-                + "document.addEventListener('click', function(e) {"
-                + "  var a = e.target.closest('a');"
-                + "  if(a && a.href && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {"
-                + "    e.preventDefault();"
-                + "    if(window.java) window.java.openLink(a.href);"
-                + "  }"
-                + "});"
-                + "document.addEventListener('contextmenu', function(e) {"
-                + "  var sel = window.getSelection().toString();"
-                + "  if(sel && sel.trim().length > 0 && window.java) {"
-                + "    e.preventDefault();"
-                + "    window.java.findInSource(sel.trim());"
-                + "  }"
-                + "});</script>")
-                + "</head><body>" + bodyHtml + "</body></html>";
+        // Detect which libraries are needed based on markdown content
+        boolean needsMathJax;
+        boolean needsHighlightJs;
+        boolean needsMermaid;
+        if (markdown == null) {
+            // When markdown is unavailable, include everything
+            needsMathJax = true;
+            needsHighlightJs = true;
+            needsMermaid = true;
+        } else {
+            needsMathJax = markdown.contains("$");
+            needsMermaid = markdown.contains("```mermaid");
+            // Needs highlight.js if there's a fenced code block that isn't mermaid
+            needsHighlightJs = java.util.regex.Pattern.compile("```(?!mermaid)\\w").matcher(markdown).find();
+        }
+
+        String title = "";
+        if (currentFile != null) {
+            title = currentFile.getName();
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html><head>");
+        sb.append("<title>").append(title).append("</title>");
+        sb.append("<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">");
+        sb.append(baseTag).append("<style>");
+        sb.append("body { font-family: '").append(fontFamily).append("', sans-serif; font-size: ").append(fontSize).append("pt; }");
+        sb.append("code, pre { font-family: '").append(codeFontFamily).append("', monospace; font-size: ").append(codeFontSize).append("pt; }");
+        sb.append("::selection { background: ").append(selColor).append("; }");
+        sb.append("</style>");
+        sb.append("<style>").append(loadPreviewCss(dark)).append("</style>");
+
+        if (needsHighlightJs) {
+            if (forExport) {
+                sb.append("<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/")
+                  .append(dark ? "github-dark" : "github").append(".min.css\">");
+                sb.append("<script src=\"https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js\"></script>");
+            } else {
+                sb.append("<style>").append(WebResources.highlightCss(dark)).append("</style>");
+                sb.append("<script>").append(WebResources.highlightJs()).append("</script>");
+            }
+        }
+        if (needsMermaid) {
+            if (forExport) {
+                sb.append("<script src=\"https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js\"></script>");
+            } else {
+                sb.append("<script>").append(WebResources.mermaidJs()).append("</script>");
+            }
+        }
+        if (needsMathJax) {
+            sb.append("<script>");
+            sb.append("MathJax = {");
+            sb.append("  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },");
+            sb.append("  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },");
+            sb.append("  svg: { fontCache: 'global' }");
+            sb.append("};");
+            sb.append("</script>");
+            if (forExport) {
+                sb.append("<script src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js\" async></script>");
+            } else {
+                sb.append("<script>").append(WebResources.mathjaxJs()).append("</script>");
+            }
+        }
+
+        sb.append("<script>");
+        if (needsMermaid) {
+            sb.append("if(window.mermaid){mermaid.initialize({startOnLoad: false, theme: '").append(dark ? "dark" : "default").append("'});}");
+        }
+        sb.append("document.addEventListener('DOMContentLoaded', function(){");
+        if (needsMermaid) {
+            sb.append("if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){");
+            sb.append("var pre=el.parentElement;var div=document.createElement('div');");
+            sb.append("div.className='mermaid';div.textContent=el.textContent;");
+            sb.append("pre.parentElement.replaceChild(div,pre);});");
+            sb.append("mermaid.run();}");
+        }
+        if (needsHighlightJs) {
+            sb.append("if(window.hljs){hljs.highlightAll();}");
+        }
+        sb.append("});");
+        sb.append("</script>");
+
+        if (!forExport) {
+            sb.append("<script>window.addEventListener('scroll', function() {");
+            sb.append("  var ratio = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);");
+            sb.append("  if(window.java) window.java.onScroll(ratio);");
+            sb.append("});");
+            sb.append("document.addEventListener('click', function(e) {");
+            sb.append("  var a = e.target.closest('a');");
+            sb.append("  if(a && a.href && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {");
+            sb.append("    e.preventDefault();");
+            sb.append("    if(window.java) window.java.openLink(a.href);");
+            sb.append("  }");
+            sb.append("});");
+            sb.append("document.addEventListener('contextmenu', function(e) {");
+            sb.append("  var sel = window.getSelection().toString();");
+            sb.append("  if(sel && sel.trim().length > 0 && window.java) {");
+            sb.append("    e.preventDefault();");
+            sb.append("    window.java.findInSource(sel.trim());");
+            sb.append("  }");
+            sb.append("});</script>");
+        }
+
+        sb.append("</head><body>").append(bodyHtml).append("</body></html>");
+        return sb.toString();
     }
 
     /**

@@ -1767,7 +1767,7 @@ public class EditorWindow {
             if (!outFile.getName().contains(".")) {
                 outFile = new File(outFile.getAbsolutePath() + ".html");
             }
-            String html = previewPanel.getStyledHtml(getRenderedHtml(), null, preferences, true);
+            String html = previewPanel.getStyledHtml(getRenderedHtml(), currentFile, preferences, true, editorPane.getText());
             try {
                 Files.writeString(outFile.toPath(), html, StandardCharsets.UTF_8);
             } catch (IOException ex) {
@@ -2616,6 +2616,8 @@ public class EditorWindow {
         String altText = selectedText != null ? selectedText : "";
         String imgPath = "";
         String imgWidth = "";
+        String caption = "";
+        boolean center = false;
         int replaceStart = selStart, replaceEnd = selEnd;
 
         int searchFrom = Math.max(0, selStart - 200);
@@ -2648,10 +2650,45 @@ public class EditorWindow {
                             attrEnd = searchFrom + braceClose + 1;
                         }
                     }
-                    if (selStart <= attrEnd && selEnd >= absStart) {
+                    // Check for *caption* after the image markup
+                    int afterImg = attrEnd - searchFrom;
+                    if (afterImg < region.length() && region.charAt(afterImg) == '*') {
+                        int captionEnd = region.indexOf('*', afterImg + 1);
+                        if (captionEnd >= 0) {
+                            caption = region.substring(afterImg + 1, captionEnd);
+                            attrEnd = searchFrom + captionEnd + 1;
+                        }
+                    }
+                    // Check if wrapped in <div ...>...</div>
+                    int divStart = absStart;
+                    int divEnd = attrEnd;
+                    // Look backwards for <div
+                    String before = fullText.substring(Math.max(0, absStart - 100), absStart);
+                    int divOpen = before.lastIndexOf("<div");
+                    if (divOpen >= 0) {
+                        int divOpenAbs = Math.max(0, absStart - 100) + divOpen;
+                        int gtPos = fullText.indexOf('>', divOpenAbs);
+                        if (gtPos >= 0 && gtPos < absStart) {
+                            // Check for style="text-align: center;"
+                            String divTag = fullText.substring(divOpenAbs, gtPos + 1);
+                            if (divTag.contains("text-align: center") || divTag.contains("text-align:center")) {
+                                center = true;
+                            }
+                            divStart = divOpenAbs;
+                        }
+                    }
+                    // Look forwards for </div>
+                    String after = fullText.substring(attrEnd, Math.min(fullText.length(), attrEnd + 50));
+                    int divClose = after.indexOf("</div>");
+                    if (divClose >= 0 && divStart < absStart) {
+                        divEnd = attrEnd + divClose + 6;
+                    }
+
+                    if (selStart <= divEnd && selEnd >= divStart) {
                         altText = region.substring(bb + 2, bc);
                         imgPath = region.substring(bc + 2, pc);
-                        replaceStart = absStart; replaceEnd = attrEnd;
+                        replaceStart = divStart;
+                        replaceEnd = divEnd;
                         break;
                     }
                 }
@@ -2659,13 +2696,27 @@ public class EditorWindow {
             idx = bb + 1;
         }
 
-        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, imgWidth, currentFile);
+        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, imgWidth, caption, center, currentFile);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
-            String markdown = "![" + dialog.getAltText() + "](" + dialog.getImagePath() + ")";
+            String imgMarkdown = "![" + dialog.getAltText() + "](" + dialog.getImagePath() + ")";
             String width = dialog.getImageWidth();
             if (!width.isEmpty()) {
-                markdown += "{width=" + width + "}";
+                imgMarkdown += "{width=" + width + "}";
+            }
+            String dialogCaption = dialog.getCaption();
+            boolean dialogCenter = dialog.isCenter();
+
+            String markdown;
+            if (dialogCenter || !dialogCaption.isEmpty()) {
+                // Use div-wrapped template
+                String divOpen = dialogCenter
+                    ? "<div style=\"text-align: center;\">\n\n"
+                    : "<div>\n\n";
+                String captionPart = dialogCaption.isEmpty() ? "" : "*" + dialogCaption + "*";
+                markdown = divOpen + imgMarkdown + captionPart + "\n\n</div>";
+            } else {
+                markdown = imgMarkdown;
             }
             editorPane.setSelectionStart(replaceStart);
             editorPane.setSelectionEnd(replaceEnd);
