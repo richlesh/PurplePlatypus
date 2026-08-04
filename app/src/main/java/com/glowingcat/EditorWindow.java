@@ -257,6 +257,7 @@ public class EditorWindow {
         exportTextBundleItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextBundleItem.addActionListener(e -> exportTextBundle());
         JMenuItem exportTextPackItem = new JMenuItem("TextPack...");
+        exportTextPackItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Z, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextPackItem.addActionListener(e -> exportTextPack());
         JMenuItem exportRtfItem = new JMenuItem("RTF...");
         exportRtfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
@@ -401,6 +402,7 @@ public class EditorWindow {
         markdownMenu.add(boldItem);
 
         JMenuItem centerItem = new JMenuItem("Center");
+        centerItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         centerItem.addActionListener(e -> wrapBlock("<div style=\"text-align: center;\">\n\n", "\n\n</div>"));
         markdownMenu.add(centerItem);
 
@@ -2337,7 +2339,10 @@ public class EditorWindow {
                 tablesExt, strikethroughExt, taskListExt, autolinkExt, footnotesExt,
                 headingAnchorExt, imageAttrExt, insExt, yamlExt);
         org.commonmark.parser.Parser parser = org.commonmark.parser.Parser.builder().extensions(extensions).build();
-        org.commonmark.renderer.html.HtmlRenderer renderer = org.commonmark.renderer.html.HtmlRenderer.builder().extensions(extensions).build();
+        org.commonmark.renderer.html.HtmlRenderer renderer = org.commonmark.renderer.html.HtmlRenderer.builder()
+                .extensions(extensions)
+                .nodeRendererFactory(new FigureNodeRenderer.Factory())
+                .build();
         org.commonmark.node.Node document = parser.parse(markdown);
         String html = renderer.render(document);
 

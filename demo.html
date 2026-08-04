@@ -1,4 +1,4 @@
-<html><head><meta charset="utf-8"><style>body { font-family: 'Calibri', sans-serif; font-size: 16pt; }code, pre { font-family: 'JetBrains Mono NL', monospace; font-size: 12pt; }::selection { background: #b482ff; }</style><style>/* Preview Panel Styles — Dark Mode */
+<!DOCTYPE html><html><head><title>demo.md</title><meta http-equiv="content-type" content="text/html; charset=utf-8"><base href="file:/Users/rich/Desktop/Resources/Glowing%20Cat%20Projects/PurplePlatypus/"><style>body { font-family: 'Calibri', sans-serif; font-size: 16pt; }code, pre { font-family: 'JetBrains Mono NL', monospace; font-size: 12pt; }::selection { background: #b482ff; }</style><style>/* Preview Panel Styles */
 
 ::-webkit-scrollbar {
     width: 11px;
@@ -6,16 +6,16 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: #1e1e1e;
+    background: #f0f0f0;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #555;
+    background: #c0c0c0;
     border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #777;
+    background: #a0a0a0;
 }
 
 body {
@@ -23,24 +23,22 @@ body {
     padding-right: 18px;
     line-height: 1.6;
     overflow-x: hidden;
-    background: #1e1e1e;
-    color: #d4d4d4;
 }
 
 h1, h2, h3 {
-    color: #e0e0e0;
+    color: #333;
 }
 
 code {
-    color: #d4d4d4;
-    background: #2d2d2d;
+    color: #333333;
+    background: #f5eee2;
     padding: 2px 6px;
     border-radius: 3px;
 }
 
 pre {
-    color: #d4d4d4;
-    background: #2d2d2d;
+    color: #333333;
+    background: #f5eee2;
     padding: 10px;
     border-radius: 5px;
     overflow-x: auto;
@@ -53,21 +51,26 @@ pre code {
     border-radius: 0;
 }
 
+pre code.hljs {
+    background: inherit;
+    padding: 0;
+}
+
 blockquote {
-    border-left: 4px solid #555;
+    border-left: 4px solid #ccc;
     margin-left: 0;
     padding-left: 16px;
-    color: #aaa;
+    color: #333333;
 }
 
 table {
-    color: #d4d4d4;
+    color: #333333;
     border-collapse: collapse;
     margin: 12px auto;
 }
 
 th, td {
-    border: 1px solid #444;
+    border: 1px solid #cbcbcb;
     padding: 6px 12px;
 }
 
@@ -76,26 +79,43 @@ td[align=center], th[align=center] { text-align: center; }
 td[align=right], th[align=right] { text-align: right; }
 
 th {
-    background-color: #2d2d2d;
+    color: #ffffff;
+    background-color: #888888;
     font-weight: bold;
 }
 
 tr:nth-child(even) {
-    background-color: #252525;
+    background-color: #f7f7f7;
 }
 
 tr:nth-child(odd) {
-    background-color: #1e1e1e;
+    background-color: #ffffff;
 }
 
 img {
     max-width: 75%;
-    display: block;
-    margin: 12px auto;
+    display: inline;
+    margin: 12px 0;
+}
+
+figure {
+    margin: 16px 0;
+    padding: 0;
+}
+
+figure img {
+    display: inline;
+}
+
+figcaption {
+    font-style: italic;
+    color: #666666;
+    margin-top: 6px;
+    font-size: 0.9em;
 }
 
 a {
-    color: #6db3f2;
+    color: #0366d6;
 }
 
 li {
@@ -136,7 +156,7 @@ mjx-container[display=true] {
 mjx-container svg {
     overflow: visible;
 }
-</style><script>MathJax = {  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },  svg: { fontCache: 'global' }};</script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script><script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script><script>mermaid.initialize({startOnLoad: false, theme: 'dark'});document.addEventListener('DOMContentLoaded', function(){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){var pre=el.parentElement;var div=document.createElement('div');div.className='mermaid';div.textContent=el.textContent;pre.parentElement.replaceChild(div,pre);});mermaid.run();});</script></head><body><h1 id="markdown-feature-demo">Markdown Feature Demo</h1>
+</style><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css"><script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script><script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js"></script><script>MathJax = {  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },  svg: { fontCache: 'global' }};</script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script><script>if(window.mermaid){mermaid.initialize({startOnLoad: false, theme: 'default'});}document.addEventListener('DOMContentLoaded', function(){if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){var pre=el.parentElement;var div=document.createElement('div');div.className='mermaid';div.textContent=el.textContent;pre.parentElement.replaceChild(div,pre);});mermaid.run();}if(window.hljs){hljs.highlightAll();}});</script></head><body><h1 id="markdown-feature-demo">Markdown Feature Demo</h1>
 <p>Welcome to a comprehensive demonstration of <strong>Markdown</strong> features supported by PurplePlatypus.</p>
 <hr />
 <h2 id="1-headings">1. Headings</h2>
@@ -149,55 +169,96 @@ mjx-container svg {
 <hr />
 <h2 id="2-text-formatting">2. Text Formatting</h2>
 <ul>
-<li><strong>Bold text</strong> using double asterisks</li>
-<li><em>Italic text</em> using single asterisks</li>
-<li><em><strong>Bold and italic</strong></em> combined</li>
-<li><del>Strikethrough text</del> using tildes</li>
-<li><ins>Underlined text</ins> using double plus</li>
-<li><code>Inline code</code> using backticks</li>
-<li>Regular text with a line break</li>
+<li>
+<p><strong>Bold text</strong> using double asterisks</p>
+</li>
+<li>
+<p><em>Italic text</em> using single asterisks</p>
+</li>
+<li>
+<p><em><strong>Bold and italic</strong></em> combined</p>
+</li>
+<li>
+<p><del>Strikethrough text</del> using tildes</p>
+</li>
+<li>
+<p><ins>Underlined text</ins> using double plus</p>
+</li>
+<li>
+<p><code>Inline code</code> using backticks</p>
+</li>
+<li>
+<p>Regular text with a line break</p>
+</li>
 </ul>
 <hr />
 <h2 id="3-lists">3. Lists</h2>
 <h3 id="unordered-list">Unordered List</h3>
 <ul>
-<li>First item</li>
-<li>Second item
+<li>
+<p>First item</p>
+</li>
+<li>
+<p>Second item</p>
 <ul>
-<li>Nested item</li>
-<li>Another nested item
+<li>
+<p>Nested item</p>
+</li>
+<li>
+<p>Another nested item</p>
 <ul>
-<li>Deeply nested item</li>
-</ul>
+<li>
+<p>Deeply nested item</p>
 </li>
 </ul>
 </li>
-<li>Third item</li>
+</ul>
+</li>
+<li>
+<p>Third item</p>
+</li>
 </ul>
 <h3 id="ordered-list">Ordered List</h3>
 <ol>
-<li>First step</li>
-<li>Second step
+<li>
+<p>First step</p>
+</li>
+<li>
+<p>Second step</p>
 <ol>
-<li>Sub-step A</li>
-<li>Sub-step B</li>
+<li>
+<p>Sub-step A</p>
+</li>
+<li>
+<p>Sub-step B</p>
+</li>
 </ol>
 </li>
-<li>Third step</li>
+<li>
+<p>Third step</p>
+</li>
 </ol>
 <h3 id="task-list">Task List</h3>
 <ul>
-<li><input type="checkbox" disabled="" checked=""> Write the introduction</li>
-<li><input type="checkbox" disabled="" checked=""> Add examples</li>
-<li><input type="checkbox" disabled=""> Review the document</li>
-<li><input type="checkbox" disabled=""> Publish it</li>
+<li><input type="checkbox" disabled="" checked=""> 
+<p>Write the introduction</p>
+</li>
+<li><input type="checkbox" disabled="" checked=""> 
+<p>Add examples</p>
+</li>
+<li><input type="checkbox" disabled=""> 
+<p>Review the document</p>
+</li>
+<li><input type="checkbox" disabled=""> 
+<p>Publish it</p>
+</li>
 </ul>
 <hr />
 <h2 id="4-links-and-images">4. Links and Images</h2>
 <p>Visit <a href="https://github.com/richlesh/PurplePlatypus">PurplePlatypus on GitHub</a> for more info.</p>
 <p>You can also use reference-style links like <a href="#6-code-blocks">this one</a> to headings.</p>
 <p>You can also use reference-style links like <a href="#my-target">this one</a> to arbitrary named anchor using HTML.</p>
-<p><img src="app/src/main/resources/app_icon_256.png" alt="Placeholder Image" /></p>
+<figure><img src="app/src/main/resources/app_icon_256.png" alt="Placeholder Image" /><figcaption>Placeholder Image</figcaption></figure>
 <p><a id="my-target"></a><a href="https://glowingcat.com">https://glowingcat.com</a> &quot;Example Website&quot;</p>
 <hr />
 <h2 id="5-blockquotes">5. Blockquotes</h2>
@@ -316,11 +377,15 @@ mjx-container svg {
 </table>
 <hr />
 <h2 id="8-images">8. Images</h2>
-<p>Image Support</p>
-<p><img src="app/src/main/resources/app_icon_256.png" alt="Purple Platypus" /></p>
+<div style="text-align: center;">
+<figure><img src="app/src/main/resources/app_icon_256.png" alt="Purple Platypus" /><figcaption>Purple Platypus</figcaption></figure>
+</div>
+<div style="text-align: center;">
 <p>Image Style Attributes</p>
-<p><img src="app/src/main/resources/app_icon_256.png" alt="Purple Platypus" width="25%" /></p>
-<h2 id="purple-platypus"><img src="app/src/main/resources/app_icon_256.png" alt="Purple Platypus" width="100" /></h2>
+</div>
+<figure><img src="app/src/main/resources/app_icon_256.png" alt="width=25%" width="25%" /><figcaption>width=25%</figcaption></figure>
+<figure><img src="app/src/main/resources/app_icon_256.png" alt="width=100" width="100" /><figcaption>width=100</figcaption></figure>
+<hr />
 <h2 id="9-math-notation-latex">9. Math Notation (LaTeX)</h2>
 <p>You can write inline math using single dollar signs, like $E = mc^2$ or the golden ratio $\varphi = \frac{1 + \sqrt{5}}{2}$.</p>
 <p>For larger expressions, use block math with double dollar signs:</p>
@@ -347,6 +412,7 @@ $$</p>
 <hr />
 <h2 id="11-mermaid-charts-and-diagrams">11. Mermaid Charts and Diagrams</h2>
 <p>Support for Mermaid Charts and Diagrams using a simple markdown format.</p>
+<div style="text-align: center;">
 <pre><code class="language-mermaid">graph TD
     A[CEO] --&gt; B[CTO]
     A --&gt; C[CFO]
@@ -354,6 +420,7 @@ $$</p>
     B --&gt; E[Engineering Lead]
     B --&gt; F[QA Lead]
 </code></pre>
+</div>
 <pre><code class="language-mermaid">classDiagram
 Class01 &lt;|-- AveryLongClass : Cool
 Class03 *-- Class04
@@ -369,12 +436,14 @@ Class01 : int chimp
 Class01 : int gorilla
 Class08 &lt;--&gt; C2: Cool label
 </code></pre>
+<div style="text-align: center;">
 <pre><code class="language-mermaid">erDiagram
     CUSTOMER ||--o{ ORDER : places
     ORDER ||--|{ LINE-ITEM : contains
     CUSTOMER }|..|{ DELIVERY-ADDRESS : uses
 
 </code></pre>
+</div>
 <p>For more information, see the <a href="https://mermaid.js.org/intro/syntax-reference.html">Mermaid syntax documentation</a>.</p>
 <hr />
 <h2 id="11-horizontal-rules">11. Horizontal Rules</h2>
@@ -425,7 +494,12 @@ share your work wherever it needs to go.</p>
 <tr>
 <td align="left"><strong>TextBundle</strong></td>
 <td align="left"><code>.textbundle</code></td>
-<td align="left">Bundle of Markdown file and images</td>
+<td align="left">Bundle/Folder of Markdown file and images</td>
+</tr>
+<tr>
+<td align="left"><strong>TextPack</strong></td>
+<td align="left"><code>.textpack</code></td>
+<td align="left">ZIP file of Markdown file and images</td>
 </tr>
 </tbody>
 </table>

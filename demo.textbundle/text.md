@@ -134,15 +134,23 @@ Cells can also contain **formatting**, `code`, and [links](https://glowingcat.co
 
 ## 8. Images
 
-Image Support
+<div style="text-align: center;">
 
 ![Purple Platypus](assets/app/src/main/resources/app_icon_256.png)
 
+</div>
+
+<div style="text-align: center;">
+
 Image Style Attributes
 
-![Purple Platypus](assets/app/src/main/resources/app_icon_256.png){width=25%}
+</div>
 
-![Purple Platypus](assets/app/src/main/resources/app_icon_256.png){width=100}
+![width=25%](assets/app/src/main/resources/app_icon_256.png){width=25%}
+
+
+![width=100](assets/app/src/main/resources/app_icon_256.png){width=100}
+
 ---
 
 ## 9. Math Notation (LaTeX)
@@ -191,6 +199,8 @@ This is a line with a footnote[^1]
 
 Support for Mermaid Charts and Diagrams using a simple markdown format.
 
+<div style="text-align: center;">
+
 ```mermaid
 graph TD
     A[CEO] --> B[CTO]
@@ -199,6 +209,8 @@ graph TD
     B --> E[Engineering Lead]
     B --> F[QA Lead]
 ```
+
+</div>
 
 ```mermaid
 classDiagram
@@ -217,6 +229,8 @@ Class01 : int gorilla
 Class08 <--> C2: Cool label
 ```
 
+<div style="text-align: center;">
+
 ```mermaid
 erDiagram
     CUSTOMER ||--o{ ORDER : places
@@ -224,6 +238,8 @@ erDiagram
     CUSTOMER }|..|{ DELIVERY-ADDRESS : uses
 
 ```
+
+</div>
 
 For more information, see the [Mermaid syntax documentation](https://mermaid.js.org/intro/syntax-reference.html).
 
@@ -257,7 +273,8 @@ share your work wherever it needs to go.
 | **Markdown** | `.md`     | Keeping the raw source, portable and editable |
 | **RTF** | `.rtf` | Rich Text Format |
 | **Plain Text** | `.txt` | Plain Text Format (loses formatting) |
-| **TextBundle** | `.textbundle` | Bundle of Markdown file and images |
+| **TextBundle** | `.textbundle` | Bundle/Folder of Markdown file and images |
+| **TextPack** | `.textpack` | ZIP file of Markdown file and images |
 
 ### HTML
 

@@ -134,33 +134,22 @@ Cells can also contain **formatting**, `code`, and [links](https://glowingcat.co
 
 ## 8. Images
 
-Image Support
-
-
-
 <div style="text-align: center;">
 
 ![Purple Platypus](app/src/main/resources/app_icon_256.png)
 
-*Default size*
-
 </div>
+
+<div style="text-align: center;">
 
 Image Style Attributes
 
-<div style="text-align: center;">
-
-![Purple Platypus](app/src/main/resources/app_icon_256.png){width=25%}
-*width=25%*
-
 </div>
 
-<div style="text-align: center;">
+![width=25%](app/src/main/resources/app_icon_256.png){width=25%}
 
-![Purple Platypus](app/src/main/resources/app_icon_256.png){width=100}
-*width=100*
 
-</div>
+![width=100](app/src/main/resources/app_icon_256.png){width=100}
 
 ---
 
@@ -210,6 +199,8 @@ This is a line with a footnote[^1]
 
 Support for Mermaid Charts and Diagrams using a simple markdown format.
 
+<div style="text-align: center;">
+
 ```mermaid
 graph TD
     A[CEO] --> B[CTO]
@@ -218,6 +209,8 @@ graph TD
     B --> E[Engineering Lead]
     B --> F[QA Lead]
 ```
+
+</div>
 
 ```mermaid
 classDiagram
@@ -236,6 +229,8 @@ Class01 : int gorilla
 Class08 <--> C2: Cool label
 ```
 
+<div style="text-align: center;">
+
 ```mermaid
 erDiagram
     CUSTOMER ||--o{ ORDER : places
@@ -243,6 +238,8 @@ erDiagram
     CUSTOMER }|..|{ DELIVERY-ADDRESS : uses
 
 ```
+
+</div>
 
 For more information, see the [Mermaid syntax documentation](https://mermaid.js.org/intro/syntax-reference.html).
 
