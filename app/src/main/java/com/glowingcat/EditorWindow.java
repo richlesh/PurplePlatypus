@@ -75,6 +75,12 @@ public class EditorWindow {
     private long lastModifiedOnDisk = 0;
     private long lastOpenTime = 0;
 
+    // Debounce timer for preview updates (avoids re-rendering on every keystroke for large files)
+    private javax.swing.Timer previewDebounceTimer;
+    private static final int PREVIEW_DEBOUNCE_MS = 500;
+    // Threshold above which syntax highlighting is disabled (bytes)
+    private static final long LARGE_FILE_THRESHOLD = 1_000_000; // 1 MB
+
     private FindDialog findDialog;
     private ReplaceDialog replaceDialog;
     private JMenu recentsMenu;
@@ -850,6 +856,40 @@ public class EditorWindow {
         aiChatPanel = AIChatPanel.builder()
             .editor(new DocumentEditor() {
                 @Override public String getText() { return editorPane.getText(); }
+                private boolean truncationWarningShown = false;
+                @Override public String getContextText() {
+                    String fullText = editorPane.getText();
+                    if (fullText.length() <= 20_000) {
+                        truncationWarningShown = false;
+                        return fullText;
+                    }
+                    // For large documents, return 10K chars before and after the visible area
+                    int caretPos = editorPane.getCaretPosition();
+                    int start = Math.max(0, caretPos - 10_000);
+                    int end = Math.min(fullText.length(), caretPos + 10_000);
+                    if (!truncationWarningShown) {
+                        truncationWarningShown = true;
+                        JOptionPane.showMessageDialog(frame,
+                                "This document is too large to send in full to the LLM.\nOnly 20,000 characters centered at the caret position are being sent.",
+                                "Document Truncated", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                    StringBuilder sb = new StringBuilder();
+                    if (start > 0) {
+                        // Count lines and characters omitted from the beginning
+                        String omittedPrefix = fullText.substring(0, start);
+                        long omittedLines = omittedPrefix.chars().filter(c -> c == '\n').count();
+                        sb.append("[... ").append(omittedLines).append(" lines, ")
+                          .append(start).append(" characters omitted from beginning ...]\n");
+                    }
+                    sb.append(fullText, start, end);
+                    if (end < fullText.length()) {
+                        String omittedSuffix = fullText.substring(end);
+                        long omittedLines = omittedSuffix.chars().filter(c -> c == '\n').count();
+                        sb.append("\n[... ").append(omittedLines).append(" lines, ")
+                          .append(fullText.length() - end).append(" characters omitted from end ...]");
+                    }
+                    return sb.toString();
+                }
                 @Override public void setText(String text) {
                     editorPane.setText(text);
                     editorPane.setCaretPosition(0);
@@ -1161,7 +1201,15 @@ public class EditorWindow {
     }
 
     private void updatePreview() {
-        previewPanel.updatePreview(editorPane.getText(), currentFile, preferences);
+        if (previewDebounceTimer != null) {
+            previewDebounceTimer.restart();
+        } else {
+            previewDebounceTimer = new javax.swing.Timer(PREVIEW_DEBOUNCE_MS, e -> {
+                previewPanel.updatePreview(editorPane.getText(), currentFile, preferences);
+            });
+            previewDebounceTimer.setRepeats(false);
+            previewDebounceTimer.start();
+        }
     }
 
     // --- File operations ---
@@ -1310,6 +1358,14 @@ public class EditorWindow {
                                 "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 } else if (file.isFile()) {
+                    // Warn if file is larger than 2MB
+                    if (file.length() > 2_000_000) {
+                        int choice = JOptionPane.showOptionDialog(frame,
+                                "This document is " + (file.length() / 1_000_000) + " MB and may be too large to be responsive.",
+                                "Large File", JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                                null, new String[]{"Open", "Cancel"}, "Cancel");
+                        if (choice != 0) continue;
+                    }
                     try {
                         String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
                         if (first) {
@@ -1347,6 +1403,15 @@ public class EditorWindow {
         // Normalize to Unix line endings for the editor; restore on save if needed
         content = content.replace("\r\n", "\n").replace("\r", "\n");
         lastModifiedOnDisk = file.lastModified();
+        // Disable syntax highlighting for large files to improve performance
+        if (file.length() > LARGE_FILE_THRESHOLD) {
+            editorPane.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE);
+            JOptionPane.showMessageDialog(frame,
+                    "Due to the size of this document, syntax highlighting has been\ndisabled to help keep the program responsive.",
+                    "Syntax Highlighting Disabled", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            editorPane.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_MARKDOWN);
+        }
         previewPanel.forceFullReload();
         editorPane.setText(content);
         editorPane.setCaretPosition(0);
@@ -2380,19 +2445,31 @@ public class EditorWindow {
      * Updates the stats label in the toolbar with the current document's
      * line count, word count, and character count.
      */
+    // Debounce timer for stats updates
+    private javax.swing.Timer statsDebounceTimer;
+    private static final int STATS_DEBOUNCE_MS = 500;
+
     private void updateStats() {
         if (statsLabel == null) return;
-        String text = editorPane.getText();
-        int lines = editorPane.getLineCount();
-        int chars = text.length();
-        int words = 0;
-        if (!text.isEmpty()) {
-            String trimmed = text.trim();
-            if (!trimmed.isEmpty()) {
-                words = trimmed.split("\\s+").length;
-            }
+        if (statsDebounceTimer != null) {
+            statsDebounceTimer.restart();
+        } else {
+            statsDebounceTimer = new javax.swing.Timer(STATS_DEBOUNCE_MS, e -> {
+                String text = editorPane.getText();
+                int lines = editorPane.getLineCount();
+                int chars = text.length();
+                int words = 0;
+                if (!text.isEmpty()) {
+                    String trimmed = text.trim();
+                    if (!trimmed.isEmpty()) {
+                        words = trimmed.split("\\s+").length;
+                    }
+                }
+                statsLabel.setText("L: " + lines + "  W: " + words + "  C: " + chars);
+            });
+            statsDebounceTimer.setRepeats(false);
+            statsDebounceTimer.start();
         }
-        statsLabel.setText("L: " + lines + "  W: " + words + "  C: " + chars);
     }
 
     public boolean confirmClose() {

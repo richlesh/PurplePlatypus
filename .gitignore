@@ -33,3 +33,5 @@ Thumbs.db
 # License key (private)
 src/main/java/com/glowingcat/License.java
 generate_license_key.py
+stress_*.md
+generate_stress.py
