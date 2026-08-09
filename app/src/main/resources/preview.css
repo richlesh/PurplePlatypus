@@ -98,6 +98,10 @@ img {
     margin: 12px 0;
 }
 
+img[width] {
+    max-width: none;
+}
+
 figure {
     margin: 16px 0;
     padding: 0;
@@ -155,4 +159,12 @@ mjx-container[display=true] {
 
 mjx-container svg {
     overflow: visible;
+}
+
+@media print {
+    a[href^="http"]:not(.url-link)::after {
+        content: " (" attr(href) ")";
+        font-size: 0.85em;
+        word-break: break-all;
+    }
 }

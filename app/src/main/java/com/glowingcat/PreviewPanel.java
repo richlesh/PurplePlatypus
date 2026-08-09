@@ -253,6 +253,10 @@ public class PreviewPanel extends JPanel {
         Node document = parser.parse(markdown);
         String html = renderer.render(document);
 
+        // Mark links where the display text matches the href URL so that
+        // @media print CSS can skip appending the URL after them
+        html = markUrlLinks(html);
+
         // Resolve relative image paths to absolute file:// URLs
         if (currentFile != null && currentFile.getParentFile() != null) {
             File baseDir = currentFile.getParentFile();
@@ -626,6 +630,32 @@ public class PreviewPanel extends JPanel {
                 SwingUtilities.invokeLater(() -> findInSourceCallback.accept(text));
             }
         }
+    }
+
+    /**
+     * Adds class="url-link" to anchor tags where the link text matches the href URL.
+     * This allows @media print CSS to skip appending the URL after such links,
+     * since the URL is already visible as the link text.
+     */
+    static String markUrlLinks(String html) {
+        // Match <a href="URL">TEXT</a> and add class if TEXT equals URL
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "<a\\s+href=\"([^\"]+)\">(.*?)</a>");
+        java.util.regex.Matcher matcher = pattern.matcher(html);
+        StringBuilder sb = new StringBuilder();
+        while (matcher.find()) {
+            String href = matcher.group(1);
+            String text = matcher.group(2);
+            if (text.equals(href)) {
+                matcher.appendReplacement(sb,
+                        java.util.regex.Matcher.quoteReplacement(
+                                "<a class=\"url-link\" href=\"" + href + "\">" + text + "</a>"));
+            } else {
+                matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(matcher.group()));
+            }
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 
     /**

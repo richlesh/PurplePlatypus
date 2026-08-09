@@ -33,5 +33,4 @@ Thumbs.db
 # License key (private)
 generate_license_key.py
 stress_*.md
-generate_stress.py
 app/src/main/java/com/glowingcat/License.java

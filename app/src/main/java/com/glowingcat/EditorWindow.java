@@ -253,6 +253,21 @@ public class EditorWindow {
         fileMenu.add(printItem);
         fileMenu.addSeparator();
 
+        JMenu importMenu = new JMenu("Import");
+        JMenuItem importHtmlItem = new JMenuItem("HTML...");
+        importHtmlItem.addActionListener(e -> importHtml());
+        JMenuItem importPlainTextItem = new JMenuItem("Plain Text...");
+        importPlainTextItem.addActionListener(e -> importPlainText());
+        JMenuItem importRtfItem = new JMenuItem("RTF...");
+        importRtfItem.addActionListener(e -> importRtf());
+        JMenuItem importDocxItem = new JMenuItem("Word Document...");
+        importDocxItem.addActionListener(e -> importDocx());
+        importMenu.add(importHtmlItem);
+        importMenu.add(importPlainTextItem);
+        importMenu.add(importRtfItem);
+        importMenu.add(importDocxItem);
+        fileMenu.add(importMenu);
+
         JMenu exportMenu = new JMenu("Export");
         JMenuItem exportHtmlItem = new JMenuItem("HTML...");
         exportHtmlItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
@@ -260,23 +275,27 @@ public class EditorWindow {
         JMenuItem exportPdfItem = new JMenuItem("PDF...");
         exportPdfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_P, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportPdfItem.addActionListener(e -> exportPdf());
+        JMenuItem exportTextItem = new JMenuItem("Plain Text...");
+        exportTextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
+        exportTextItem.addActionListener(e -> exportPlainText());
+        JMenuItem exportRtfItem = new JMenuItem("RTF...");
+        exportRtfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
+        exportRtfItem.addActionListener(e -> exportRtf());
         JMenuItem exportTextBundleItem = new JMenuItem("TextBundle...");
         exportTextBundleItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextBundleItem.addActionListener(e -> exportTextBundle());
         JMenuItem exportTextPackItem = new JMenuItem("TextPack...");
         exportTextPackItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Z, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextPackItem.addActionListener(e -> exportTextPack());
-        JMenuItem exportRtfItem = new JMenuItem("RTF...");
-        exportRtfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportRtfItem.addActionListener(e -> exportRtf());
-        JMenuItem exportTextItem = new JMenuItem("Plain Text...");
-        exportTextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportTextItem.addActionListener(e -> exportPlainText());
+        JMenuItem exportDocxItem = new JMenuItem("Word Document...");
+        exportDocxItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
+        exportDocxItem.addActionListener(e -> exportDocx());
         exportMenu.add(exportHtmlItem);
         exportMenu.add(exportPdfItem);
         exportMenu.add(exportTextBundleItem);
         exportMenu.add(exportTextPackItem);
         exportMenu.add(exportRtfItem);
+        exportMenu.add(exportDocxItem);
         exportMenu.add(exportTextItem);
         fileMenu.add(exportMenu);
         if (isMac) {
@@ -2178,6 +2197,51 @@ public class EditorWindow {
         }
     }
 
+    private void exportDocx() {
+        FileDialog dialog = new FileDialog(frame, "Export Word Document", FileDialog.SAVE);
+        if (currentFile != null) {
+            dialog.setDirectory(currentFile.getParent());
+            String name = currentFile.getName();
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) name = name.substring(0, dot);
+            dialog.setFile(name + ".docx");
+        } else {
+            dialog.setFile("untitled.docx");
+        }
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File outFile = new File(dialog.getDirectory(), dialog.getFile());
+            if (!outFile.getName().contains(".")) {
+                outFile = new File(outFile.getAbsolutePath() + ".docx");
+            }
+            try {
+                String markdown = editorPane.getText();
+
+                // Parse markdown using the same extensions as preview
+                org.commonmark.Extension tablesExt = org.commonmark.ext.gfm.tables.TablesExtension.create();
+                org.commonmark.Extension strikethroughExt = org.commonmark.ext.gfm.strikethrough.StrikethroughExtension.create();
+                org.commonmark.Extension taskListExt = org.commonmark.ext.task.list.items.TaskListItemsExtension.create();
+                org.commonmark.Extension autolinkExt = org.commonmark.ext.autolink.AutolinkExtension.create();
+                org.commonmark.Extension footnotesExt = org.commonmark.ext.footnotes.FootnotesExtension.create();
+                org.commonmark.Extension headingAnchorExt = org.commonmark.ext.heading.anchor.HeadingAnchorExtension.create();
+                org.commonmark.Extension imageAttrExt = org.commonmark.ext.image.attributes.ImageAttributesExtension.create();
+                org.commonmark.Extension insExt = org.commonmark.ext.ins.InsExtension.create();
+                org.commonmark.Extension yamlExt = org.commonmark.ext.front.matter.YamlFrontMatterExtension.create();
+                java.util.List<org.commonmark.Extension> extensions = java.util.Arrays.asList(
+                        tablesExt, strikethroughExt, taskListExt, autolinkExt, footnotesExt,
+                        headingAnchorExt, imageAttrExt, insExt, yamlExt);
+                org.commonmark.parser.Parser parser = org.commonmark.parser.Parser.builder().extensions(extensions).build();
+                org.commonmark.node.Node document = parser.parse(markdown);
+
+                DocxExporter exporter = new DocxExporter(currentFile);
+                exporter.export(document, outFile);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Error exporting Word document: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     private void exportPlainText() {
         FileDialog dialog = new FileDialog(frame, "Export Plain Text", FileDialog.SAVE);
         if (currentFile != null) {
@@ -2204,6 +2268,355 @@ public class EditorWindow {
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    // --- Import methods ---
+
+    private void importHtml() {
+        FileDialog dialog = new FileDialog(frame, "Import HTML", FileDialog.LOAD);
+        dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".html") || name.toLowerCase().endsWith(".htm"));
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File inFile = new File(dialog.getDirectory(), dialog.getFile());
+            try {
+                String html = Files.readString(inFile.toPath(), StandardCharsets.UTF_8);
+                String markdown = htmlToMarkdown(html);
+                insertImportedText(markdown);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error importing HTML: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void importPlainText() {
+        FileDialog dialog = new FileDialog(frame, "Import Plain Text", FileDialog.LOAD);
+        dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".txt"));
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File inFile = new File(dialog.getDirectory(), dialog.getFile());
+            try {
+                String text = Files.readString(inFile.toPath(), StandardCharsets.UTF_8);
+                insertImportedText(text);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error importing plain text: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void importRtf() {
+        FileDialog dialog = new FileDialog(frame, "Import RTF", FileDialog.LOAD);
+        dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".rtf"));
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File inFile = new File(dialog.getDirectory(), dialog.getFile());
+            try {
+                String rtf = Files.readString(inFile.toPath(), StandardCharsets.UTF_8);
+                String markdown = rtfToMarkdown(rtf);
+                insertImportedText(markdown);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error importing RTF: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void importDocx() {
+        FileDialog dialog = new FileDialog(frame, "Import Word Document", FileDialog.LOAD);
+        dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".docx"));
+        dialog.setVisible(true);
+        if (dialog.getFile() != null) {
+            File inFile = new File(dialog.getDirectory(), dialog.getFile());
+            try {
+                String markdown = docxToMarkdown(inFile);
+                insertImportedText(markdown);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Error importing Word document: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Inserts imported text at the current caret position, or replaces
+     * the document content if the document is empty.
+     */
+    private void insertImportedText(String text) {
+        if (text == null || text.isEmpty()) return;
+        if (editorPane.getText().trim().isEmpty()) {
+            editorPane.setText(text);
+            editorPane.setCaretPosition(0);
+        } else {
+            editorPane.replaceSelection(text);
+        }
+        markDirty();
+    }
+
+    /**
+     * Converts HTML to Markdown by extracting text content with basic formatting.
+     */
+    private String htmlToMarkdown(String html) {
+        // Remove DOCTYPE and head section
+        html = html.replaceAll("(?si)<!DOCTYPE[^>]*>", "");
+        html = html.replaceAll("(?si)<head>.*?</head>", "");
+        html = html.replaceAll("(?si)<style[^>]*>.*?</style>", "");
+        html = html.replaceAll("(?si)<script[^>]*>.*?</script>", "");
+
+        // Convert headings
+        html = html.replaceAll("(?i)<h1[^>]*>(.*?)</h1>", "\n# $1\n");
+        html = html.replaceAll("(?i)<h2[^>]*>(.*?)</h2>", "\n## $1\n");
+        html = html.replaceAll("(?i)<h3[^>]*>(.*?)</h3>", "\n### $1\n");
+        html = html.replaceAll("(?i)<h4[^>]*>(.*?)</h4>", "\n#### $1\n");
+        html = html.replaceAll("(?i)<h5[^>]*>(.*?)</h5>", "\n##### $1\n");
+        html = html.replaceAll("(?i)<h6[^>]*>(.*?)</h6>", "\n###### $1\n");
+
+        // Convert emphasis
+        html = html.replaceAll("(?i)<strong[^>]*>(.*?)</strong>", "**$1**");
+        html = html.replaceAll("(?i)<b[^>]*>(.*?)</b>", "**$1**");
+        html = html.replaceAll("(?i)<em[^>]*>(.*?)</em>", "*$1*");
+        html = html.replaceAll("(?i)<i[^>]*>(.*?)</i>", "*$1*");
+        html = html.replaceAll("(?i)<del[^>]*>(.*?)</del>", "~~$1~~");
+        html = html.replaceAll("(?i)<s[^>]*>(.*?)</s>", "~~$1~~");
+        html = html.replaceAll("(?i)<u[^>]*>(.*?)</u>", "++$1++");
+        html = html.replaceAll("(?i)<ins[^>]*>(.*?)</ins>", "++$1++");
+
+        // Convert code
+        html = html.replaceAll("(?i)<code[^>]*>(.*?)</code>", "`$1`");
+        html = html.replaceAll("(?si)<pre[^>]*>(.*?)</pre>", "\n```\n$1\n```\n");
+
+        // Convert links
+        html = html.replaceAll("(?i)<a[^>]*href=\"([^\"]+)\"[^>]*>(.*?)</a>", "[$2]($1)");
+
+        // Convert images
+        html = html.replaceAll("(?i)<img[^>]*src=\"([^\"]+)\"[^>]*alt=\"([^\"]*?)\"[^>]*/?>", "![$2]($1)");
+        html = html.replaceAll("(?i)<img[^>]*src=\"([^\"]+)\"[^>]*/?>", "![]($1)");
+
+        // Convert line breaks and paragraphs
+        html = html.replaceAll("(?i)<br\\s*/?>", "\n");
+        html = html.replaceAll("(?i)<p[^>]*>", "\n");
+        html = html.replaceAll("(?i)</p>", "\n");
+        html = html.replaceAll("(?i)<hr[^>]*/?>", "\n---\n");
+
+        // Convert lists
+        html = html.replaceAll("(?i)<li[^>]*>", "- ");
+        html = html.replaceAll("(?i)</li>", "\n");
+        html = html.replaceAll("(?i)</?[ou]l[^>]*>", "\n");
+
+        // Convert blockquotes
+        html = html.replaceAll("(?i)<blockquote[^>]*>", "\n> ");
+        html = html.replaceAll("(?i)</blockquote>", "\n");
+
+        // Strip remaining HTML tags
+        html = html.replaceAll("<[^>]+>", "");
+
+        // Decode common HTML entities
+        html = html.replace("&amp;", "&");
+        html = html.replace("&lt;", "<");
+        html = html.replace("&gt;", ">");
+        html = html.replace("&quot;", "\"");
+        html = html.replace("&apos;", "'");
+        html = html.replace("&nbsp;", " ");
+        html = html.replaceAll("&#(\\d+);", ""); // Strip numeric entities as fallback
+
+        // Clean up excessive newlines
+        html = html.replaceAll("\n{3,}", "\n\n");
+        return html.trim();
+    }
+
+    /**
+     * Converts RTF to Markdown by extracting text content with basic formatting.
+     */
+    private String rtfToMarkdown(String rtf) {
+        StringBuilder sb = new StringBuilder();
+
+        // Remove RTF header and font tables
+        rtf = rtf.replaceAll("\\{\\\\fonttbl[^}]*\\}", "");
+        rtf = rtf.replaceAll("\\{\\\\colortbl[^}]*\\}", "");
+        rtf = rtf.replaceAll("\\{\\\\stylesheet[^}]*\\}", "");
+
+        // Process the RTF content
+        int i = 0;
+        int len = rtf.length();
+        boolean bold = false;
+        boolean italic = false;
+
+        while (i < len) {
+            char c = rtf.charAt(i);
+
+            if (c == '\\') {
+                // RTF control word
+                int start = i + 1;
+                if (start >= len) { i++; continue; }
+
+                // Check for escaped characters: \{, \}, \\
+                char next = rtf.charAt(start);
+                if (next == '{') { sb.append('{'); i = start + 1; continue; }
+                if (next == '}') { sb.append('}'); i = start + 1; continue; }
+                if (next == '\\') { sb.append('\\'); i = start + 1; continue; }
+
+                while (start < len && Character.isLetter(rtf.charAt(start))) {
+                    start++;
+                }
+                String word = rtf.substring(i + 1, start);
+
+                // Skip optional numeric parameter
+                int paramEnd = start;
+                if (paramEnd < len && (rtf.charAt(paramEnd) == '-' || Character.isDigit(rtf.charAt(paramEnd)))) {
+                    paramEnd++;
+                    while (paramEnd < len && Character.isDigit(rtf.charAt(paramEnd))) {
+                        paramEnd++;
+                    }
+                }
+                // Skip optional space delimiter
+                if (paramEnd < len && rtf.charAt(paramEnd) == ' ') {
+                    paramEnd++;
+                }
+
+                switch (word) {
+                    case "par" -> sb.append("\n");
+                    case "tab" -> sb.append("\t");
+                    case "b" -> {
+                        if (!bold) { sb.append("**"); bold = true; }
+                    }
+                    case "b0" -> {
+                        if (bold) { sb.append("**"); bold = false; }
+                    }
+                    case "i" -> {
+                        if (!italic) { sb.append("*"); italic = true; }
+                    }
+                    case "i0" -> {
+                        if (italic) { sb.append("*"); italic = false; }
+                    }
+                    case "line" -> sb.append("\n");
+                    default -> {
+                        // Skip unknown control words
+                    }
+                }
+                i = paramEnd;
+            } else if (c == '{' || c == '}') {
+                i++;
+            } else if (c == '\n' || c == '\r') {
+                i++;
+            } else {
+                sb.append(c);
+                i++;
+            }
+        }
+
+        // Close unclosed formatting
+        if (bold) sb.append("**");
+        if (italic) sb.append("*");
+
+        // Clean up excessive newlines
+        String result = sb.toString().replaceAll("\n{3,}", "\n\n");
+        return result.trim();
+    }
+
+    /**
+     * Converts a DOCX file to Markdown using Apache POI.
+     */
+    private String docxToMarkdown(File docxFile) throws IOException {
+        StringBuilder sb = new StringBuilder();
+
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument doc =
+                     new org.apache.poi.xwpf.usermodel.XWPFDocument(
+                             new java.io.FileInputStream(docxFile))) {
+
+            for (org.apache.poi.xwpf.usermodel.IBodyElement element : doc.getBodyElements()) {
+                if (element instanceof org.apache.poi.xwpf.usermodel.XWPFParagraph para) {
+                    String style = para.getStyle();
+                    String text = convertParagraphToMarkdown(para);
+
+                    if (text.trim().isEmpty()) {
+                        sb.append("\n");
+                        continue;
+                    }
+
+                    // Apply heading style
+                    if (style != null) {
+                        switch (style) {
+                            case "Heading1", "heading 1" -> text = "# " + text;
+                            case "Heading2", "heading 2" -> text = "## " + text;
+                            case "Heading3", "heading 3" -> text = "### " + text;
+                            case "Heading4", "heading 4" -> text = "#### " + text;
+                            case "Heading5", "heading 5" -> text = "##### " + text;
+                            case "Heading6", "heading 6" -> text = "###### " + text;
+                        }
+                    }
+
+                    sb.append(text).append("\n\n");
+                } else if (element instanceof org.apache.poi.xwpf.usermodel.XWPFTable table) {
+                    sb.append(convertTableToMarkdown(table));
+                    sb.append("\n");
+                }
+            }
+        }
+
+        // Clean up excessive newlines
+        String result = sb.toString().replaceAll("\n{3,}", "\n\n");
+        return result.trim();
+    }
+
+    private String convertParagraphToMarkdown(org.apache.poi.xwpf.usermodel.XWPFParagraph para) {
+        StringBuilder sb = new StringBuilder();
+        for (org.apache.poi.xwpf.usermodel.XWPFRun run : para.getRuns()) {
+            String text = run.getText(0);
+            if (text == null) continue;
+
+            boolean isBold = run.isBold();
+            boolean isItalic = run.isItalic();
+            boolean isStrike = run.isStrikeThrough();
+            String fontFamily = run.getFontFamily();
+            boolean isCode = fontFamily != null &&
+                    (fontFamily.contains("Courier") || fontFamily.contains("Mono") || fontFamily.contains("Consolas"));
+
+            if (isCode) {
+                sb.append("`").append(text).append("`");
+            } else {
+                if (isBold && isItalic) sb.append("***");
+                else if (isBold) sb.append("**");
+                else if (isItalic) sb.append("*");
+                if (isStrike) sb.append("~~");
+
+                sb.append(text);
+
+                if (isStrike) sb.append("~~");
+                if (isBold && isItalic) sb.append("***");
+                else if (isBold) sb.append("**");
+                else if (isItalic) sb.append("*");
+            }
+        }
+        return sb.toString();
+    }
+
+    private String convertTableToMarkdown(org.apache.poi.xwpf.usermodel.XWPFTable table) {
+        StringBuilder sb = new StringBuilder();
+        java.util.List<org.apache.poi.xwpf.usermodel.XWPFTableRow> rows = table.getRows();
+        if (rows.isEmpty()) return "";
+
+        // First row as header
+        org.apache.poi.xwpf.usermodel.XWPFTableRow headerRow = rows.get(0);
+        sb.append("|");
+        for (org.apache.poi.xwpf.usermodel.XWPFTableCell cell : headerRow.getTableCells()) {
+            sb.append(" ").append(cell.getText().trim()).append(" |");
+        }
+        sb.append("\n|");
+        for (int i = 0; i < headerRow.getTableCells().size(); i++) {
+            sb.append("------|");
+        }
+        sb.append("\n");
+
+        // Remaining rows as body
+        for (int r = 1; r < rows.size(); r++) {
+            org.apache.poi.xwpf.usermodel.XWPFTableRow row = rows.get(r);
+            sb.append("|");
+            for (org.apache.poi.xwpf.usermodel.XWPFTableCell cell : row.getTableCells()) {
+                sb.append(" ").append(cell.getText().trim()).append(" |");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 
     /**
@@ -2412,6 +2825,9 @@ public class EditorWindow {
         org.commonmark.node.Node document = parser.parse(markdown);
         String html = renderer.render(document);
 
+        // Mark links where the display text matches the href URL
+        html = PreviewPanel.markUrlLinks(html);
+
         // Resolve relative image paths - keep them relative since the exported
         // HTML will be placed alongside the markdown file. Just decode %20 back
         // to spaces for readable paths, but leave them relative.
@@ -2594,6 +3010,12 @@ public class EditorWindow {
         int start = editorPane.getSelectionStart();
         int end = editorPane.getSelectionEnd();
         String fullText = editorPane.getText();
+
+        // If selection includes a trailing newline, back up so we don't
+        // expand into the next line
+        if (end > start && end <= fullText.length() && fullText.charAt(end - 1) == '\n') {
+            end--;
+        }
 
         // Expand to full lines
         int lineStart = fullText.lastIndexOf('\n', start - 1) + 1;

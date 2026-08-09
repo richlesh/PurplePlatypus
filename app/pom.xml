@@ -112,6 +112,16 @@
             <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>de.rototor.snuggletex</groupId>
+            <artifactId>snuggletex-core</artifactId>
+            <version>1.3.0</version>
+        </dependency>
     </dependencies>
 
     <build>
