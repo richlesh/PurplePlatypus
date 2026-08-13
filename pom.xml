@@ -44,6 +44,7 @@
 
     <modules>
         <module>aichat</module>
+        <module>spellcheck</module>
         <module>app</module>
     </modules>
 </project>
