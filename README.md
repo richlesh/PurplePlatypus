@@ -25,7 +25,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Dirty checking** — Prompts to save unsaved changes when closing a window or quitting the application
 - **Undo/Redo** — Full multi-level undo and redo support
 - **Clipboard** — Cut, Copy, and Paste via the Edit menu
-- **Markdown formatting** — Bold, Italic, Underline, Strikethrough, Superscript, Subscript, and Insert (++underline++) via the Markdown menu (enabled when text is selected)
+- **Markdown formatting** — Bold, Italic, Underline, Strikethrough, Superscript, Subscript, Center, and Insert (++underline++) via the Markdown menu (enabled when text is selected)
 - **Headings** — Insert Heading 1 through Heading 6 via the Markdown menu (replaces any existing heading prefix)
 - **Horizontal Rule** — Insert a `---` separator via the Markdown menu
 - **Footnotes** — Insert footnote references and definitions via the Markdown menu
@@ -35,7 +35,8 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Lists** — Convert lines to ordered, unordered, or task lists
 - **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, and Block Math
 - **Print** — Page Setup and Print (⌘/Ctrl+P) using the native system print dialog
-- **Export** — Export to HTML, PDF, TextBundle, TextPack, RTF, or Plain Text formats
+- **Export** — Export to HTML, PDF, Word Document (DOCX), TextBundle, TextPack, RTF, or Plain Text formats
+- **Import** — Import from HTML, Plain Text, RTF, or Word Document files, converting content to Markdown
 - **Find** — Search with options for Match Case, Wrap Around, Search Backwards, Find in Selection, and Regular Expression (remembers the original selection for repeated searches)
 - **Find All** — Opens a results window showing matching lines with highlighted text; click a match to jump to it in the editor
 - **Count** — Quickly count the number of matches in the document or selection
@@ -52,9 +53,13 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Show invisible characters** — Toggle button in the toolbar to reveal spaces (dots), tabs (arrows), and line endings (paragraph marks)
 - **Document statistics** — Live display of line count, word count, and character count in the toolbar, updated as you type
 - **External change detection** — Detects when a file is modified on disk by another program and prompts to reload or keep current changes
+- **Large file performance** — Preview updates and document statistics are debounced for large files; syntax highlighting is disabled above 1 MB; AI context is truncated above 20K characters
 
 - **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins (underline), and YAML front matter
 - **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
+- **Syntax highlighting** — Code blocks in the preview and AI chat are syntax-highlighted via highlight.js with automatic language detection and light/dark theme support
+- **Mermaid diagrams** — Mermaid code blocks are rendered as diagrams in both the preview and AI chat panes
+- **Figure captions** — Images with alt text are rendered as `<figure>` elements with a visible `<figcaption>` in the preview
 - **Preview fallback** — On platforms where JavaFX WebView is unavailable (e.g. Windows ARM64), the preview gracefully falls back to a Swing-based HTML renderer with reduced functionality
 - **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors; toolbar button highlight color
 - **Window state persistence** — Window size, divider positions, and panel visibility are remembered between sessions
@@ -92,7 +97,8 @@ Sample configurations for Amazon Bedrock, Anthropic, IBM watsonx.ai, Microsoft A
 ## Export Formats
 
 - **HTML** — Fully styled HTML with CSS, relative image paths preserved
-- **PDF** — Print-to-file via the system's PDF output
+- **PDF** — Print-to-file via the system's PDF output, with print-friendly links (URLs shown in parentheses)
+- **Word Document (DOCX)** — Export to `.docx` with math support (LaTeX converted to OMML) and Mermaid diagrams rendered as PNG images
 - **TextBundle** — Standard `.textbundle` package with `text.md`, `info.json`, and images copied into `assets/` (preserving subfolder hierarchy)
 - **TextPack** — Compressed `.textpack` file (zipped TextBundle) for easy sharing
 - **RTF** — Rich Text Format with headings, bold, italic, strikethrough, code, lists, and block quotes
@@ -133,6 +139,10 @@ Or run `com.glowingcat.Main` directly from your IDE.
 - **commonmark-java** — Markdown parsing and HTML rendering (with GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins, and YAML front matter extensions)
 - **RSyntaxTextArea** — Syntax-aware text editor component
 - **JavaFX WebView** — HTML preview rendering with MathJax (with JEditorPane fallback)
+- **highlight.js** — Syntax highlighting for code blocks in preview and AI chat
+- **Mermaid** — Diagram rendering for flowcharts, sequence diagrams, and more
+- **Apache POI** — Word Document (DOCX) export and import
+- **SnuggleTeX** — LaTeX to OMML conversion for math in DOCX export
 - **Gson** — JSON serialization for user preferences
 - **SnakeYAML** — YAML parsing for Generic vendor configuration
 - **java.net.http** — HTTP client for LLM API calls

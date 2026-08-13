@@ -98,6 +98,10 @@ img {
     margin: 12px 0;
 }
 
+img[width] {
+    max-width: none;
+}
+
 figure {
     margin: 16px 0;
     padding: 0;
@@ -155,6 +159,14 @@ mjx-container[display=true] {
 
 mjx-container svg {
     overflow: visible;
+}
+
+@media print {
+    a[href^="http"]:not(.url-link)::after {
+        content: " (" attr(href) ")";
+        font-size: 0.85em;
+        word-break: break-all;
+    }
 }
 </style><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css"><script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script><script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js"></script><script>MathJax = {  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },  svg: { fontCache: 'global' }};</script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script><script>if(window.mermaid){mermaid.initialize({startOnLoad: false, theme: 'default'});}document.addEventListener('DOMContentLoaded', function(){if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){var pre=el.parentElement;var div=document.createElement('div');div.className='mermaid';div.textContent=el.textContent;pre.parentElement.replaceChild(div,pre);});mermaid.run();}if(window.hljs){hljs.highlightAll();}});</script></head><body><h1 id="markdown-feature-demo">Markdown Feature Demo</h1>
 <p>Welcome to a comprehensive demonstration of <strong>Markdown</strong> features supported by PurplePlatypus.</p>
@@ -259,7 +271,7 @@ mjx-container svg {
 <p>You can also use reference-style links like <a href="#6-code-blocks">this one</a> to headings.</p>
 <p>You can also use reference-style links like <a href="#my-target">this one</a> to arbitrary named anchor using HTML.</p>
 <figure><img src="app/src/main/resources/app_icon_256.png" alt="Placeholder Image" /><figcaption>Placeholder Image</figcaption></figure>
-<p><a id="my-target"></a><a href="https://glowingcat.com">https://glowingcat.com</a> &quot;Example Website&quot;</p>
+<p><a id="my-target"></a><a class="url-link" href="https://glowingcat.com">https://glowingcat.com</a> &quot;Example Website&quot;</p>
 <hr />
 <h2 id="5-blockquotes">5. Blockquotes</h2>
 <blockquote>
