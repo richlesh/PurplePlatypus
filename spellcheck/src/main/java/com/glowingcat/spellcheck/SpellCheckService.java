@@ -5,6 +5,7 @@ package com.glowingcat.spellcheck;
 
 import org.languagetool.JLanguageTool;
 import org.languagetool.Language;
+import org.languagetool.Languages;
 import org.languagetool.language.AmericanEnglish;
 import org.languagetool.rules.RuleMatch;
 
@@ -168,6 +169,12 @@ public class SpellCheckService {
                 return;
             }
 
+            // For non-English languages, register with LanguageTool's Languages class
+            // so that internal calls to Languages.getLanguageForShortCode() succeed.
+            if (!"en".equals(currentLanguage)) {
+                registerLanguage(language);
+            }
+
             JLanguageTool lt = new JLanguageTool(language);
             for (String ruleId : DISABLED_RULES) {
                 lt.disableRule(ruleId);
@@ -223,26 +230,28 @@ public class SpellCheckService {
                     this.getClass().getClassLoader()
             );
 
-            // Read language-module.properties from the JAR
-            InputStream propsStream = classLoader.getResourceAsStream(
-                    "META-INF/org/languagetool/language-module.properties");
-            if (propsStream == null) {
-                System.err.println("SpellCheckService: No language-module.properties in " + jarPath);
-                return null;
-            }
+            // Set as thread context classloader so LanguageTool can find resources
+            Thread.currentThread().setContextClassLoader(classLoader);
 
+            // Read language-module.properties DIRECTLY from the JAR file
+            // (not via classloader which would parent-delegate and find English first)
+            String propsPath = "META-INF/org/languagetool/language-module.properties";
+            URL propsUrl = new URL("jar:" + jarUrl + "!/" + propsPath);
             Properties props = new Properties();
-            props.load(propsStream);
-            propsStream.close();
+            try (InputStream propsStream = propsUrl.openStream()) {
+                props.load(propsStream);
+            }
 
             String classesStr = props.getProperty("languageClasses");
             if (classesStr == null || classesStr.isBlank()) {
+                System.err.println("SpellCheckService: No languageClasses in " + jarPath);
                 return null;
             }
 
-            // Parse comma-separated class names and instantiate the best match
+            // Parse comma-separated class names and instantiate the first one
             String[] classNames = classesStr.split(",");
             Language bestMatch = null;
+            List<Language> allVariants = new ArrayList<>();
 
             for (String className : classNames) {
                 className = className.trim();
@@ -250,19 +259,63 @@ public class SpellCheckService {
                 try {
                     Class<?> langClass = classLoader.loadClass(className);
                     Language lang = (Language) langClass.getDeclaredConstructor().newInstance();
-                    // Prefer a more specific variant (first class is usually the base)
+                    allVariants.add(lang);
                     if (bestMatch == null) {
                         bestMatch = lang;
                     }
                 } catch (Exception e) {
-                    // Try next class
+                    System.err.println("SpellCheckService: Could not load " + className + ": " + e.getMessage());
                 }
+            }
+
+            // Register all variants with LanguageTool's Languages registry
+            for (Language variant : allVariants) {
+                registerLanguage(variant);
             }
 
             return bestMatch;
         } catch (Exception e) {
             System.err.println("SpellCheckService: Failed to load language from JAR: " + e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Registers a dynamically loaded Language with LanguageTool's internal Languages registry.
+     * This is necessary so that internal calls to Languages.getLanguageForShortCode() succeed.
+     * Uses reflection to access the internal lists since there's no public API for this.
+     */
+    @SuppressWarnings("unchecked")
+    private void registerLanguage(Language language) {
+        try {
+            // Check if already registered
+            if (Languages.isLanguageSupported(language.getShortCodeWithCountryAndVariant())) {
+                return;
+            }
+        } catch (Exception e) {
+            // Not registered — proceed to register
+        }
+
+        try {
+            // Access Languages.dynLanguages (List<Language>)
+            java.lang.reflect.Field dynField = Languages.class.getDeclaredField("dynLanguages");
+            dynField.setAccessible(true);
+            List<Language> dynLanguages = (List<Language>) dynField.get(null);
+            dynLanguages.add(language);
+
+            // Access Languages.staticAndDynamicLanguages (List<Language>)
+            java.lang.reflect.Field sadField = Languages.class.getDeclaredField("staticAndDynamicLanguages");
+            sadField.setAccessible(true);
+            List<Language> sadLanguages = (List<Language>) sadField.get(null);
+            sadLanguages.add(language);
+        } catch (Exception e) {
+            System.err.println("SpellCheckService: Could not register language via reflection: " + e.getMessage());
+            // Try the public API as fallback (may fail with ClassNotFoundException)
+            try {
+                Languages.getOrAddLanguageByClassName(language.getClass().getName());
+            } catch (Exception ex) {
+                System.err.println("SpellCheckService: Fallback registration also failed: " + ex.getMessage());
+            }
         }
     }
 
