@@ -115,6 +115,10 @@ public class SpellCheckService {
 
     private void initLanguageTool() {
         try {
+            // LanguageTool's grammar.xml exceeds the default JDK XML entity size limit
+            System.setProperty("jdk.xml.totalEntitySizeLimit", "0");
+            System.setProperty("jdk.xml.entityExpansionLimit", "0");
+
             JLanguageTool lt = new JLanguageTool(new AmericanEnglish());
             for (String ruleId : DISABLED_RULES) {
                 lt.disableRule(ruleId);
@@ -122,6 +126,7 @@ public class SpellCheckService {
             this.langTool = lt;
         } catch (Exception e) {
             System.err.println("SpellCheckService: Failed to initialize LanguageTool: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
