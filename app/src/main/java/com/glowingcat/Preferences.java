@@ -129,6 +129,9 @@ public class Preferences {
     /** Whether dark mode is enabled. */
     private boolean darkMode = false;
 
+    /** Spell check language code (e.g., "en", "fr", "de"). */
+    private String spellCheckLanguage = "en";
+
     // --- License ---
 
     /** License email address. */
@@ -232,6 +235,8 @@ public class Preferences {
     public void setAiVisible(boolean aiVisible) { this.aiVisible = aiVisible; }
     public boolean isDarkMode() { return darkMode; }
     public void setDarkMode(boolean darkMode) { this.darkMode = darkMode; }
+    public String getSpellCheckLanguage() { return spellCheckLanguage != null ? spellCheckLanguage : "en"; }
+    public void setSpellCheckLanguage(String spellCheckLanguage) { this.spellCheckLanguage = spellCheckLanguage; }
 
     // --- License getters/setters ---
 

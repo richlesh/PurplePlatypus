@@ -22,7 +22,8 @@ public class SpellCheckController {
     private static final int DEBOUNCE_MS = 500;
 
     private final RSyntaxTextArea textArea;
-    private final SpellCheckService service;
+    private final Path configDir;
+    private SpellCheckService service;
     private final SpellCheckHighlighter highlighter;
     private final SpellCheckContextMenu contextMenu;
     private final Timer debounceTimer;
@@ -37,8 +38,20 @@ public class SpellCheckController {
      * @param configDir directory for user dictionary storage (e.g., ~/.purpleplatypus/)
      */
     public SpellCheckController(RSyntaxTextArea textArea, Path configDir) {
+        this(textArea, configDir, "en");
+    }
+
+    /**
+     * Creates a spell-check controller for the given text area with a specific language.
+     *
+     * @param textArea  the editor component
+     * @param configDir directory for user dictionary storage (e.g., ~/.purpleplatypus/)
+     * @param langCode  the language code (e.g., "en", "fr", "de")
+     */
+    public SpellCheckController(RSyntaxTextArea textArea, Path configDir, String langCode) {
         this.textArea = textArea;
-        this.service = new SpellCheckService(configDir);
+        this.configDir = configDir;
+        this.service = new SpellCheckService(configDir, langCode);
         this.highlighter = new SpellCheckHighlighter(textArea);
         this.contextMenu = new SpellCheckContextMenu();
 
@@ -80,6 +93,28 @@ public class SpellCheckController {
     /** Returns whether spell checking is currently enabled. */
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * Changes the spell-check language. Clears current highlights and
+     * reinitializes the service with the new language.
+     *
+     * @param langCode the new language code (e.g., "en", "fr", "de")
+     */
+    public void setLanguage(String langCode) {
+        highlighter.clearHighlights();
+        service.setLanguage(langCode);
+        if (enabled) {
+            // Re-check after a short delay to let the service reinitialize
+            Timer delayTimer = new Timer(500, e -> scheduleCheck());
+            delayTimer.setRepeats(false);
+            delayTimer.start();
+        }
+    }
+
+    /** Returns the current language code. */
+    public String getLanguage() {
+        return service.getCurrentLanguage();
     }
 
     /**

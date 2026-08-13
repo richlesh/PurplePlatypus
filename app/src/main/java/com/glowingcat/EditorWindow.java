@@ -1119,6 +1119,9 @@ public class EditorWindow {
             // Restore pane visibility
             if (!preferences.isPreviewVisible()) {
                 previewToggle.setSelected(false);
+                previewToggle.setBackground(null);
+                previewToggle.setContentAreaFilled(false);
+                previewToggle.setOpaque(false);
                 previewVisible = false;
                 lastPreviewDivider = preferences.getEditorPreviewDivider();
                 editorPreviewSplit.setRightComponent(null);
@@ -1126,6 +1129,9 @@ public class EditorWindow {
             }
             if (!preferences.isAiVisible()) {
                 aiToggle.setSelected(false);
+                aiToggle.setBackground(null);
+                aiToggle.setContentAreaFilled(false);
+                aiToggle.setOpaque(false);
                 aiVisible = false;
                 lastAiDivider = preferences.getMainDivider();
                 mainSplit.setRightComponent(null);
@@ -1198,7 +1204,7 @@ public class EditorWindow {
 
         // Spell checking — initialize controller and enable by default
         Path spellCheckConfigDir = Paths.get(System.getProperty("user.home"), ".purpleplatypus");
-        spellCheckController = new SpellCheckController(editorPane, spellCheckConfigDir);
+        spellCheckController = new SpellCheckController(editorPane, spellCheckConfigDir, preferences.getSpellCheckLanguage());
         spellCheckController.setEnabled(true);
 
         // Drag-and-drop: insert markdown image link when an image file is dropped onto the editor
@@ -3426,10 +3432,18 @@ public class EditorWindow {
             editorPanel.applyPreferences(preferences);
             previewPanel.forceFullReload();
             updatePreview();
+            // Update spell check language if changed
+            if (spellCheckController != null) {
+                String newLang = preferences.getSpellCheckLanguage();
+                if (!newLang.equals(spellCheckController.getLanguage())) {
+                    spellCheckController.setLanguage(newLang);
+                }
+            }
             // Update toolbar toggle button highlight colors
             Color hlColor = preferences.getButtonHighlightColorObj();
             if (wordWrapToggle.isSelected()) wordWrapToggle.setBackground(hlColor);
             if (hiddenCharsToggle.isSelected()) hiddenCharsToggle.setBackground(hlColor);
+            if (spellCheckToggle.isSelected()) spellCheckToggle.setBackground(hlColor);
             if (syncScrollToggle.isSelected()) syncScrollToggle.setBackground(hlColor);
             if (previewToggle.isSelected()) previewToggle.setBackground(hlColor);
             if (aiToggle.isSelected()) aiToggle.setBackground(hlColor);

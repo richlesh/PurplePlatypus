@@ -4,10 +4,14 @@
 package com.glowingcat.spellcheck;
 
 import org.languagetool.JLanguageTool;
+import org.languagetool.Language;
 import org.languagetool.language.AmericanEnglish;
 import org.languagetool.rules.RuleMatch;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +25,7 @@ import java.util.stream.Collectors;
  * <p>
  * Initializes LanguageTool asynchronously on first construction and manages
  * a per-user dictionary stored in the provided config directory.
+ * Supports switching languages at runtime by downloading language JARs.
  */
 public class SpellCheckService {
 
@@ -44,24 +49,56 @@ public class SpellCheckService {
     private final Path configDir;
     private final Path userDictPath;
     private final Set<String> userDictionary = new CopyOnWriteArraySet<>();
+    private final LanguageDownloader downloader;
     private volatile JLanguageTool langTool;
-    private final CompletableFuture<Void> initFuture;
+    private volatile String currentLanguage;
+    private volatile boolean initializing = false;
 
     /**
-     * Creates the spell-check service.
+     * Creates the spell-check service with the default language (English).
      *
      * @param configDir directory for storing the user dictionary (e.g., ~/.purpleplatypus/)
      */
     public SpellCheckService(Path configDir) {
+        this(configDir, "en");
+    }
+
+    /**
+     * Creates the spell-check service with a specified language.
+     *
+     * @param configDir directory for storing the user dictionary (e.g., ~/.purpleplatypus/)
+     * @param langCode  the language code (e.g., "en", "fr", "de")
+     */
+    public SpellCheckService(Path configDir, String langCode) {
         this.configDir = configDir;
         this.userDictPath = configDir.resolve(USER_DICT_FILENAME);
+        this.downloader = new LanguageDownloader(configDir);
+        this.currentLanguage = langCode != null ? langCode : "en";
         loadUserDictionary();
-        initFuture = CompletableFuture.runAsync(this::initLanguageTool);
+        initializeAsync();
     }
 
     /** Returns true once LanguageTool has finished initializing. */
     public boolean isReady() {
-        return langTool != null;
+        return langTool != null && !initializing;
+    }
+
+    /** Returns the current language code. */
+    public String getCurrentLanguage() {
+        return currentLanguage;
+    }
+
+    /**
+     * Changes the spell-check language. Downloads the language JAR if needed.
+     * Reinitializes LanguageTool asynchronously.
+     *
+     * @param langCode the new language code
+     */
+    public void setLanguage(String langCode) {
+        if (langCode == null || langCode.equals(currentLanguage)) return;
+        this.currentLanguage = langCode;
+        this.langTool = null;
+        initializeAsync();
     }
 
     /**
@@ -113,13 +150,25 @@ public class SpellCheckService {
         return Collections.unmodifiableSet(userDictionary);
     }
 
+    private void initializeAsync() {
+        initializing = true;
+        CompletableFuture.runAsync(this::initLanguageTool);
+    }
+
     private void initLanguageTool() {
         try {
             // LanguageTool's grammar.xml exceeds the default JDK XML entity size limit
             System.setProperty("jdk.xml.totalEntitySizeLimit", "0");
             System.setProperty("jdk.xml.entityExpansionLimit", "0");
 
-            JLanguageTool lt = new JLanguageTool(new AmericanEnglish());
+            Language language = resolveLanguage(currentLanguage);
+            if (language == null) {
+                System.err.println("SpellCheckService: Could not resolve language: " + currentLanguage);
+                initializing = false;
+                return;
+            }
+
+            JLanguageTool lt = new JLanguageTool(language);
             for (String ruleId : DISABLED_RULES) {
                 lt.disableRule(ruleId);
             }
@@ -127,6 +176,93 @@ public class SpellCheckService {
         } catch (Exception e) {
             System.err.println("SpellCheckService: Failed to initialize LanguageTool: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            initializing = false;
+        }
+    }
+
+    /**
+     * Resolves the Language object for the given code.
+     * For English, uses the bundled AmericanEnglish. For others, downloads the JAR
+     * and loads the Language class dynamically.
+     */
+    private Language resolveLanguage(String langCode) {
+        if ("en".equals(langCode)) {
+            return new AmericanEnglish();
+        }
+
+        // Download the language JAR if not already present
+        try {
+            if (!downloader.isDownloaded(langCode)) {
+                downloader.download(langCode);
+            }
+        } catch (IOException e) {
+            System.err.println("SpellCheckService: Failed to download language pack for " + langCode + ": " + e.getMessage());
+            return null;
+        }
+
+        // Load the language from the downloaded JAR
+        return loadLanguageFromJar(langCode);
+    }
+
+    /**
+     * Loads a Language instance from a downloaded JAR using URLClassLoader.
+     * Reads the language-module.properties to find the language class names,
+     * then instantiates the first one (or the best match for the language code).
+     */
+    private Language loadLanguageFromJar(String langCode) {
+        Path jarPath = downloader.getJarPath(langCode);
+        if (!Files.exists(jarPath)) {
+            return null;
+        }
+
+        try {
+            URL jarUrl = jarPath.toUri().toURL();
+            URLClassLoader classLoader = new URLClassLoader(
+                    new URL[]{jarUrl},
+                    this.getClass().getClassLoader()
+            );
+
+            // Read language-module.properties from the JAR
+            InputStream propsStream = classLoader.getResourceAsStream(
+                    "META-INF/org/languagetool/language-module.properties");
+            if (propsStream == null) {
+                System.err.println("SpellCheckService: No language-module.properties in " + jarPath);
+                return null;
+            }
+
+            Properties props = new Properties();
+            props.load(propsStream);
+            propsStream.close();
+
+            String classesStr = props.getProperty("languageClasses");
+            if (classesStr == null || classesStr.isBlank()) {
+                return null;
+            }
+
+            // Parse comma-separated class names and instantiate the best match
+            String[] classNames = classesStr.split(",");
+            Language bestMatch = null;
+
+            for (String className : classNames) {
+                className = className.trim();
+                if (className.isEmpty()) continue;
+                try {
+                    Class<?> langClass = classLoader.loadClass(className);
+                    Language lang = (Language) langClass.getDeclaredConstructor().newInstance();
+                    // Prefer a more specific variant (first class is usually the base)
+                    if (bestMatch == null) {
+                        bestMatch = lang;
+                    }
+                } catch (Exception e) {
+                    // Try next class
+                }
+            }
+
+            return bestMatch;
+        } catch (Exception e) {
+            System.err.println("SpellCheckService: Failed to load language from JAR: " + e.getMessage());
+            return null;
         }
     }
 
