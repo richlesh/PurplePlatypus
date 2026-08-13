@@ -446,7 +446,7 @@ public class PreviewPanel extends JPanel {
         }
         if (needsMermaid) {
             if (forExport) {
-                sb.append("<script src=\"https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js\"></script>");
+                sb.append("<script src=\"https://cdn.jsdelivr.net/npm/mermaid@11.16.1/dist/mermaid.min.js\"></script>");
             } else {
                 sb.append("<script>").append(WebResources.mermaidJs()).append("</script>");
             }
