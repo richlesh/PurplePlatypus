@@ -34,7 +34,7 @@ public class LanguageDownloader {
     private static final LinkedHashMap<String, String> AVAILABLE_LANGUAGES = new LinkedHashMap<>();
 
     static {
-        AVAILABLE_LANGUAGES.put("ar", "العربية — Arabic");
+        AVAILABLE_LANGUAGES.put("ar", "\u200Eالعربية — Arabic");
         AVAILABLE_LANGUAGES.put("ast", "Asturianu — Asturian");
         AVAILABLE_LANGUAGES.put("be", "Беларуская — Belarusian");
         AVAILABLE_LANGUAGES.put("br", "Brezhoneg — Breton");
@@ -54,7 +54,7 @@ public class LanguageDownloader {
         AVAILABLE_LANGUAGES.put("ja", "日本語 — Japanese");
         AVAILABLE_LANGUAGES.put("km", "ភាសាខ្មែរ — Khmer");
         AVAILABLE_LANGUAGES.put("nl", "Nederlands — Dutch");
-        AVAILABLE_LANGUAGES.put("fa", "فارسی — Persian");
+        AVAILABLE_LANGUAGES.put("fa", "\u200Eفارسی — Persian");
         AVAILABLE_LANGUAGES.put("pl", "Polski — Polish");
         AVAILABLE_LANGUAGES.put("pt", "Português — Portuguese");
         AVAILABLE_LANGUAGES.put("ro", "Română — Romanian");
