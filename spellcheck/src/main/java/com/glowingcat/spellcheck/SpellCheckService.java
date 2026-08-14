@@ -164,10 +164,12 @@ public class SpellCheckService {
 
             // Extract English dictionary resources to filesystem on first run.
             // Morfologik requires filesystem Paths for dictionary access, which fails
-            // when resources are inside a fat JAR.
+            // when resources are inside a fat JAR. In dev mode, extraction is skipped.
             if ("en".equals(currentLanguage)) {
-                extractEnglishResources();
-                configureEnglishDataBroker();
+                boolean extracted = extractEnglishResources();
+                if (extracted) {
+                    configureEnglishDataBroker();
+                }
             }
 
             Language language = resolveLanguage(currentLanguage);
@@ -200,11 +202,21 @@ public class SpellCheckService {
      * Extracts English language resources from the classpath to the config directory.
      * This is needed because Morfologik's Dictionary.read(Path) requires filesystem access,
      * which fails when resources are inside a fat JAR.
+     *
+     * @return true if extraction was performed (running from JAR), false if not needed (dev mode)
      */
-    private void extractEnglishResources() {
+    private boolean extractEnglishResources() {
         Path enDir = configDir.resolve("languages").resolve("en");
         Path marker = enDir.resolve(".extracted_english");
-        if (Files.exists(marker)) return;
+        if (Files.exists(marker)) {
+            // Check if it was a real extraction or a dev-mode skip
+            try {
+                String content = Files.readString(marker);
+                return "extracted".equals(content.trim());
+            } catch (IOException e) {
+                return false;
+            }
+        }
 
         try {
             Files.createDirectories(enDir);
@@ -212,13 +224,12 @@ public class SpellCheckService {
 
             // Find the source of English resources — could be a JAR or directory
             URL resUrl = cl.getResource("org/languagetool/resource/en/english.dict");
-            if (resUrl == null) return; // Resources not available
+            if (resUrl == null) return false; // Resources not available
 
             if ("file".equals(resUrl.getProtocol())) {
                 // Running from exploded classpath (development) — extraction not needed
-                // but we still create the marker so we don't check every time
                 Files.writeString(marker, "not-needed");
-                return;
+                return false;
             }
 
             // Running from a JAR — extract all English resources
@@ -245,8 +256,10 @@ public class SpellCheckService {
                 }
             }
             Files.writeString(marker, "extracted");
+            return true;
         } catch (IOException e) {
             System.err.println("SpellCheckService: Could not extract English resources: " + e.getMessage());
+            return false;
         }
     }
 

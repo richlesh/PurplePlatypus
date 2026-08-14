@@ -22,37 +22,6 @@
             <groupId>org.languagetool</groupId>
             <artifactId>languagetool-core</artifactId>
             <version>6.4</version>
-            <exclusions>
-                <!-- Server-side/monitoring deps not needed for embedded spell checking -->
-                <exclusion>
-                    <groupId>io.grpc</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.protobuf</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.api.grpc</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.opentelemetry</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.prometheus</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.micrometer</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.github.resilience4j</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.languagetool</groupId>
