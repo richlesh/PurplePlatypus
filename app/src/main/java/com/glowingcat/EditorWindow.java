@@ -347,7 +347,7 @@ public class EditorWindow {
         convertLineEndingsItem.addActionListener(e -> convertLineEndings());
         editMenu.add(convertLineEndingsItem);
 
-        JMenuItem cleanupTablesItem = new JMenuItem("Cleanup Tables");
+        JMenuItem cleanupTablesItem = new JMenuItem("Convert All Pandoc Tables");
         cleanupTablesItem.addActionListener(e -> cleanupPandocTables());
         editMenu.add(cleanupTablesItem);
 
@@ -367,7 +367,7 @@ public class EditorWindow {
         editMenu.addMenuListener(new javax.swing.event.MenuListener() {
             @Override public void menuSelected(javax.swing.event.MenuEvent e) {
                 boolean hasSel = editorPane.getSelectionStart() != editorPane.getSelectionEnd();
-                cleanupTablesItem.setText(hasSel ? "Cleanup Tables in Selection" : "Cleanup Tables");
+                cleanupTablesItem.setText(hasSel ? "Convert Pandoc Table in Selection" : "Convert All Pandoc Tables");
                 zapGremlinsItem.setText(hasSel ? "Zap Gremlins in Selection..." : "Zap Gremlins...");
                 htmlEncodeItem.setText(hasSel ? "HTML Encode Selection" : "HTML Encode");
             }
@@ -1638,7 +1638,7 @@ public class EditorWindow {
             updatePreview();
         } else {
             JOptionPane.showMessageDialog(frame, "No Pandoc-style tables found.",
-                "Cleanup Pandoc Tables", JOptionPane.INFORMATION_MESSAGE);
+                "Convert Pandoc Table", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 

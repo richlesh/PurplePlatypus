@@ -4,6 +4,9 @@ Copy any block into a Mermaid‑enabled viewer (e.g., Markdown preview, MkDocs, 
 ---
 
 ## 1. Graph (`graph`)
+
+<div style="text-align: center;">
+
 ```mermaid
 graph TD
     A[Start] --> B{Decision}
@@ -11,17 +14,27 @@ graph TD
     B -->|No| D[Result 2]
 ```
 
+</div>
+
 ---
 
 ## 2. Flowchart (`flowchart`)
+
+<div style="text-align: center;">
+
 ```mermaid
 flowchart LR
     Start --> Process[Do something] --> End[Finish]
 ```
 
+</div>
+
 ---
 
 ## 3. Sequence Diagram (`sequenceDiagram`)
+
+<div style="text-align: center;">
+
 ```mermaid
 sequenceDiagram
     participant Alice
@@ -32,9 +45,14 @@ sequenceDiagram
     Bob-->>Alice: Great!
 ```
 
+</div>
+
 ---
 
 ## 4. Class Diagram (`classDiagram`)
+
+<div style="text-align: center;">
+
 ```mermaid
 classDiagram
     Animal <|-- Dog
@@ -53,9 +71,14 @@ classDiagram
     }
 ```
 
+</div>
+
 ---
 
 ## 5. State Diagram v2 (`stateDiagram-v2`)
+
+<div style="text-align: center;">
+
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
@@ -65,9 +88,14 @@ stateDiagram-v2
     Error --> [*]
 ```
 
+</div>
+
 ---
 
 ## 6. ER Diagram (`erDiagram`)
+
+<div style="text-align: center;">
+
 ```mermaid
 erDiagram
     CUSTOMER ||--o{ ORDER : places
@@ -87,9 +115,14 @@ erDiagram
     }
 ```
 
+</div>
+
 ---
 
 ## 7. Gantt (`gantt`)
+
+<div style="text-align: center;">
+
 ```mermaid
 gantt
     title Project Timeline
@@ -100,9 +133,14 @@ gantt
     Review           :2023-01-20, 2d
 ```
 
+</div>
+
 ---
 
 ## 8. Pie (`pie`)
+
+<div style="text-align: center;">
+
 ```mermaid
 pie
     title Pets Adopted
@@ -111,9 +149,14 @@ pie
     "Rabbits" : 15
     "Others" : 10
 ```
+
+</div>
 ---
 
 ## 9. Mindmap (`mindmap`)
+
+<div style="text-align: center;">
+
 ```mermaid
 mindmap
     root((Mindmap))
@@ -124,9 +167,14 @@ mindmap
             sub2a[Detail C]
 ```
 
+</div>
+
 ---
 
 ## 10. Timeline (`timeline`)
+
+<div style="text-align: center;">
+
 ```mermaid
 timeline
     title History Timeline
@@ -136,9 +184,14 @@ timeline
     2020 : Event D
 ```
 
+</div>
+
 ---
 
 ## 11. GitGraph (`gitGraph`)
+
+<div style="text-align: center;">
+
 ```mermaid
 gitGraph
     commit
@@ -150,9 +203,14 @@ gitGraph
     merge develop
 ```
 
+</div>
+
 ---
 
 ## 12. Quadrant Chart (`quadrantChart`)
+
+<div style="text-align: center;">
+
 ```mermaid
 quadrantChart
     title Quadrant Chart Example
@@ -162,6 +220,10 @@ quadrantChart
     "Item B": [0.80, 0.20]
     "Item C": [0.50, 0.50]
 ```
+
+</div>
+
+<div style="text-align: center;">
 
 ```mermaid
 quadrantChart
@@ -178,10 +240,13 @@ quadrantChart
     "Update dependencies": [0.30, 0.45]
 ```
 
+</div>
 
 ---
 
 ## 13. XY Chart (`xychart-beta`)
+
+<div style="text-align: center;">
 
 ```mermaid
 xychart-beta
@@ -199,9 +264,14 @@ xychart-beta
     line [45, 52, 60, 78, 85, 100]
 ```
 
+</div>
+
 ---
 
 ## 14. Block (`block-beta`)
+
+<div style="text-align: center;">
+
 ```mermaid
 block-beta
     a["Start"] --> b["Step 1"]
@@ -210,21 +280,30 @@ block-beta
     c -->|no| e["End"]
 ```
 
+</div>
+
 ---
 
 ## 15. Sankey (`sankey-beta`)
+
+<div style="text-align: center;">
+
 ```mermaid
 sankey-beta
 Agricultural 'waste',Bio-energy,124.729
 Bio-energy,Electricity grid,35.0
 Bio-energy,Losses,6.242
 Bio-energy,Industry,10.606
-
 ```
+
+</div>
 
 ---
 
 ## 16. Packet (`packet-beta`)
+
+<div style="text-align: center;">
+
 ```mermaid
 packet-beta
 0-15: "Source Port"
@@ -244,9 +323,14 @@ packet-beta
 144-159: "Urgent Pointer"
 ```
 
+</div>
+
 ---
 
 ## 17. User Journey (`journey`)
+
+<div style="text-align: center;">
+
 ```mermaid
 journey
     title A User's Workday
@@ -259,9 +343,14 @@ journey
         Complete tasks: 5: User
 ```
 
+</div>
+
 ---
 
 ## 18. Requirement Diagram (`requirementDiagram`)
+
+<div style="text-align: center;">
+
 ```mermaid
 requirementDiagram
     requirement test_req {
@@ -276,9 +365,14 @@ requirementDiagram
     test_entity - satisfies -> test_req
 ```
 
+</div>
+
 ---
 
 ## 19. C4 Context Diagram (`C4Context`)
+
+<div style="text-align: center;">
+
 ```mermaid
 C4Context
     title System Context Diagram
@@ -287,9 +381,14 @@ C4Context
     Rel(user, app, "Uses")
 ```
 
+</div>
+
 ---
 
 ## 20. C4 Container Diagram (`C4Container`)
+
+<div style="text-align: center;">
+
 ```mermaid
 C4Container
     title Container Diagram
@@ -301,6 +400,8 @@ C4Container
     Rel(user, web, "Uses")
     Rel(web, api, "Calls")
 ```
+
+</div>
 
 ---
 
@@ -318,6 +419,9 @@ C4Component
 ---
 
 ## 22. C4 Dynamic Diagram (`C4Dynamic`)
+
+<div style="text-align: center;">
+
 ```mermaid
 C4Dynamic
     title Dynamic Diagram
@@ -327,9 +431,14 @@ C4Dynamic
     Rel(app, user, "2. Returns response")
 ```
 
+</div>
+
 ---
 
 ## 23. C4 Deployment Diagram (`C4Deployment`)
+
+<div style="text-align: center;">
+
 ```mermaid
 C4Deployment
     title Deployment Diagram
@@ -342,11 +451,16 @@ C4Deployment
     Rel(app, db, "Reads and writes")
 ```
 
+</div>
+
 ---
 
 ---
 
 ## 24. Kanban (`kanban`)
+
+<div style="text-align: center;">
+
 ```mermaid
 kanban
     Todo
@@ -357,9 +471,14 @@ kanban
         [Choose diagram types]
 ```
 
+</div>
+
 ---
 
 ## 25. Architecture (`architecture-beta`)
+
+<div style="text-align: center;">
+
 ```mermaid
 architecture-beta
     group app(cloud)[Application]
@@ -368,9 +487,14 @@ architecture-beta
     server:R -- L:db
 ```
 
+</div>
+
 ---
 
 ## 26. Radar Chart (`radar-beta`)
+
+<div style="text-align: center;">
+
 ```mermaid
 radar-beta
     title Team Skills
@@ -381,9 +505,14 @@ radar-beta
     curve Team { 80, 70, 90, 75 }
 ```
 
+</div>
+
 ---
 
 ## 27. Treemap (`treemap-beta`)
+
+<div style="text-align: center;">
+
 ```mermaid
 treemap-beta
     "Project"
@@ -395,14 +524,21 @@ treemap-beta
             "Database": 10
 ```
 
+</div>
+
 ---
 
 ## 28. Venn Diagram (`venn-beta`)
+
+<div style="text-align: center;">
+
 ```mermaid
 venn-beta
     set A["Developers"] : 40
     set B["Designers"] : 30
     union A,B : 10
 ```
+
+</div>
 
 Feel free to adjust the contents or styling to suit your own documentation or presentation needs!
