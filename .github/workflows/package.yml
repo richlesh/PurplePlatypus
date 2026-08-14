@@ -483,13 +483,16 @@ jobs:
           if [ -n "$JAR_PATH" ]; then
             TMPJAR=$(mktemp -d)
             cd "$TMPJAR"
-            # Use unzip instead of jar xf to handle case-insensitive filesystem
-            # conflicts (META-INF/LICENSE file vs META-INF/license/ directory)
-            unzip -o -q "$OLDPWD/$JAR_PATH"
+            # Only extract native libraries that need codesigning
+            # (avoids META-INF/LICENSE vs META-INF/license/ case conflict on macOS)
+            jar xf "$OLDPWD/$JAR_PATH" $(jar tf "$OLDPWD/$JAR_PATH" | grep -E '\.(dylib|jnilib)$') 2>/dev/null || true
             find . -name "*.dylib" -o -name "*.jnilib" | while read f; do
               codesign --force --options runtime --timestamp --entitlements "$OLDPWD/entitlements.plist" --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
             done
-            jar cf "$OLDPWD/$JAR_PATH" .
+            # Rebuild JAR: update signed native libs back into the original JAR
+            find . -name "*.dylib" -o -name "*.jnilib" | while read f; do
+              jar uf "$OLDPWD/$JAR_PATH" "$f"
+            done
             cd "$OLDPWD"
             rm -rf "$TMPJAR"
           fi
