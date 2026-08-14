@@ -483,7 +483,9 @@ jobs:
           if [ -n "$JAR_PATH" ]; then
             TMPJAR=$(mktemp -d)
             cd "$TMPJAR"
-            jar xf "$OLDPWD/$JAR_PATH"
+            # Use unzip instead of jar xf to handle case-insensitive filesystem
+            # conflicts (META-INF/LICENSE file vs META-INF/license/ directory)
+            unzip -o -q "$OLDPWD/$JAR_PATH"
             find . -name "*.dylib" -o -name "*.jnilib" | while read f; do
               codesign --force --options runtime --timestamp --entitlements "$OLDPWD/entitlements.plist" --sign "$IDENTITY" --keychain $RUNNER_TEMP/build.keychain "$f"
             done
