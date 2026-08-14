@@ -63,6 +63,7 @@ public class PreferencesDialog extends JDialog {
 
         // Initialize spell check language combo
         String[] languageDisplayNames = LanguageDownloader.getAvailableLanguages().values().toArray(new String[0]);
+        java.util.Arrays.sort(languageDisplayNames, String.CASE_INSENSITIVE_ORDER);
         spellCheckLanguageCombo = new JComboBox<>(languageDisplayNames);
         String currentLangCode = prefs.getSpellCheckLanguage();
         spellCheckLanguageCombo.setSelectedItem(LanguageDownloader.getDisplayName(currentLangCode));

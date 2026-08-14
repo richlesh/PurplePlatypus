@@ -31,38 +31,39 @@ public class LanguageDownloader {
     private static final LinkedHashMap<String, String> AVAILABLE_LANGUAGES = new LinkedHashMap<>();
 
     static {
+        // Sorted alphabetically by display name (native language name — English name)
+        AVAILABLE_LANGUAGES.put("ar", "العربية — Arabic");
+        AVAILABLE_LANGUAGES.put("ast", "Asturianu — Asturian");
+        AVAILABLE_LANGUAGES.put("be", "Беларуская — Belarusian");
+        AVAILABLE_LANGUAGES.put("br", "Brezhoneg — Breton");
+        AVAILABLE_LANGUAGES.put("ca", "Català — Catalan");
+        AVAILABLE_LANGUAGES.put("crh", "Qırımtatar — Crimean Tatar");
+        AVAILABLE_LANGUAGES.put("da", "Dansk — Danish");
+        AVAILABLE_LANGUAGES.put("de", "Deutsch — German");
+        AVAILABLE_LANGUAGES.put("de-DE-x-simple-language", "Einfaches Deutsch — Simple German");
+        AVAILABLE_LANGUAGES.put("el", "Ελληνικά — Greek");
         AVAILABLE_LANGUAGES.put("en", "English (American)");
-        AVAILABLE_LANGUAGES.put("ar", "Arabic");
-        AVAILABLE_LANGUAGES.put("ast", "Asturian");
-        AVAILABLE_LANGUAGES.put("be", "Belarusian");
-        AVAILABLE_LANGUAGES.put("br", "Breton");
-        AVAILABLE_LANGUAGES.put("ca", "Catalan");
-        AVAILABLE_LANGUAGES.put("crh", "Crimean Tatar");
-        AVAILABLE_LANGUAGES.put("da", "Danish");
-        AVAILABLE_LANGUAGES.put("de", "German");
-        AVAILABLE_LANGUAGES.put("de-DE-x-simple-language", "Simple German");
-        AVAILABLE_LANGUAGES.put("el", "Greek");
         AVAILABLE_LANGUAGES.put("eo", "Esperanto");
-        AVAILABLE_LANGUAGES.put("es", "Spanish");
-        AVAILABLE_LANGUAGES.put("fa", "Persian");
-        AVAILABLE_LANGUAGES.put("fr", "French");
-        AVAILABLE_LANGUAGES.put("ga", "Irish");
-        AVAILABLE_LANGUAGES.put("gl", "Galician");
-        AVAILABLE_LANGUAGES.put("it", "Italian");
-        AVAILABLE_LANGUAGES.put("ja", "Japanese");
-        AVAILABLE_LANGUAGES.put("km", "Khmer");
-        AVAILABLE_LANGUAGES.put("nl", "Dutch");
-        AVAILABLE_LANGUAGES.put("pl", "Polish");
-        AVAILABLE_LANGUAGES.put("pt", "Portuguese");
-        AVAILABLE_LANGUAGES.put("ro", "Romanian");
-        AVAILABLE_LANGUAGES.put("ru", "Russian");
-        AVAILABLE_LANGUAGES.put("sk", "Slovak");
-        AVAILABLE_LANGUAGES.put("sl", "Slovenian");
-        AVAILABLE_LANGUAGES.put("sv", "Swedish");
-        AVAILABLE_LANGUAGES.put("ta", "Tamil");
+        AVAILABLE_LANGUAGES.put("es", "Español — Spanish");
+        AVAILABLE_LANGUAGES.put("fr", "Français — French");
+        AVAILABLE_LANGUAGES.put("ga", "Gaeilge — Irish");
+        AVAILABLE_LANGUAGES.put("gl", "Galego — Galician");
+        AVAILABLE_LANGUAGES.put("it", "Italiano — Italian");
+        AVAILABLE_LANGUAGES.put("ja", "日本語 — Japanese");
+        AVAILABLE_LANGUAGES.put("km", "ភាសាខ្មែរ — Khmer");
+        AVAILABLE_LANGUAGES.put("nl", "Nederlands — Dutch");
+        AVAILABLE_LANGUAGES.put("fa", "فارسی — Persian");
+        AVAILABLE_LANGUAGES.put("pl", "Polski — Polish");
+        AVAILABLE_LANGUAGES.put("pt", "Português — Portuguese");
+        AVAILABLE_LANGUAGES.put("ro", "Română — Romanian");
+        AVAILABLE_LANGUAGES.put("ru", "Русский — Russian");
+        AVAILABLE_LANGUAGES.put("sk", "Slovenčina — Slovak");
+        AVAILABLE_LANGUAGES.put("sl", "Slovenščina — Slovenian");
+        AVAILABLE_LANGUAGES.put("sv", "Svenska — Swedish");
+        AVAILABLE_LANGUAGES.put("ta", "தமிழ் — Tamil");
         AVAILABLE_LANGUAGES.put("tl", "Tagalog");
-        AVAILABLE_LANGUAGES.put("uk", "Ukrainian");
-        AVAILABLE_LANGUAGES.put("zh", "Chinese");
+        AVAILABLE_LANGUAGES.put("uk", "Українська — Ukrainian");
+        AVAILABLE_LANGUAGES.put("zh", "中文 — Chinese");
     }
 
     private final Path languagesDir;
