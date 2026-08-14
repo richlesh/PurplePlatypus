@@ -69,6 +69,9 @@ table {
     color: #cccccc;
     border-collapse: collapse;
     margin: 12px auto;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
 }
 
 th, td {
