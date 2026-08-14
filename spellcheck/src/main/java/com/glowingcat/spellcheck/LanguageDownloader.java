@@ -14,24 +14,26 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Downloads LanguageTool language JARs from Maven Central to a local directory.
  * <p>
  * Downloaded JARs are cached in {@code ~/.purpleplatypus/languages/} so they
- * only need to be downloaded once per language.
+ * only need to be downloaded once per language. Dependencies (POS dictionaries,
+ * morphology JARs, etc.) are discovered automatically by parsing the language
+ * JAR's POM file from Maven Central.
  */
 public class LanguageDownloader {
 
     private static final String LANGUAGETOOL_VERSION = "6.4";
-    private static final String MAVEN_CENTRAL_BASE =
-            "https://repo1.maven.org/maven2/org/languagetool/";
+    private static final String MAVEN_CENTRAL = "https://repo1.maven.org/maven2/";
 
     /** All available LanguageTool language artifacts (code → display name). */
     private static final LinkedHashMap<String, String> AVAILABLE_LANGUAGES = new LinkedHashMap<>();
 
     static {
-        // Sorted alphabetically by display name (native language name — English name)
         AVAILABLE_LANGUAGES.put("ar", "العربية — Arabic");
         AVAILABLE_LANGUAGES.put("ast", "Asturianu — Asturian");
         AVAILABLE_LANGUAGES.put("be", "Беларуская — Belarusian");
@@ -66,34 +68,43 @@ public class LanguageDownloader {
         AVAILABLE_LANGUAGES.put("zh", "中文 — Chinese");
     }
 
-    private final Path languagesDir;
+    /** Artifacts to skip when resolving dependencies (already on classpath or test-only). */
+    private static final Set<String> SKIP_ARTIFACTS = Set.of(
+            "languagetool-core", "junit", "logback-classic", "openregex"
+    );
 
-    /**
-     * Creates a downloader that stores JARs in the given config directory.
-     *
-     * @param configDir the base config directory (e.g., ~/.purpleplatypus/)
-     */
+    /** Regex patterns for parsing POM XML without a full XML parser. */
+    private static final Pattern DEPENDENCY_BLOCK = Pattern.compile(
+            "<dependency>\\s*(.*?)\\s*</dependency>", Pattern.DOTALL);
+    private static final Pattern GROUP_ID = Pattern.compile("<groupId>([^<]+)</groupId>");
+    private static final Pattern ARTIFACT_ID = Pattern.compile("<artifactId>([^<]+)</artifactId>");
+    private static final Pattern VERSION_TAG = Pattern.compile("<version>([^<]+)</version>");
+    private static final Pattern SCOPE_TAG = Pattern.compile("<scope>([^<]+)</scope>");
+    private static final Pattern CLASSIFIER_TAG = Pattern.compile("<classifier>([^<]+)</classifier>");
+    private static final Pattern PROPERTY_REF = Pattern.compile("\\$\\{([^}]+)}");
+
+    private final Path languagesDir;
+    private final HttpClient httpClient;
+
     public LanguageDownloader(Path configDir) {
         this.languagesDir = configDir.resolve("languages");
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
     }
 
-    /**
-     * Returns all available languages as a map of language code → display name.
-     */
+    /** Returns all available languages as a map of language code → display name. */
     public static Map<String, String> getAvailableLanguages() {
         return Collections.unmodifiableMap(AVAILABLE_LANGUAGES);
     }
 
-    /**
-     * Returns the display name for a language code.
-     */
+    /** Returns the display name for a language code. */
     public static String getDisplayName(String langCode) {
         return AVAILABLE_LANGUAGES.getOrDefault(langCode, langCode);
     }
 
-    /**
-     * Returns the language code for a display name.
-     */
+    /** Returns the language code for a display name. */
     public static String getCodeForDisplayName(String displayName) {
         for (Map.Entry<String, String> entry : AVAILABLE_LANGUAGES.entrySet()) {
             if (entry.getValue().equals(displayName)) {
@@ -103,17 +114,13 @@ public class LanguageDownloader {
         return "en";
     }
 
-    /**
-     * Returns true if the language JAR is already downloaded locally.
-     */
+    /** Returns true if the language JAR is already downloaded locally. */
     public boolean isDownloaded(String langCode) {
-        if ("en".equals(langCode)) return true; // English is bundled
+        if ("en".equals(langCode)) return true;
         return Files.exists(getJarPath(langCode));
     }
 
-    /**
-     * Returns the path to the downloaded JAR for a language.
-     */
+    /** Returns the path to the downloaded JAR for a language. */
     public Path getJarPath(String langCode) {
         String artifactId = "language-" + langCode;
         String filename = artifactId + "-" + LANGUAGETOOL_VERSION + ".jar";
@@ -121,8 +128,8 @@ public class LanguageDownloader {
     }
 
     /**
-     * Downloads the language JAR and its POS dictionary dependency (if any)
-     * from Maven Central if not already present.
+     * Downloads the language JAR and automatically resolves and downloads its
+     * dependencies by parsing the POM file from Maven Central.
      *
      * @param langCode the language code (e.g., "fr", "de", "es")
      * @return the path to the downloaded language JAR
@@ -133,38 +140,224 @@ public class LanguageDownloader {
             throw new IllegalArgumentException("English is bundled and does not need downloading");
         }
 
-        Path jarPath = getJarPath(langCode);
         Files.createDirectories(languagesDir);
+        Path jarPath = getJarPath(langCode);
 
         // Download the main language JAR if needed
         if (!Files.exists(jarPath)) {
             String artifactId = "language-" + langCode;
-            downloadArtifact("org.languagetool", artifactId, LANGUAGETOOL_VERSION, jarPath);
+            downloadArtifact("org.languagetool", artifactId, LANGUAGETOOL_VERSION, null, jarPath);
         }
 
-        // Also download additional dependencies (POS dicts, morphology, etc.)
-        List<DependencyInfo> deps = getLanguageDependencies(langCode);
-        for (DependencyInfo dep : deps) {
-            Path depPath = languagesDir.resolve(dep.filename());
-            if (!Files.exists(depPath)) {
-                try {
-                    downloadUrl(dep.url(), depPath);
-                } catch (IOException e) {
-                    System.err.println("LanguageDownloader: Could not download " + dep.artifactId() + ": " + e.getMessage());
-                }
-            }
-        }
+        // Resolve and download dependencies from the POM
+        resolveDependencies(langCode);
 
         return jarPath;
     }
 
     /**
-     * Downloads a Maven artifact JAR by groupId/artifactId/version.
+     * Resolves dependencies by downloading and parsing the language's POM file.
+     * Also fetches the parent POM to resolve version properties.
      */
-    private void downloadArtifact(String groupId, String artifactId, String version, Path targetPath) throws IOException {
+    private void resolveDependencies(String langCode) {
+        try {
+            String artifactId = "language-" + langCode;
+            String pomUrl = MAVEN_CENTRAL + "org/languagetool/" + artifactId + "/" + LANGUAGETOOL_VERSION
+                    + "/" + artifactId + "-" + LANGUAGETOOL_VERSION + ".pom";
+
+            String pomContent = fetchText(pomUrl);
+            if (pomContent == null) return;
+
+            // Also fetch parent POM for version properties
+            String parentPomUrl = MAVEN_CENTRAL + "org/languagetool/languagetool-parent/"
+                    + LANGUAGETOOL_VERSION + "/languagetool-parent-" + LANGUAGETOOL_VERSION + ".pom";
+            String parentPom = fetchText(parentPomUrl);
+            Map<String, String> properties = parseProperties(parentPom);
+
+            // Parse dependencies from the language POM
+            List<DependencyInfo> deps = parseDependencies(pomContent, properties);
+
+            // Download each dependency
+            for (DependencyInfo dep : deps) {
+                Path depPath = languagesDir.resolve(dep.filename());
+                if (!Files.exists(depPath)) {
+                    try {
+                        downloadUrl(dep.url(), depPath);
+                    } catch (IOException e) {
+                        System.err.println("LanguageDownloader: Could not download "
+                                + dep.groupId() + ":" + dep.artifactId() + " - " + e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("LanguageDownloader: Error resolving dependencies for " + langCode + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Parses dependency blocks from a POM file, filtering out test-scoped and
+     * known-on-classpath artifacts.
+     */
+    private List<DependencyInfo> parseDependencies(String pomContent, Map<String, String> properties) {
+        List<DependencyInfo> deps = new ArrayList<>();
+
+        Matcher depMatcher = DEPENDENCY_BLOCK.matcher(pomContent);
+        while (depMatcher.find()) {
+            String block = depMatcher.group(1);
+
+            // Skip test-scoped dependencies
+            Matcher scopeMatcher = SCOPE_TAG.matcher(block);
+            if (scopeMatcher.find() && "test".equals(scopeMatcher.group(1))) {
+                continue;
+            }
+
+            Matcher gidMatcher = GROUP_ID.matcher(block);
+            Matcher aidMatcher = ARTIFACT_ID.matcher(block);
+            if (!gidMatcher.find() || !aidMatcher.find()) continue;
+
+            String groupId = gidMatcher.group(1).trim();
+            String artifactId = aidMatcher.group(1).trim();
+
+            // Skip artifacts we already have on the classpath
+            if (SKIP_ARTIFACTS.contains(artifactId)) continue;
+            if ("org.languagetool".equals(groupId) && artifactId.startsWith("language")) continue;
+
+            // Resolve version
+            String version = null;
+            Matcher verMatcher = VERSION_TAG.matcher(block);
+            if (verMatcher.find()) {
+                version = resolveProperty(verMatcher.group(1).trim(), properties);
+            }
+
+            // If no version in the POM, try to find it from Maven Central metadata
+            if (version == null || version.startsWith("${")) {
+                version = fetchLatestVersion(groupId, artifactId);
+            }
+
+            if (version == null) continue;
+
+            // Check for classifier
+            String classifier = null;
+            Matcher clsMatcher = CLASSIFIER_TAG.matcher(block);
+            if (clsMatcher.find()) {
+                classifier = resolveProperty(clsMatcher.group(1).trim(), properties);
+            }
+
+            deps.add(new DependencyInfo(groupId, artifactId, version, classifier));
+        }
+
+        return deps;
+    }
+
+    /**
+     * Parses properties from a POM (typically the parent POM) for version resolution.
+     */
+    private Map<String, String> parseProperties(String pomContent) {
+        Map<String, String> props = new HashMap<>();
+        if (pomContent == null) return props;
+
+        // Extract <properties> section
+        int start = pomContent.indexOf("<properties>");
+        int end = pomContent.indexOf("</properties>");
+        if (start < 0 || end < 0) return props;
+
+        String propsSection = pomContent.substring(start, end);
+        Pattern propPattern = Pattern.compile("<([^/>]+)>([^<]+)</\\1>");
+        Matcher m = propPattern.matcher(propsSection);
+        while (m.find()) {
+            props.put(m.group(1).trim(), m.group(2).trim());
+        }
+        return props;
+    }
+
+    /**
+     * Resolves a property reference like ${com.hankcs.hanlp.version} to its value.
+     */
+    private String resolveProperty(String value, Map<String, String> properties) {
+        if (value == null) return null;
+        Matcher m = PROPERTY_REF.matcher(value);
+        if (m.matches()) {
+            String propName = m.group(1);
+            return properties.getOrDefault(propName, value);
+        }
+        return value;
+    }
+
+    /**
+     * Fetches the latest version of an artifact from Maven Central metadata.
+     */
+    private String fetchLatestVersion(String groupId, String artifactId) {
+        try {
+            String groupPath = groupId.replace('.', '/');
+            String metadataUrl = MAVEN_CENTRAL + groupPath + "/" + artifactId + "/maven-metadata.xml";
+            String metadata = fetchText(metadataUrl);
+            if (metadata == null) return null;
+
+            // Try <latest> first, then last <version>
+            Pattern latestPattern = Pattern.compile("<latest>([^<]+)</latest>");
+            Matcher m = latestPattern.matcher(metadata);
+            if (m.find()) return m.group(1);
+
+            // Fall back to last <version> entry
+            Pattern versionPattern = Pattern.compile("<version>([^<]+)</version>");
+            Matcher vm = versionPattern.matcher(metadata);
+            String last = null;
+            while (vm.find()) last = vm.group(1);
+            return last;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Returns all JAR paths for a language (main JAR + resolved dependencies).
+     * Reads a cached dependency manifest to avoid re-parsing the POM.
+     */
+    public List<Path> getAllJarPaths(String langCode) {
+        List<Path> paths = new ArrayList<>();
+        paths.add(getJarPath(langCode));
+
+        // Find all JARs in the languages directory that were downloaded for this language
+        // Use the deps manifest file
+        Path manifestPath = languagesDir.resolve(langCode + "-deps.txt");
+        if (Files.exists(manifestPath)) {
+            try {
+                List<String> filenames = Files.readAllLines(manifestPath);
+                for (String filename : filenames) {
+                    Path depPath = languagesDir.resolve(filename.trim());
+                    if (Files.exists(depPath) && !depPath.equals(paths.get(0))) {
+                        paths.add(depPath);
+                    }
+                }
+            } catch (IOException e) {
+                // Fall through to glob search
+            }
+        }
+
+        // Fallback: find any extra JARs that aren't language-*.jar files
+        if (paths.size() == 1) {
+            try (var stream = Files.list(languagesDir)) {
+                stream.filter(p -> p.toString().endsWith(".jar"))
+                        .filter(p -> !p.getFileName().toString().startsWith("language-"))
+                        .forEach(paths::add);
+            } catch (IOException e) {
+                // ignore
+            }
+        }
+
+        return paths;
+    }
+
+    /**
+     * Downloads a Maven artifact JAR.
+     */
+    private void downloadArtifact(String groupId, String artifactId, String version,
+                                  String classifier, Path targetPath) throws IOException {
         String groupPath = groupId.replace('.', '/');
-        String url = "https://repo1.maven.org/maven2/" + groupPath + "/" + artifactId + "/" + version
-                + "/" + artifactId + "-" + version + ".jar";
+        String filename = classifier != null
+                ? artifactId + "-" + version + "-" + classifier + ".jar"
+                : artifactId + "-" + version + ".jar";
+        String url = MAVEN_CENTRAL + groupPath + "/" + artifactId + "/" + version + "/" + filename;
         downloadUrl(url, targetPath);
     }
 
@@ -172,11 +365,6 @@ public class LanguageDownloader {
      * Downloads a file from a URL to the target path.
      */
     private void downloadUrl(String url, Path targetPath) throws IOException {
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
-
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofMinutes(5))
@@ -184,12 +372,11 @@ public class LanguageDownloader {
                 .build();
 
         try {
-            HttpResponse<InputStream> response = client.send(request,
+            HttpResponse<InputStream> response = httpClient.send(request,
                     HttpResponse.BodyHandlers.ofInputStream());
 
             if (response.statusCode() != 200) {
-                throw new IOException("Failed to download: HTTP " + response.statusCode()
-                        + " for " + url);
+                throw new IOException("HTTP " + response.statusCode() + " for " + url);
             }
 
             Path tempFile = targetPath.getParent().resolve(targetPath.getFileName() + ".tmp");
@@ -203,7 +390,33 @@ public class LanguageDownloader {
         }
     }
 
-    /** POS dictionary descriptor: groupId, artifactId, version, optional classifier. */
+    /**
+     * Fetches text content from a URL, returning null on failure.
+     */
+    private String fetchText(String url) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(30))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request,
+                    HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                return response.body();
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
+    }
+
+    /** Returns the LanguageTool version used for downloads. */
+    public static String getLanguageToolVersion() {
+        return LANGUAGETOOL_VERSION;
+    }
+
+    /** Internal dependency descriptor. */
     private record DependencyInfo(String groupId, String artifactId, String version, String classifier) {
         DependencyInfo(String groupId, String artifactId, String version) {
             this(groupId, artifactId, version, null);
@@ -218,57 +431,8 @@ public class LanguageDownloader {
 
         String url() {
             String groupPath = groupId.replace('.', '/');
-            if (classifier != null) {
-                return "https://repo1.maven.org/maven2/" + groupPath + "/" + artifactId + "/" + version
-                        + "/" + artifactId + "-" + version + "-" + classifier + ".jar";
-            }
-            return "https://repo1.maven.org/maven2/" + groupPath + "/" + artifactId + "/" + version
-                    + "/" + artifactId + "-" + version + ".jar";
+            String fname = filename();
+            return "https://repo1.maven.org/maven2/" + groupPath + "/" + artifactId + "/" + version + "/" + fname;
         }
-    }
-
-    /**
-     * Returns the additional dependency JARs needed for a language (dictionaries, morphology, etc.).
-     */
-    private static List<DependencyInfo> getLanguageDependencies(String langCode) {
-        return switch (langCode) {
-            case "ast" -> List.of(new DependencyInfo("org.languagetool", "asturian-pos-dict", "0.1"));
-            case "ca" -> List.of(new DependencyInfo("org.softcatala", "catalan-pos-dict", "3.3"));
-            case "crh" -> List.of(new DependencyInfo("org.qirimca.nlp", "morfologik-crh-lt", "1.0.1"));
-            case "de", "de-DE-x-simple-language" -> List.of(new DependencyInfo("de.danielnaber", "german-pos-dict", "1.2.4"));
-            case "el" -> List.of(new DependencyInfo("org.ioperm", "morphology-el", "1.0.0"));
-            case "es" -> List.of(new DependencyInfo("org.softcatala", "spanish-pos-dict", "2.5"));
-            case "fr" -> List.of(new DependencyInfo("org.languagetool", "french-pos-dict", "0.7"));
-            case "ja" -> List.of(new DependencyInfo("com.github.lucene-gosen", "lucene-gosen", "6.2.1", "ipadic"));
-            case "nl" -> List.of(new DependencyInfo("org.languagetool", "dutch-pos-dict", "0.1"));
-            case "pt" -> List.of(new DependencyInfo("org.languagetool", "portuguese-pos-dict", "1.2.0"));
-            case "uk" -> List.of(new DependencyInfo("ua.net.nlp", "morfologik-ukrainian-lt", "6.4.0"));
-            case "zh" -> List.of(new DependencyInfo("com.hankcs", "hanlp", "portable-1.8.2"));
-            default -> List.of();
-        };
-    }
-
-    /**
-     * Returns all JAR paths for a language (main JAR + dependencies).
-     */
-    public List<Path> getAllJarPaths(String langCode) {
-        List<Path> paths = new ArrayList<>();
-        paths.add(getJarPath(langCode));
-
-        List<DependencyInfo> deps = getLanguageDependencies(langCode);
-        for (DependencyInfo dep : deps) {
-            Path depPath = languagesDir.resolve(dep.filename());
-            if (Files.exists(depPath)) {
-                paths.add(depPath);
-            }
-        }
-        return paths;
-    }
-
-    /**
-     * Returns the LanguageTool version used for downloads.
-     */
-    public static String getLanguageToolVersion() {
-        return LANGUAGETOOL_VERSION;
     }
 }
