@@ -60,6 +60,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins (underline), and YAML front matter
 - **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
 - **Syntax highlighting** — Code blocks in the preview and AI chat are syntax-highlighted via highlight.js with automatic language detection and light/dark theme support
+- **Live Spellcheck** - Live spell and grammar check with customizable dictionaries and language support
 - **Mermaid diagrams** — Mermaid code blocks are rendered as diagrams in both the preview and AI chat panes
 - **Figure captions** — Images with alt text are rendered as `<figure>` elements with a visible `<figcaption>` in the preview
 - **Preview fallback** — On platforms where JavaFX WebView is unavailable (e.g. Windows ARM64), the preview gracefully falls back to a Swing-based HTML renderer with reduced functionality
