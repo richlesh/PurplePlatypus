@@ -351,6 +351,10 @@ public class EditorWindow {
         cleanupTablesItem.addActionListener(e -> cleanupPandocTables());
         editMenu.add(cleanupTablesItem);
 
+        JMenuItem formatTableItem = new JMenuItem("Format Table");
+        formatTableItem.addActionListener(e -> formatTable());
+        editMenu.add(formatTableItem);
+
         JMenuItem htmlEncodeItem = new JMenuItem("HTML Encode");
         htmlEncodeItem.addActionListener(e -> htmlEncodeNonAscii());
         editMenu.add(htmlEncodeItem);
@@ -1636,6 +1640,193 @@ public class EditorWindow {
             JOptionPane.showMessageDialog(frame, "No Pandoc-style tables found.",
                 "Cleanup Pandoc Tables", JOptionPane.INFORMATION_MESSAGE);
         }
+    }
+
+    /**
+     * Formats the GFM table at the current caret position by padding columns to
+     * uniform width, respecting the alignment indicated by the separator row.
+     */
+    private void formatTable() {
+        String fullText = editorPane.getText();
+        int caretPos = editorPane.getCaretPosition();
+
+        // Find the table surrounding the caret position
+        String[] allLines = fullText.split("\n", -1);
+        int caretLine = 0;
+        int charCount = 0;
+        for (int i = 0; i < allLines.length; i++) {
+            charCount += allLines[i].length() + 1; // +1 for \n
+            if (charCount > caretPos) {
+                caretLine = i;
+                break;
+            }
+        }
+
+        // Check if the current line is part of a table (contains |)
+        if (caretLine >= allLines.length || !allLines[caretLine].contains("|")) {
+            JOptionPane.showMessageDialog(frame, "No table found at the current position.",
+                    "Format Table", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Expand to find full table (consecutive lines containing |)
+        int tableStart = caretLine;
+        while (tableStart > 0 && allLines[tableStart - 1].contains("|")) {
+            tableStart--;
+        }
+        int tableEnd = caretLine;
+        while (tableEnd < allLines.length - 1 && allLines[tableEnd + 1].contains("|")) {
+            tableEnd++;
+        }
+
+        // Need at least 2 rows (header + separator)
+        if (tableEnd - tableStart < 1) {
+            JOptionPane.showMessageDialog(frame, "No valid table found at the current position.",
+                    "Format Table", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Parse table cells
+        List<String[]> rows = new ArrayList<>();
+        for (int i = tableStart; i <= tableEnd; i++) {
+            rows.add(parseTableRow(allLines[i]));
+        }
+
+        // Determine column count (max across all rows)
+        int colCount = 0;
+        for (String[] row : rows) {
+            colCount = Math.max(colCount, row.length);
+        }
+        if (colCount == 0) return;
+
+        // Detect alignment from separator row (row index 1 if it matches ---/:::/etc.)
+        int sepRowIdx = -1;
+        for (int i = 0; i < rows.size(); i++) {
+            if (isSeparatorRow(rows.get(i))) {
+                sepRowIdx = i;
+                break;
+            }
+        }
+
+        // Determine alignment per column: 0=left, 1=center, 2=right
+        int[] alignments = new int[colCount];
+        if (sepRowIdx >= 0) {
+            String[] sepCells = rows.get(sepRowIdx);
+            for (int c = 0; c < colCount; c++) {
+                if (c < sepCells.length) {
+                    alignments[c] = parseAlignment(sepCells[c].trim());
+                }
+            }
+        }
+
+        // Calculate max width per column (excluding separator row)
+        int[] colWidths = new int[colCount];
+        for (int i = 0; i < rows.size(); i++) {
+            if (i == sepRowIdx) continue;
+            String[] cells = rows.get(i);
+            for (int c = 0; c < cells.length; c++) {
+                colWidths[c] = Math.max(colWidths[c], cells[c].trim().length());
+            }
+        }
+        // Ensure minimum width of 3 (for separator dashes)
+        for (int c = 0; c < colCount; c++) {
+            colWidths[c] = Math.max(colWidths[c], 3);
+        }
+
+        // Rebuild the table with padding
+        StringBuilder formatted = new StringBuilder();
+        for (int i = 0; i < rows.size(); i++) {
+            String[] cells = rows.get(i);
+            formatted.append("|");
+            for (int c = 0; c < colCount; c++) {
+                String cell = c < cells.length ? cells[c].trim() : "";
+                if (i == sepRowIdx) {
+                    // Rebuild separator with alignment markers
+                    formatted.append(" ").append(buildSeparatorCell(alignments[c], colWidths[c])).append(" |");
+                } else {
+                    // Pad cell according to alignment
+                    formatted.append(" ").append(padCell(cell, colWidths[c], alignments[c])).append(" |");
+                }
+            }
+            if (i < rows.size() - 1) formatted.append("\n");
+        }
+
+        // Calculate the text range to replace
+        int startOffset = 0;
+        for (int i = 0; i < tableStart; i++) {
+            startOffset += allLines[i].length() + 1;
+        }
+        int endOffset = startOffset;
+        for (int i = tableStart; i <= tableEnd; i++) {
+            endOffset += allLines[i].length() + (i < tableEnd ? 1 : 0);
+        }
+
+        // Replace the table text
+        String formattedText = formatted.toString();
+        try {
+            editorPane.getDocument().remove(startOffset, endOffset - startOffset);
+            editorPane.getDocument().insertString(startOffset, formattedText, null);
+            editorPane.setCaretPosition(Math.min(caretPos, editorPane.getDocument().getLength()));
+        } catch (javax.swing.text.BadLocationException e) {
+            // Fallback: just set full text
+            editorPane.select(startOffset, endOffset);
+            editorPane.replaceSelection(formattedText);
+        }
+        dirty = true;
+        updateTitle();
+        updatePreview();
+    }
+
+    /** Splits a table row by | delimiters, ignoring leading/trailing pipes. */
+    private String[] parseTableRow(String line) {
+        String trimmed = line.trim();
+        if (trimmed.startsWith("|")) trimmed = trimmed.substring(1);
+        if (trimmed.endsWith("|")) trimmed = trimmed.substring(0, trimmed.length() - 1);
+        return trimmed.split("\\|", -1);
+    }
+
+    /** Returns true if all cells in the row match a separator pattern (dashes with optional colons). */
+    private boolean isSeparatorRow(String[] cells) {
+        if (cells.length == 0) return false;
+        for (String cell : cells) {
+            if (!cell.trim().matches(":?-{1,}:?")) return false;
+        }
+        return true;
+    }
+
+    /** Parses alignment from a separator cell: :--- = left, :---: = center, ---: = right. */
+    private int parseAlignment(String sep) {
+        boolean left = sep.startsWith(":");
+        boolean right = sep.endsWith(":");
+        if (left && right) return 1; // center
+        if (right) return 2;         // right
+        return 0;                    // left (default)
+    }
+
+    /** Pads a cell value to the given width according to alignment. */
+    private String padCell(String value, int width, int alignment) {
+        int padding = width - value.length();
+        if (padding <= 0) return value;
+        return switch (alignment) {
+            case 1 -> { // center
+                int left = padding / 2;
+                int right = padding - left;
+                yield " ".repeat(left) + value + " ".repeat(right);
+            }
+            case 2 -> // right
+                " ".repeat(padding) + value;
+            default -> // left
+                value + " ".repeat(padding);
+        };
+    }
+
+    /** Builds a separator cell (e.g., :---:, ---:, ---) of the given width. */
+    private String buildSeparatorCell(int alignment, int width) {
+        return switch (alignment) {
+            case 1 -> ":" + "-".repeat(width - 2) + ":"; // center
+            case 2 -> "-".repeat(width - 1) + ":";       // right
+            default -> "-".repeat(width);                 // left
+        };
     }
 
     /**
