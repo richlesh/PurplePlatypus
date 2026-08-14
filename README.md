@@ -9,6 +9,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Split-pane editor** — Write Markdown on the left, see the rendered HTML preview on the right, with synchronized scrolling so the preview stays aligned with your position in the editor
 - **Live preview** — The preview updates in real time as you type, with no manual refresh needed
 - **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
+- **Live spell checker** — Real-time spell and grammar checking powered by LanguageTool with support for 31 languages; right-click suggestions and user dictionary; language packs download on demand from Maven Central
 - **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, DeepSeek, Alibaba, Cerebras, Groq, Meta, Mistral, Moonshot AI, Perplexity, xAI, or local Ollama models
 - **Generic LLM vendor** — YAML-configurable API endpoint for any LLM service (corporate APIs, custom proxies, etc.) with OAuth/IAM token exchange, configurable request/response format, and single-shot or multi-turn conversation modes
 - **Multi-window** — Open multiple editor windows with File > New
@@ -16,7 +17,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Cross-platform** — Runs on macOS (ARM64), Windows (x64, ARM64), and Linux (x64, ARM64)
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
-- **Toolbar** — Status bar showing the full file path with document statistics, toggle buttons for word wrap, invisible characters, synchronized scrolling, preview, and AI panels
+- **Toolbar** — Status bar showing the full file path with document statistics, toggle buttons for word wrap, invisible characters, spell check, synchronized scrolling, preview, and AI panels
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
 - **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt`/`.textbundle`/`.textpack` files, and save your work
 - **Recent files** — File > Recents menu shows recently opened documents; selecting one brings its window to front if already open
@@ -47,6 +48,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Go to Line** — Jump to a specific line number in the source (⇧⌘J)
 - **Line ending conversion** — Detect and convert between Unix (`\n`) and Windows (`\r\n`) line endings via the Edit menu; line ending format is preserved on save
 - **Cleanup Pandoc Tables** — Convert grid/Pandoc-style tables to standard GFM pipe tables (also auto-converted in preview)
+- **Format Table** — Auto-format the GFM table at the cursor, padding columns to uniform width respecting header alignment (left, center, right)
 - **Zap Gremlins** — Configurable substitution of Unicode characters (smart quotes, em-dashes, non-breaking spaces, etc.) with ASCII equivalents; user-editable rules saved to preferences
 - **HTML Encode** — Convert non-ASCII characters to HTML entities (named where available per HTML5, otherwise numeric code points)
 - **Selection-aware editing** — Cleanup Pandoc Tables, Zap Gremlins, and HTML Encode operate on the selection if text is selected, or the full document otherwise
@@ -145,6 +147,7 @@ Or run `com.glowingcat.Main` directly from your IDE.
 - **SnuggleTeX** — LaTeX to OMML conversion for math in DOCX export
 - **Gson** — JSON serialization for user preferences
 - **SnakeYAML** — YAML parsing for Generic vendor configuration
+- **LanguageTool** — Spell and grammar checking engine with multi-language support
 - **java.net.http** — HTTP client for LLM API calls
 
 ## Class Diagram
