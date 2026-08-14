@@ -8,6 +8,8 @@ import com.glowingcat.aichat.AIChatPreferences;
 import com.glowingcat.aichat.AIChatPreferencesDialog;
 import com.glowingcat.aichat.LLMClientFactory;
 import com.glowingcat.aichat.DocumentEditor;
+import com.glowingcat.spellcheck.SpellCheckController;
+import com.glowingcat.spellcheck.LanguageDownloader;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import javax.swing.*;
@@ -27,6 +29,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -59,7 +62,9 @@ public class EditorWindow {
     private JToggleButton hiddenCharsToggle;
     private JToggleButton wordWrapToggle;
     private JToggleButton darkModeToggle;
+    private JToggleButton spellCheckToggle;
     private JPanel toolbar;
+    private SpellCheckController spellCheckController;
     private boolean previewVisible = true;
     private boolean aiVisible = true;
     private boolean syncScrollEnabled = false;
@@ -119,6 +124,9 @@ public class EditorWindow {
             public void windowClosing(WindowEvent e) {
                 if (confirmClose()) {
                     saveWindowState();
+                    if (spellCheckController != null) {
+                        spellCheckController.dispose();
+                    }
                     frame.dispose();
                 }
             }
@@ -759,6 +767,57 @@ public class EditorWindow {
         });
         togglePanel.add(hiddenCharsToggle);
 
+        // Spell check toggle button
+        spellCheckToggle = new JToggleButton();
+        spellCheckToggle.setUI(new BasicToggleButtonUI());
+        spellCheckToggle.setToolTipText("Spell Check");
+        spellCheckToggle.setIcon(new Icon() {
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(c.getForeground());
+                // Draw "ABC" with a checkmark
+                g2.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 9));
+                g2.drawString("AB", x + 2, y + 12);
+                // Red squiggly under it
+                g2.setColor(new Color(255, 0, 0, 200));
+                g2.setStroke(new BasicStroke(1.0f));
+                int baseY = y + 15;
+                for (int wx = x + 2; wx < x + 16; wx += 4) {
+                    int nx = Math.min(wx + 2, x + 16);
+                    g2.drawLine(wx, baseY, nx, baseY - 2);
+                    int nx2 = Math.min(nx + 2, x + 16);
+                    g2.drawLine(nx, baseY - 2, nx2, baseY);
+                }
+                // Checkmark in green
+                g2.setColor(new Color(0, 160, 0));
+                g2.setStroke(new BasicStroke(1.8f));
+                g2.drawLine(x + 13, y + 6, x + 15, y + 9);
+                g2.drawLine(x + 15, y + 9, x + 19, y + 3);
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return 20; }
+            @Override public int getIconHeight() { return 20; }
+        });
+        spellCheckToggle.setSelected(true);
+        spellCheckToggle.setFocusPainted(false);
+        spellCheckToggle.setBorderPainted(false);
+        spellCheckToggle.setContentAreaFilled(true);
+        spellCheckToggle.setOpaque(true);
+        spellCheckToggle.setBackground(preferences.getButtonHighlightColorObj());
+        spellCheckToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        spellCheckToggle.setPreferredSize(new Dimension(28, 28));
+        spellCheckToggle.addActionListener(e -> {
+            boolean active = spellCheckToggle.isSelected();
+            spellCheckToggle.setBackground(active ? preferences.getButtonHighlightColorObj() : null);
+            spellCheckToggle.setContentAreaFilled(active);
+            spellCheckToggle.setOpaque(active);
+            if (spellCheckController != null) {
+                spellCheckController.setEnabled(active);
+            }
+        });
+        togglePanel.add(spellCheckToggle);
+
         // Synchronized scrolling toggle button
         ImageIcon syncIconFull = null;
         var syncUrl = getClass().getClassLoader().getResource("sync_scrolling.png");
@@ -1061,6 +1120,9 @@ public class EditorWindow {
             // Restore pane visibility
             if (!preferences.isPreviewVisible()) {
                 previewToggle.setSelected(false);
+                previewToggle.setBackground(null);
+                previewToggle.setContentAreaFilled(false);
+                previewToggle.setOpaque(false);
                 previewVisible = false;
                 lastPreviewDivider = preferences.getEditorPreviewDivider();
                 editorPreviewSplit.setRightComponent(null);
@@ -1068,6 +1130,9 @@ public class EditorWindow {
             }
             if (!preferences.isAiVisible()) {
                 aiToggle.setSelected(false);
+                aiToggle.setBackground(null);
+                aiToggle.setContentAreaFilled(false);
+                aiToggle.setOpaque(false);
                 aiVisible = false;
                 lastAiDivider = preferences.getMainDivider();
                 mainSplit.setRightComponent(null);
@@ -1137,6 +1202,17 @@ public class EditorWindow {
         editorContextMenu.addSeparator();
         editorContextMenu.add(ctxFindInPreview);
         editorPane.setPopupMenu(editorContextMenu);
+
+        // Spell checking — initialize controller and enable by default
+        Path spellCheckConfigDir = Paths.get(System.getProperty("user.home"), ".purpleplatypus");
+        spellCheckController = new SpellCheckController(editorPane, spellCheckConfigDir, preferences.getSpellCheckLanguage());
+        spellCheckController.setOnLanguageReady(() -> {
+            String langName = LanguageDownloader.getDisplayName(spellCheckController.getLanguage());
+            JOptionPane.showMessageDialog(frame,
+                    "Spell check dictionary ready: " + langName,
+                    "Spell Check", JOptionPane.INFORMATION_MESSAGE);
+        });
+        spellCheckController.setEnabled(true);
 
         // Drag-and-drop: insert markdown image link when an image file is dropped onto the editor
         new DropTarget(editorPane, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
@@ -3363,10 +3439,18 @@ public class EditorWindow {
             editorPanel.applyPreferences(preferences);
             previewPanel.forceFullReload();
             updatePreview();
+            // Update spell check language if changed
+            if (spellCheckController != null) {
+                String newLang = preferences.getSpellCheckLanguage();
+                if (!newLang.equals(spellCheckController.getLanguage())) {
+                    spellCheckController.setLanguage(newLang);
+                }
+            }
             // Update toolbar toggle button highlight colors
             Color hlColor = preferences.getButtonHighlightColorObj();
             if (wordWrapToggle.isSelected()) wordWrapToggle.setBackground(hlColor);
             if (hiddenCharsToggle.isSelected()) hiddenCharsToggle.setBackground(hlColor);
+            if (spellCheckToggle.isSelected()) spellCheckToggle.setBackground(hlColor);
             if (syncScrollToggle.isSelected()) syncScrollToggle.setBackground(hlColor);
             if (previewToggle.isSelected()) previewToggle.setBackground(hlColor);
             if (aiToggle.isSelected()) aiToggle.setBackground(hlColor);

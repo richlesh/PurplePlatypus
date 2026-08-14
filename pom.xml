@@ -6,13 +6,13 @@
 
     <groupId>com.glowingcat</groupId>
     <artifactId>PurplePlatypus-parent</artifactId>
-    <version>1.6.0</version>
+    <version>1.8.0</version>
     <packaging>pom</packaging>
 
     <name>PurplePlatypus Parent</name>
 
     <properties>
-        <app.version>1.6.0</app.version>
+        <app.version>1.8.0</app.version>
         <copyright.years>2025–2026</copyright.years>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -44,6 +44,7 @@
 
     <modules>
         <module>aichat</module>
+        <module>spellcheck</module>
         <module>app</module>
     </modules>
 </project>

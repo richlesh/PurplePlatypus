@@ -10,6 +10,8 @@
  */
 package com.glowingcat;
 
+import com.glowingcat.spellcheck.LanguageDownloader;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -21,6 +23,7 @@ public class PreferencesDialog extends JDialog {
     private final JComboBox<Integer> previewSizeCombo;
     private final JComboBox<String> previewCodeFontCombo;
     private final JComboBox<Integer> previewCodeSizeCombo;
+    private final JComboBox<String> spellCheckLanguageCombo;
     private final Color[] selectionColor;
     private final JCheckBox useTabsBox;
     private final JSpinner tabSizeSpinner;
@@ -57,6 +60,18 @@ public class PreferencesDialog extends JDialog {
         tabSizeSpinner = new JSpinner(new SpinnerNumberModel(prefs.getTabSize(), 1, 8, 1));
 
         buttonHighlightColor = new Color[]{prefs.getButtonHighlightColorObj()};
+
+        // Initialize spell check language combo — sorted by language code
+        java.util.Map<String, String> langs = LanguageDownloader.getAvailableLanguages();
+        String[] languageCodes = langs.keySet().toArray(new String[0]);
+        java.util.Arrays.sort(languageCodes);
+        String[] languageDisplayNames = new String[languageCodes.length];
+        for (int i = 0; i < languageCodes.length; i++) {
+            languageDisplayNames[i] = langs.get(languageCodes[i]);
+        }
+        spellCheckLanguageCombo = new JComboBox<>(languageDisplayNames);
+        String currentLangCode = prefs.getSpellCheckLanguage();
+        spellCheckLanguageCombo.setSelectedItem(LanguageDownloader.getDisplayName(currentLangCode));
 
         // === Main layout ===
         JPanel mainPanel = buildFontPanel();
@@ -190,6 +205,11 @@ public class PreferencesDialog extends JDialog {
         gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
         panel.add(tabSizeSpinner, gbc);
 
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Spell Check Language:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(spellCheckLanguageCombo, gbc);
+
         // Separator
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 6, 10, 6);
@@ -240,5 +260,7 @@ public class PreferencesDialog extends JDialog {
         prefs.setUseTabs(useTabsBox.isSelected());
         prefs.setTabSize((Integer) tabSizeSpinner.getValue());
         prefs.setButtonHighlightColor(buttonHighlightColor[0]);
+        String selectedDisplayName = (String) spellCheckLanguageCombo.getSelectedItem();
+        prefs.setSpellCheckLanguage(LanguageDownloader.getCodeForDisplayName(selectedDisplayName));
     }
 }
