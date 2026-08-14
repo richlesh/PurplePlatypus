@@ -162,10 +162,13 @@ public class SpellCheckService {
             System.setProperty("jdk.xml.totalEntitySizeLimit", "0");
             System.setProperty("jdk.xml.entityExpansionLimit", "0");
 
-            // Ensure the ZipFileSystem is available for the application JAR.
-            // When packaged with jpackage, dictionaries are inside the fat JAR and
-            // Morfologik resolves them via Paths.get(URI) which requires an open ZipFileSystem.
-            ensureZipFileSystem();
+            // Extract English dictionary resources to filesystem on first run.
+            // Morfologik requires filesystem Paths for dictionary access, which fails
+            // when resources are inside a fat JAR.
+            if ("en".equals(currentLanguage)) {
+                extractEnglishResources();
+                configureEnglishDataBroker();
+            }
 
             Language language = resolveLanguage(currentLanguage);
             if (language == null) {
@@ -194,31 +197,131 @@ public class SpellCheckService {
     }
 
     /**
-     * Ensures a ZipFileSystem is open for the JAR containing this class.
-     * This is needed when running as a packaged app (jpackage) where dictionary
-     * resources are inside the fat JAR and Morfologik uses Paths.get(URI) to access them.
-     * In development (exploded classpath), this is a no-op.
+     * Extracts English language resources from the classpath to the config directory.
+     * This is needed because Morfologik's Dictionary.read(Path) requires filesystem access,
+     * which fails when resources are inside a fat JAR.
      */
-    private void ensureZipFileSystem() {
-        try {
-            URL resourceUrl = getClass().getClassLoader().getResource("META-INF/org/languagetool/language-module.properties");
-            if (resourceUrl != null && "jar".equals(resourceUrl.getProtocol())) {
-                // Extract the JAR file URI from the jar: URL (format: jar:file:/path/to/jar!/entry)
-                String jarUrlStr = resourceUrl.toString();
-                String jarFileUri = jarUrlStr.substring(4, jarUrlStr.indexOf("!"));
-                java.net.URI jarUri = java.net.URI.create(jarFileUri);
+    private void extractEnglishResources() {
+        Path enDir = configDir.resolve("languages").resolve("en");
+        Path marker = enDir.resolve(".extracted_english");
+        if (Files.exists(marker)) return;
 
-                // Try to get or create the ZipFileSystem for this JAR
-                try {
-                    java.nio.file.FileSystems.getFileSystem(java.net.URI.create("jar:" + jarUri));
-                } catch (java.nio.file.FileSystemNotFoundException e) {
-                    java.nio.file.FileSystems.newFileSystem(java.net.URI.create("jar:" + jarUri),
-                            java.util.Map.of("create", "false"));
+        try {
+            Files.createDirectories(enDir);
+            ClassLoader cl = getClass().getClassLoader();
+
+            // Find the source of English resources — could be a JAR or directory
+            URL resUrl = cl.getResource("org/languagetool/resource/en/english.dict");
+            if (resUrl == null) return; // Resources not available
+
+            if ("file".equals(resUrl.getProtocol())) {
+                // Running from exploded classpath (development) — extraction not needed
+                // but we still create the marker so we don't check every time
+                Files.writeString(marker, "not-needed");
+                return;
+            }
+
+            // Running from a JAR — extract all English resources
+            // Find the JAR file containing the resources
+            String jarUrlStr = resUrl.toString(); // jar:file:/path/to/jar!/org/...
+            String jarPath = jarUrlStr.substring(9, jarUrlStr.indexOf("!")); // strip "jar:file:"
+
+            try (java.util.jar.JarFile jar = new java.util.jar.JarFile(jarPath)) {
+                java.util.Enumeration<java.util.jar.JarEntry> entries = jar.entries();
+                while (entries.hasMoreElements()) {
+                    java.util.jar.JarEntry entry = entries.nextElement();
+                    String name = entry.getName();
+                    // Extract LanguageTool English resource files
+                    if (name.startsWith("org/languagetool/resource/en/") ||
+                        name.startsWith("org/languagetool/rules/en/")) {
+                        if (!entry.isDirectory()) {
+                            Path target = enDir.resolve(name);
+                            Files.createDirectories(target.getParent());
+                            try (InputStream is = jar.getInputStream(entry)) {
+                                Files.copy(is, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            }
+                        }
+                    }
                 }
             }
+            Files.writeString(marker, "extracted");
+        } catch (IOException e) {
+            System.err.println("SpellCheckService: Could not extract English resources: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Configures LanguageTool's DataBroker to look for resources in the extracted
+     * English directory first, falling back to the classpath. This ensures Morfologik
+     * can find dictionary files as filesystem Paths regardless of packaging format.
+     */
+    private void configureEnglishDataBroker() {
+        Path enDir = configDir.resolve("languages").resolve("en");
+        if (!Files.exists(enDir)) return;
+
+        try {
+            URL enDirUrl = enDir.toUri().toURL();
+            URLClassLoader enClassLoader = new URLClassLoader(
+                    new URL[]{enDirUrl},
+                    getClass().getClassLoader()
+            );
+
+            JLanguageTool.setDataBroker(new org.languagetool.broker.DefaultResourceDataBroker() {
+                @Override
+                public InputStream getAsStream(String path) {
+                    String p = path.startsWith("/") ? path.substring(1) : path;
+                    InputStream is = enClassLoader.getResourceAsStream(p);
+                    return is != null ? is : super.getAsStream(path);
+                }
+
+                @Override
+                public URL getAsURL(String path) {
+                    String p = path.startsWith("/") ? path.substring(1) : path;
+                    URL url = enClassLoader.getResource(p);
+                    return url != null ? url : super.getAsURL(path);
+                }
+
+                @Override
+                public URL getFromResourceDirAsUrl(String path) {
+                    String fullPath = getResourceDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    URL url = enClassLoader.getResource(p);
+                    return url != null ? url : super.getFromResourceDirAsUrl(path);
+                }
+
+                @Override
+                public InputStream getFromResourceDirAsStream(String path) {
+                    String fullPath = getResourceDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    InputStream is = enClassLoader.getResourceAsStream(p);
+                    return is != null ? is : super.getFromResourceDirAsStream(path);
+                }
+
+                @Override
+                public boolean resourceExists(String path) {
+                    String fullPath = getResourceDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    return enClassLoader.getResource(p) != null || super.resourceExists(path);
+                }
+
+                @Override
+                public InputStream getFromRulesDirAsStream(String path) {
+                    String fullPath = getRulesDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    InputStream is = enClassLoader.getResourceAsStream(p);
+                    return is != null ? is : super.getFromRulesDirAsStream(path);
+                }
+
+                @Override
+                public URL getFromRulesDirAsUrl(String path) {
+                    String fullPath = getRulesDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    URL url = enClassLoader.getResource(p);
+                    return url != null ? url : super.getFromRulesDirAsUrl(path);
+                }
+            });
         } catch (Exception e) {
-            // Not critical — will only affect packaged apps, and the error will surface later
-            // with a more specific message from LanguageTool
+            // Fall through — will use default classpath-based broker
         }
     }
 
