@@ -61,9 +61,14 @@ public class PreferencesDialog extends JDialog {
 
         buttonHighlightColor = new Color[]{prefs.getButtonHighlightColorObj()};
 
-        // Initialize spell check language combo
-        String[] languageDisplayNames = LanguageDownloader.getAvailableLanguages().values().toArray(new String[0]);
-        java.util.Arrays.sort(languageDisplayNames, String.CASE_INSENSITIVE_ORDER);
+        // Initialize spell check language combo — sorted by language code
+        java.util.Map<String, String> langs = LanguageDownloader.getAvailableLanguages();
+        String[] languageCodes = langs.keySet().toArray(new String[0]);
+        java.util.Arrays.sort(languageCodes);
+        String[] languageDisplayNames = new String[languageCodes.length];
+        for (int i = 0; i < languageCodes.length; i++) {
+            languageDisplayNames[i] = langs.get(languageCodes[i]);
+        }
         spellCheckLanguageCombo = new JComboBox<>(languageDisplayNames);
         String currentLangCode = prefs.getSpellCheckLanguage();
         spellCheckLanguageCombo.setSelectedItem(LanguageDownloader.getDisplayName(currentLangCode));
