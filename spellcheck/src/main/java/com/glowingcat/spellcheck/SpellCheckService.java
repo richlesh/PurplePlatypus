@@ -130,7 +130,7 @@ public class SpellCheckService {
                 ));
             }
             return errors;
-        } catch (IOException e) {
+        } catch (Exception e) {
             return Collections.emptyList();
         }
     }
@@ -180,9 +180,9 @@ public class SpellCheckService {
                 lt.disableRule(ruleId);
             }
             this.langTool = lt;
-        } catch (Exception e) {
-            System.err.println("SpellCheckService: Failed to initialize LanguageTool: " + e.getMessage());
-            e.printStackTrace();
+        } catch (Throwable e) {
+            System.err.println("SpellCheckService: Failed to initialize LanguageTool (" + currentLanguage + "): "
+                    + e.getClass().getName() + ": " + e.getMessage());
         } finally {
             initializing = false;
         }
@@ -198,14 +198,15 @@ public class SpellCheckService {
             return new AmericanEnglish();
         }
 
-        // Download the language JAR if not already present
+        // Download the language JAR and dependencies if not already present
         try {
-            if (!downloader.isDownloaded(langCode)) {
-                downloader.download(langCode);
-            }
+            downloader.download(langCode);
         } catch (IOException e) {
             System.err.println("SpellCheckService: Failed to download language pack for " + langCode + ": " + e.getMessage());
-            return null;
+            // Continue anyway — the main JAR might already exist
+            if (!downloader.isDownloaded(langCode)) {
+                return null;
+            }
         }
 
         // Load the language from the downloaded JAR
@@ -213,9 +214,10 @@ public class SpellCheckService {
     }
 
     /**
-     * Loads a Language instance from a downloaded JAR using URLClassLoader.
-     * Reads the language-module.properties to find the language class names,
-     * then instantiates the first one (or the best match for the language code).
+     * Loads a Language instance from a downloaded JAR. Extracts all JARs
+     * (language + POS dictionary) to a directory so that LanguageTool's
+     * Morfologik dictionary loading (which requires filesystem Paths)
+     * can access the .dict files.
      */
     private Language loadLanguageFromJar(String langCode) {
         Path jarPath = downloader.getJarPath(langCode);
@@ -224,17 +226,109 @@ public class SpellCheckService {
         }
 
         try {
+            // Get all JAR paths (language JAR + pos-dict JAR if applicable)
+            List<Path> allJars = downloader.getAllJarPaths(langCode);
+
+            // Extract all JARs to a shared directory
+            Path extractDir = jarPath.getParent().resolve(langCode);
+            for (Path jar : allJars) {
+                if (Files.exists(jar)) {
+                    extractJarIfNeeded(jar, extractDir);
+                }
+            }
+
+            // Create a classloader that uses the extracted directory (first, for file: Path access)
+            // plus the original JARs (for any resources that don't need Path access)
+            List<URL> urls = new ArrayList<>();
+            urls.add(extractDir.toUri().toURL());
+            for (Path jar : allJars) {
+                if (Files.exists(jar)) {
+                    urls.add(jar.toUri().toURL());
+                }
+            }
             URL jarUrl = jarPath.toUri().toURL();
-            URLClassLoader classLoader = new URLClassLoader(
-                    new URL[]{jarUrl},
+            URLClassLoader langClassLoader = new URLClassLoader(
+                    urls.toArray(new URL[0]),
                     this.getClass().getClassLoader()
             );
 
-            // Set as thread context classloader so LanguageTool can find resources
-            Thread.currentThread().setContextClassLoader(classLoader);
+            // Configure LanguageTool to use this classloader for class and resource loading
+            JLanguageTool.setClassBrokerBroker(className -> langClassLoader.loadClass(className));
+            JLanguageTool.setDataBroker(new org.languagetool.broker.DefaultResourceDataBroker() {
+                @Override
+                public InputStream getAsStream(String path) {
+                    String p = path.startsWith("/") ? path.substring(1) : path;
+                    InputStream is = langClassLoader.getResourceAsStream(p);
+                    return is != null ? is : super.getAsStream(path);
+                }
+
+                @Override
+                public URL getAsURL(String path) {
+                    String p = path.startsWith("/") ? path.substring(1) : path;
+                    URL url = langClassLoader.getResource(p);
+                    return url != null ? url : super.getAsURL(path);
+                }
+
+                @Override
+                public java.util.List<URL> getAsURLs(String path) {
+                    try {
+                        String p = path.startsWith("/") ? path.substring(1) : path;
+                        java.util.List<URL> urls = java.util.Collections.list(langClassLoader.getResources(p));
+                        if (!urls.isEmpty()) return urls;
+                    } catch (IOException e) { /* fall through */ }
+                    return super.getAsURLs(path);
+                }
+
+                @Override
+                public URL getFromResourceDirAsUrl(String path) {
+                    String fullPath = getResourceDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    URL url = langClassLoader.getResource(p);
+                    return url != null ? url : super.getFromResourceDirAsUrl(path);
+                }
+
+                @Override
+                public InputStream getFromResourceDirAsStream(String path) {
+                    String fullPath = getResourceDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    InputStream is = langClassLoader.getResourceAsStream(p);
+                    return is != null ? is : super.getFromResourceDirAsStream(path);
+                }
+
+                @Override
+                public boolean resourceExists(String path) {
+                    String fullPath = getResourceDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    return langClassLoader.getResource(p) != null || super.resourceExists(path);
+                }
+
+                @Override
+                public InputStream getFromRulesDirAsStream(String path) {
+                    String fullPath = getRulesDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    InputStream is = langClassLoader.getResourceAsStream(p);
+                    return is != null ? is : super.getFromRulesDirAsStream(path);
+                }
+
+                @Override
+                public URL getFromRulesDirAsUrl(String path) {
+                    String fullPath = getRulesDir() + path;
+                    String p = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+                    URL url = langClassLoader.getResource(p);
+                    return url != null ? url : super.getFromRulesDirAsUrl(path);
+                }
+
+                @Override
+                public java.util.ResourceBundle getResourceBundle(String baseName, java.util.Locale locale) {
+                    try {
+                        return java.util.ResourceBundle.getBundle(baseName, locale, langClassLoader);
+                    } catch (java.util.MissingResourceException e) {
+                        return super.getResourceBundle(baseName, locale);
+                    }
+                }
+            });
 
             // Read language-module.properties DIRECTLY from the JAR file
-            // (not via classloader which would parent-delegate and find English first)
             String propsPath = "META-INF/org/languagetool/language-module.properties";
             URL propsUrl = new URL("jar:" + jarUrl + "!/" + propsPath);
             Properties props = new Properties();
@@ -248,7 +342,7 @@ public class SpellCheckService {
                 return null;
             }
 
-            // Parse comma-separated class names and instantiate the first one
+            // Parse comma-separated class names and instantiate them
             String[] classNames = classesStr.split(",");
             Language bestMatch = null;
             List<Language> allVariants = new ArrayList<>();
@@ -257,7 +351,7 @@ public class SpellCheckService {
                 className = className.trim();
                 if (className.isEmpty()) continue;
                 try {
-                    Class<?> langClass = classLoader.loadClass(className);
+                    Class<?> langClass = langClassLoader.loadClass(className);
                     Language lang = (Language) langClass.getDeclaredConstructor().newInstance();
                     allVariants.add(lang);
                     if (bestMatch == null) {
@@ -276,8 +370,48 @@ public class SpellCheckService {
             return bestMatch;
         } catch (Exception e) {
             System.err.println("SpellCheckService: Failed to load language from JAR: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
+    }
+
+    /**
+     * Extracts a JAR file to a directory if not already extracted.
+     * Uses a per-JAR marker file to track which JARs have been extracted.
+     */
+    private void extractJarIfNeeded(Path jarPath, Path extractDir) throws IOException {
+        // Use jar filename as marker to support multiple JARs in same dir
+        Path marker = extractDir.resolve(".extracted_" + jarPath.getFileName());
+        if (Files.exists(marker)) {
+            return;
+        }
+
+        Files.createDirectories(extractDir);
+
+        try (java.util.jar.JarFile jar = new java.util.jar.JarFile(jarPath.toFile())) {
+            java.util.Enumeration<java.util.jar.JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                java.util.jar.JarEntry entry = entries.nextElement();
+                Path targetPath = extractDir.resolve(entry.getName());
+
+                // Security: prevent path traversal
+                if (!targetPath.normalize().startsWith(extractDir.normalize())) {
+                    continue;
+                }
+
+                if (entry.isDirectory()) {
+                    Files.createDirectories(targetPath);
+                } else {
+                    Files.createDirectories(targetPath.getParent());
+                    try (InputStream is = jar.getInputStream(entry)) {
+                        Files.copy(is, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+        }
+
+        // Write marker file
+        Files.writeString(marker, "extracted");
     }
 
     /**
