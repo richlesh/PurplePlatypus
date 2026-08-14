@@ -30,6 +30,7 @@ public class SpellCheckController {
     private final DocumentListener docListener;
     private boolean enabled = false;
     private boolean contextMenuConfigured = false;
+    private Runnable onLanguageReady;
 
     /**
      * Creates a spell-check controller for the given text area.
@@ -105,11 +106,28 @@ public class SpellCheckController {
         highlighter.clearHighlights();
         service.setLanguage(langCode);
         if (enabled) {
-            // Re-check after a short delay to let the service reinitialize
-            Timer delayTimer = new Timer(500, e -> scheduleCheck());
-            delayTimer.setRepeats(false);
-            delayTimer.start();
+            // Poll until the service is ready, then check and notify
+            Timer pollTimer = new Timer(500, null);
+            pollTimer.addActionListener(e -> {
+                if (service.isReady()) {
+                    pollTimer.stop();
+                    scheduleCheck();
+                    if (onLanguageReady != null) {
+                        onLanguageReady.run();
+                    }
+                }
+            });
+            pollTimer.setRepeats(true);
+            pollTimer.start();
         }
+    }
+
+    /**
+     * Sets a callback to invoke (on the EDT) when a new language has finished
+     * downloading and initializing.
+     */
+    public void setOnLanguageReady(Runnable callback) {
+        this.onLanguageReady = callback;
     }
 
     /** Returns the current language code. */

@@ -142,16 +142,15 @@ public class LanguageDownloader {
             downloadArtifact("org.languagetool", artifactId, LANGUAGETOOL_VERSION, jarPath);
         }
 
-        // Also download the POS dictionary dependency if it exists and isn't downloaded yet
-        PosDictInfo posDict = getPosDictInfo(langCode);
-        if (posDict != null) {
-            Path posDictPath = languagesDir.resolve(posDict.artifactId() + "-" + posDict.version() + ".jar");
-            if (!Files.exists(posDictPath)) {
+        // Also download additional dependencies (POS dicts, morphology, etc.)
+        List<DependencyInfo> deps = getLanguageDependencies(langCode);
+        for (DependencyInfo dep : deps) {
+            Path depPath = languagesDir.resolve(dep.filename());
+            if (!Files.exists(depPath)) {
                 try {
-                    downloadArtifact(posDict.groupId(), posDict.artifactId(), posDict.version(), posDictPath);
+                    downloadUrl(dep.url(), depPath);
                 } catch (IOException e) {
-                    System.err.println("LanguageDownloader: Could not download POS dict "
-                            + posDict.artifactId() + ": " + e.getMessage());
+                    System.err.println("LanguageDownloader: Could not download " + dep.artifactId() + ": " + e.getMessage());
                 }
             }
         }
@@ -160,13 +159,19 @@ public class LanguageDownloader {
     }
 
     /**
-     * Downloads a single Maven artifact JAR.
+     * Downloads a Maven artifact JAR by groupId/artifactId/version.
      */
     private void downloadArtifact(String groupId, String artifactId, String version, Path targetPath) throws IOException {
         String groupPath = groupId.replace('.', '/');
         String url = "https://repo1.maven.org/maven2/" + groupPath + "/" + artifactId + "/" + version
                 + "/" + artifactId + "-" + version + ".jar";
+        downloadUrl(url, targetPath);
+    }
 
+    /**
+     * Downloads a file from a URL to the target path.
+     */
+    private void downloadUrl(String url, Path targetPath) throws IOException {
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -187,7 +192,6 @@ public class LanguageDownloader {
                         + " for " + url);
             }
 
-            // Download to a temp file first, then move atomically
             Path tempFile = targetPath.getParent().resolve(targetPath.getFileName() + ".tmp");
             try (InputStream is = response.body()) {
                 Files.copy(is, tempFile, StandardCopyOption.REPLACE_EXISTING);
@@ -199,37 +203,63 @@ public class LanguageDownloader {
         }
     }
 
-    /** POS dictionary descriptor: groupId, artifactId, version. */
-    private record PosDictInfo(String groupId, String artifactId, String version) {}
+    /** POS dictionary descriptor: groupId, artifactId, version, optional classifier. */
+    private record DependencyInfo(String groupId, String artifactId, String version, String classifier) {
+        DependencyInfo(String groupId, String artifactId, String version) {
+            this(groupId, artifactId, version, null);
+        }
+
+        String filename() {
+            if (classifier != null) {
+                return artifactId + "-" + version + "-" + classifier + ".jar";
+            }
+            return artifactId + "-" + version + ".jar";
+        }
+
+        String url() {
+            String groupPath = groupId.replace('.', '/');
+            if (classifier != null) {
+                return "https://repo1.maven.org/maven2/" + groupPath + "/" + artifactId + "/" + version
+                        + "/" + artifactId + "-" + version + "-" + classifier + ".jar";
+            }
+            return "https://repo1.maven.org/maven2/" + groupPath + "/" + artifactId + "/" + version
+                    + "/" + artifactId + "-" + version + ".jar";
+        }
+    }
 
     /**
-     * Returns the POS dictionary info for a language, or null if none is needed.
+     * Returns the additional dependency JARs needed for a language (dictionaries, morphology, etc.).
      */
-    private static PosDictInfo getPosDictInfo(String langCode) {
+    private static List<DependencyInfo> getLanguageDependencies(String langCode) {
         return switch (langCode) {
-            case "ast" -> new PosDictInfo("org.languagetool", "asturian-pos-dict", "0.1");
-            case "ca" -> new PosDictInfo("org.softcatala", "catalan-pos-dict", "3.3");
-            case "de", "de-DE-x-simple-language" -> new PosDictInfo("de.danielnaber", "german-pos-dict", "1.2.4");
-            case "es" -> new PosDictInfo("org.softcatala", "spanish-pos-dict", "2.5");
-            case "fr" -> new PosDictInfo("org.languagetool", "french-pos-dict", "0.7");
-            case "nl" -> new PosDictInfo("org.languagetool", "dutch-pos-dict", "0.1");
-            case "pt" -> new PosDictInfo("org.languagetool", "portuguese-pos-dict", "1.2.0");
-            default -> null;
+            case "ast" -> List.of(new DependencyInfo("org.languagetool", "asturian-pos-dict", "0.1"));
+            case "ca" -> List.of(new DependencyInfo("org.softcatala", "catalan-pos-dict", "3.3"));
+            case "crh" -> List.of(new DependencyInfo("org.qirimca.nlp", "morfologik-crh-lt", "1.0.1"));
+            case "de", "de-DE-x-simple-language" -> List.of(new DependencyInfo("de.danielnaber", "german-pos-dict", "1.2.4"));
+            case "el" -> List.of(new DependencyInfo("org.ioperm", "morphology-el", "1.0.0"));
+            case "es" -> List.of(new DependencyInfo("org.softcatala", "spanish-pos-dict", "2.5"));
+            case "fr" -> List.of(new DependencyInfo("org.languagetool", "french-pos-dict", "0.7"));
+            case "ja" -> List.of(new DependencyInfo("com.github.lucene-gosen", "lucene-gosen", "6.2.1", "ipadic"));
+            case "nl" -> List.of(new DependencyInfo("org.languagetool", "dutch-pos-dict", "0.1"));
+            case "pt" -> List.of(new DependencyInfo("org.languagetool", "portuguese-pos-dict", "1.2.0"));
+            case "uk" -> List.of(new DependencyInfo("ua.net.nlp", "morfologik-ukrainian-lt", "6.4.0"));
+            case "zh" -> List.of(new DependencyInfo("com.hankcs", "hanlp", "portable-1.8.2"));
+            default -> List.of();
         };
     }
 
     /**
-     * Returns all JAR paths for a language (main JAR + pos-dict if applicable).
+     * Returns all JAR paths for a language (main JAR + dependencies).
      */
     public List<Path> getAllJarPaths(String langCode) {
         List<Path> paths = new ArrayList<>();
         paths.add(getJarPath(langCode));
 
-        PosDictInfo posDict = getPosDictInfo(langCode);
-        if (posDict != null) {
-            Path posDictPath = languagesDir.resolve(posDict.artifactId() + "-" + posDict.version() + ".jar");
-            if (Files.exists(posDictPath)) {
-                paths.add(posDictPath);
+        List<DependencyInfo> deps = getLanguageDependencies(langCode);
+        for (DependencyInfo dep : deps) {
+            Path depPath = languagesDir.resolve(dep.filename());
+            if (Files.exists(depPath)) {
+                paths.add(depPath);
             }
         }
         return paths;

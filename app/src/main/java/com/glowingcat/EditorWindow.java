@@ -9,6 +9,7 @@ import com.glowingcat.aichat.AIChatPreferencesDialog;
 import com.glowingcat.aichat.LLMClientFactory;
 import com.glowingcat.aichat.DocumentEditor;
 import com.glowingcat.spellcheck.SpellCheckController;
+import com.glowingcat.spellcheck.LanguageDownloader;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 
 import javax.swing.*;
@@ -1205,6 +1206,12 @@ public class EditorWindow {
         // Spell checking — initialize controller and enable by default
         Path spellCheckConfigDir = Paths.get(System.getProperty("user.home"), ".purpleplatypus");
         spellCheckController = new SpellCheckController(editorPane, spellCheckConfigDir, preferences.getSpellCheckLanguage());
+        spellCheckController.setOnLanguageReady(() -> {
+            String langName = LanguageDownloader.getDisplayName(spellCheckController.getLanguage());
+            JOptionPane.showMessageDialog(frame,
+                    "Spell check dictionary ready: " + langName,
+                    "Spell Check", JOptionPane.INFORMATION_MESSAGE);
+        });
         spellCheckController.setEnabled(true);
 
         // Drag-and-drop: insert markdown image link when an image file is dropped onto the editor
