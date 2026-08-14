@@ -44,7 +44,7 @@ public class LanguageDownloader {
         AVAILABLE_LANGUAGES.put("de", "Deutsch — German");
         AVAILABLE_LANGUAGES.put("de-DE-x-simple-language", "Einfaches Deutsch — Simple German");
         AVAILABLE_LANGUAGES.put("el", "Ελληνικά — Greek");
-        AVAILABLE_LANGUAGES.put("en", "English (American)");
+        AVAILABLE_LANGUAGES.put("en", "English — American English");
         AVAILABLE_LANGUAGES.put("eo", "Esperanto");
         AVAILABLE_LANGUAGES.put("es", "Español — Spanish");
         AVAILABLE_LANGUAGES.put("fr", "Français — French");
@@ -63,7 +63,7 @@ public class LanguageDownloader {
         AVAILABLE_LANGUAGES.put("sl", "Slovenščina — Slovenian");
         AVAILABLE_LANGUAGES.put("sv", "Svenska — Swedish");
         AVAILABLE_LANGUAGES.put("ta", "தமிழ் — Tamil");
-        AVAILABLE_LANGUAGES.put("tl", "Tagalog");
+        AVAILABLE_LANGUAGES.put("tl", "Filipino — Tagalog");
         AVAILABLE_LANGUAGES.put("uk", "Українська — Ukrainian");
         AVAILABLE_LANGUAGES.put("zh", "中文 — Chinese");
     }
