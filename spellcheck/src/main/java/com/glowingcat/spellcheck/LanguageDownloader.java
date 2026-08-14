@@ -139,19 +139,19 @@ public class LanguageDownloader {
         // Download the main language JAR if needed
         if (!Files.exists(jarPath)) {
             String artifactId = "language-" + langCode;
-            downloadArtifact(artifactId, LANGUAGETOOL_VERSION, jarPath);
+            downloadArtifact("org.languagetool", artifactId, LANGUAGETOOL_VERSION, jarPath);
         }
 
         // Also download the POS dictionary dependency if it exists and isn't downloaded yet
-        String posDictArtifactId = getPosDictArtifact(langCode);
-        if (posDictArtifactId != null) {
-            String posDictVersion = getPosDictVersion(posDictArtifactId);
-            Path posDictPath = languagesDir.resolve(posDictArtifactId + "-" + posDictVersion + ".jar");
+        PosDictInfo posDict = getPosDictInfo(langCode);
+        if (posDict != null) {
+            Path posDictPath = languagesDir.resolve(posDict.artifactId() + "-" + posDict.version() + ".jar");
             if (!Files.exists(posDictPath)) {
                 try {
-                    downloadArtifact(posDictArtifactId, posDictVersion, posDictPath);
+                    downloadArtifact(posDict.groupId(), posDict.artifactId(), posDict.version(), posDictPath);
                 } catch (IOException e) {
-                    System.err.println("LanguageDownloader: Could not download POS dict " + posDictArtifactId + ": " + e.getMessage());
+                    System.err.println("LanguageDownloader: Could not download POS dict "
+                            + posDict.artifactId() + ": " + e.getMessage());
                 }
             }
         }
@@ -162,8 +162,9 @@ public class LanguageDownloader {
     /**
      * Downloads a single Maven artifact JAR.
      */
-    private void downloadArtifact(String artifactId, String version, Path targetPath) throws IOException {
-        String url = MAVEN_CENTRAL_BASE + artifactId + "/" + version
+    private void downloadArtifact(String groupId, String artifactId, String version, Path targetPath) throws IOException {
+        String groupPath = groupId.replace('.', '/');
+        String url = "https://repo1.maven.org/maven2/" + groupPath + "/" + artifactId + "/" + version
                 + "/" + artifactId + "-" + version + ".jar";
 
         HttpClient client = HttpClient.newBuilder()
@@ -198,40 +199,22 @@ public class LanguageDownloader {
         }
     }
 
-    /**
-     * Returns the POS dictionary artifact ID for a language, or null if none is needed.
-     */
-    private static String getPosDictArtifact(String langCode) {
-        return switch (langCode) {
-            case "de", "de-DE-x-simple-language" -> "german-pos-dict";
-            case "es" -> "spanish-pos-dict";
-            case "fr" -> "french-pos-dict";
-            case "nl" -> "dutch-pos-dict";
-            case "pt" -> "portuguese-pos-dict";
-            case "ca" -> "catalan-pos-dict";
-            case "gl" -> "galician-pos-dict";
-            case "uk" -> "ukrainian-pos-dict";
-            case "ro" -> "romanian-pos-dict";
-            default -> null;
-        };
-    }
+    /** POS dictionary descriptor: groupId, artifactId, version. */
+    private record PosDictInfo(String groupId, String artifactId, String version) {}
 
     /**
-     * Returns the version for a POS dictionary artifact.
-     * These have their own versioning separate from LanguageTool.
+     * Returns the POS dictionary info for a language, or null if none is needed.
      */
-    private static String getPosDictVersion(String artifactId) {
-        return switch (artifactId) {
-            case "german-pos-dict" -> "0.4";
-            case "spanish-pos-dict" -> "0.3";
-            case "french-pos-dict" -> "0.7";
-            case "dutch-pos-dict" -> "0.3";
-            case "portuguese-pos-dict" -> "0.4";
-            case "catalan-pos-dict" -> "0.5";
-            case "galician-pos-dict" -> "0.3";
-            case "ukrainian-pos-dict" -> "6.4";
-            case "romanian-pos-dict" -> "0.2";
-            default -> "0.1";
+    private static PosDictInfo getPosDictInfo(String langCode) {
+        return switch (langCode) {
+            case "ast" -> new PosDictInfo("org.languagetool", "asturian-pos-dict", "0.1");
+            case "ca" -> new PosDictInfo("org.softcatala", "catalan-pos-dict", "3.3");
+            case "de", "de-DE-x-simple-language" -> new PosDictInfo("de.danielnaber", "german-pos-dict", "1.2.4");
+            case "es" -> new PosDictInfo("org.softcatala", "spanish-pos-dict", "2.5");
+            case "fr" -> new PosDictInfo("org.languagetool", "french-pos-dict", "0.7");
+            case "nl" -> new PosDictInfo("org.languagetool", "dutch-pos-dict", "0.1");
+            case "pt" -> new PosDictInfo("org.languagetool", "portuguese-pos-dict", "1.2.0");
+            default -> null;
         };
     }
 
@@ -242,10 +225,9 @@ public class LanguageDownloader {
         List<Path> paths = new ArrayList<>();
         paths.add(getJarPath(langCode));
 
-        String posDictArtifactId = getPosDictArtifact(langCode);
-        if (posDictArtifactId != null) {
-            String version = getPosDictVersion(posDictArtifactId);
-            Path posDictPath = languagesDir.resolve(posDictArtifactId + "-" + version + ".jar");
+        PosDictInfo posDict = getPosDictInfo(langCode);
+        if (posDict != null) {
+            Path posDictPath = languagesDir.resolve(posDict.artifactId() + "-" + posDict.version() + ".jar");
             if (Files.exists(posDictPath)) {
                 paths.add(posDictPath);
             }
