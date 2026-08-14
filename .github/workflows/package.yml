@@ -189,9 +189,9 @@ jobs:
       - name: Run jpackage
         shell: bash
         run: |
-          # Include demo.textpack in lib for Windows installer
+          # Include demo folder in lib for Windows installer
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp demo.textpack lib/
+            cp -R demo lib/
           fi
           # Ensure WiX is on PATH for Windows builds
           if [ -d "$GITHUB_WORKSPACE/wix" ]; then
@@ -241,8 +241,8 @@ jobs:
             # (unavailable on Ubuntu 24.04 ARM64; the JFX runtime doesn't need it from the system)
             find PurplePlatypus -name "libjpeg*" -delete
 
-            # Include demo.textpack in the app image
-            cp demo.textpack PurplePlatypus/
+            # Include demo folder in the app image
+            cp -R demo PurplePlatypus/
 
             # Ensure icon is in the app image for the second jpackage pass
             cp ${{ matrix.icon }} PurplePlatypus/lib/PurplePlatypus.png
@@ -296,7 +296,7 @@ jobs:
                 mkdir -p "$TMPDIR/usr/share/pixmaps"
                 cp ${{ matrix.icon }} "$TMPDIR/usr/share/pixmaps/purpleplatypus.png"
 
-                # Add postinst script to copy demo.textpack to user Desktop and update icon cache
+                # Add postinst script to copy demo folder to user Desktop and update icon cache
                 printf '%s\n' '#!/bin/bash' \
                   '# Update icon cache' \
                   'if command -v gtk-update-icon-cache &>/dev/null; then' \
@@ -322,8 +322,8 @@ jobs:
                   '  fi' \
                   '  DESKTOP="${DESKTOP:-$USER_HOME/Desktop}"' \
                   '  mkdir -p "$DESKTOP"' \
-                  '  cp /opt/purpleplatypus/demo.textpack "$DESKTOP/" 2>/dev/null || true' \
-                  '  chown "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo.textpack" 2>/dev/null || true' \
+                  '  cp -R /opt/purpleplatypus/demo "$DESKTOP/" 2>/dev/null || true' \
+                  '  chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo" 2>/dev/null || true' \
                   'fi' \
                   'exit 0' > "$TMPDIR/DEBIAN/postinst"
                 chmod 755 "$TMPDIR/DEBIAN/postinst"
@@ -332,7 +332,7 @@ jobs:
               fi
             fi
 
-            # Fix RPM: inject %post scriptlet to copy demo.textpack to Desktop and update icon cache
+            # Fix RPM: inject %post scriptlet to copy demo folder to Desktop and update icon cache
             if [ "${{ matrix.pkg_type }}" = "rpm" ]; then
               RPM_FILE=$(ls purpleplatypus-*.rpm 2>/dev/null | head -1)
               if [ -n "$RPM_FILE" ]; then
@@ -409,8 +409,8 @@ jobs:
                   '  DESKTOP="${DESKTOP:-$USER_HOME/Desktop}"' \
                   '  if [ -d "$DESKTOP" ] || [ -d "$USER_HOME" ]; then' \
                   '    mkdir -p "$DESKTOP"' \
-                  '    cp /opt/purpleplatypus/demo.textpack "$DESKTOP/" 2>/dev/null || true' \
-                  '    chown "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo.textpack" 2>/dev/null || true' \
+                  '    cp -R /opt/purpleplatypus/demo "$DESKTOP/" 2>/dev/null || true' \
+                  '    chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo" 2>/dev/null || true' \
                   '  fi' \
                   'fi' \
                   "" \
@@ -504,7 +504,7 @@ jobs:
           cp -R PurplePlatypus.app "$DMG_DIR/"
           ln -s /Applications "$DMG_DIR/Applications"
           cp app/src/main/resources/app_icon.icns "$DMG_DIR/.VolumeIcon.icns"
-          cp demo.textpack "$DMG_DIR/"
+          cp -R demo "$DMG_DIR/"
 
           hdiutil create -volname PurplePlatypus -srcfolder "$DMG_DIR" -ov -format UDRW /tmp/purpleplatypus-rw.dmg
           hdiutil attach /tmp/purpleplatypus-rw.dmg -mountpoint /tmp/dmg-vol
