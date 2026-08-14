@@ -162,6 +162,11 @@ public class SpellCheckService {
             System.setProperty("jdk.xml.totalEntitySizeLimit", "0");
             System.setProperty("jdk.xml.entityExpansionLimit", "0");
 
+            // Ensure the ZipFileSystem is available for the application JAR.
+            // When packaged with jpackage, dictionaries are inside the fat JAR and
+            // Morfologik resolves them via Paths.get(URI) which requires an open ZipFileSystem.
+            ensureZipFileSystem();
+
             Language language = resolveLanguage(currentLanguage);
             if (language == null) {
                 System.err.println("SpellCheckService: Could not resolve language: " + currentLanguage);
@@ -185,6 +190,35 @@ public class SpellCheckService {
                     + e.getClass().getName() + ": " + e.getMessage());
         } finally {
             initializing = false;
+        }
+    }
+
+    /**
+     * Ensures a ZipFileSystem is open for the JAR containing this class.
+     * This is needed when running as a packaged app (jpackage) where dictionary
+     * resources are inside the fat JAR and Morfologik uses Paths.get(URI) to access them.
+     * In development (exploded classpath), this is a no-op.
+     */
+    private void ensureZipFileSystem() {
+        try {
+            URL resourceUrl = getClass().getClassLoader().getResource("META-INF/org/languagetool/language-module.properties");
+            if (resourceUrl != null && "jar".equals(resourceUrl.getProtocol())) {
+                // Extract the JAR file URI from the jar: URL (format: jar:file:/path/to/jar!/entry)
+                String jarUrlStr = resourceUrl.toString();
+                String jarFileUri = jarUrlStr.substring(4, jarUrlStr.indexOf("!"));
+                java.net.URI jarUri = java.net.URI.create(jarFileUri);
+
+                // Try to get or create the ZipFileSystem for this JAR
+                try {
+                    java.nio.file.FileSystems.getFileSystem(java.net.URI.create("jar:" + jarUri));
+                } catch (java.nio.file.FileSystemNotFoundException e) {
+                    java.nio.file.FileSystems.newFileSystem(java.net.URI.create("jar:" + jarUri),
+                            java.util.Map.of("create", "false"));
+                }
+            }
+        } catch (Exception e) {
+            // Not critical — will only affect packaged apps, and the error will surface later
+            // with a more specific message from LanguageTool
         }
     }
 
