@@ -1462,7 +1462,7 @@ public class EditorWindow {
                         int choice = JOptionPane.showOptionDialog(frame,
                                 "This document is " + (file.length() / 1_000_000) + " MB and may be too large to be responsive.",
                                 Messages.get("msg.largeFileTitle"), JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
-                                null, new String[]{"Open", "Cancel"}, "Cancel");
+                                null, new String[]{Messages.get("menu.file.open"), Messages.get("msg.cancel")}, "Cancel");
                         if (choice != 0) continue;
                     }
                     try {
@@ -2050,7 +2050,7 @@ public class EditorWindow {
         long diskModified = currentFile.lastModified();
         if (diskModified == 0 || diskModified == lastModifiedOnDisk) return;
 
-        Object[] options = {"Reload", "Keep Changes"};
+        Object[] options = {Messages.get("msg.reload"), Messages.get("msg.keep")};
         int choice = JOptionPane.showOptionDialog(frame,
                 "The file \"" + currentFile.getName() + "\" has been modified by another program.\n\n"
                         + "Do you want to reload it? Any unsaved changes will be lost.",
@@ -2172,7 +2172,7 @@ public class EditorWindow {
                         } else {
                             JOptionPane.showMessageDialog(frame,
                                     "PDF export may require a PDF printer to be installed on your system.",
-                                    "Export PDF", JOptionPane.INFORMATION_MESSAGE);
+                                    Messages.get("menu.file.export.pdf"), JOptionPane.INFORMATION_MESSAGE);
                         }
                     });
                 }
@@ -3119,7 +3119,7 @@ public class EditorWindow {
             if (currentFile != null) {
                 filePathLabel.setText(currentFile.getAbsolutePath());
             } else {
-                filePathLabel.setText("Untitled");
+                filePathLabel.setText(Messages.get("msg.untitled"));
             }
         }
     }
@@ -3157,11 +3157,11 @@ public class EditorWindow {
 
     public boolean confirmClose() {
         if (!dirty) return true;
-        String filename = currentFile != null ? currentFile.getName() : "Untitled";
+        String filename = currentFile != null ? currentFile.getName() : Messages.get("msg.untitled");
         int choice = JOptionPane.showOptionDialog(frame,
                 "\"" + filename + "\" has unsaved changes. Do you want to save before closing?",
                 Messages.get("msg.unsavedTitle"), JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE,
-                null, new String[]{"Save", "Don't Save", "Cancel"}, "Save");
+                null, new String[]{Messages.get("msg.save"), Messages.get("msg.dontSave"), Messages.get("msg.cancel")}, "Save");
         if (choice == 0) { saveFile(); return !dirty; }
         else if (choice == 1) return true;
         else return false;
@@ -3545,7 +3545,7 @@ public class EditorWindow {
     private void gotoLine() {
         int totalLines = editorPane.getLineCount();
         String input = JOptionPane.showInputDialog(frame,
-            "Line number (1\u2013" + totalLines + "):", "Go to Line", JOptionPane.PLAIN_MESSAGE);
+            "Line number (1\u2013" + totalLines + "):", Messages.get("menu.search.goToLine"), JOptionPane.PLAIN_MESSAGE);
         if (input == null || input.trim().isEmpty()) return;
         try {
             int line = Integer.parseInt(input.trim());
@@ -3555,7 +3555,7 @@ public class EditorWindow {
             editorPane.setCaretPosition(offset);
             editorPane.requestFocusInWindow();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(frame, "Invalid line number.", "Go to Line", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.invalidLineNumber"), Messages.get("menu.search.goToLine"), JOptionPane.WARNING_MESSAGE);
         } catch (javax.swing.text.BadLocationException ex) {
             // Silently fail
         }
