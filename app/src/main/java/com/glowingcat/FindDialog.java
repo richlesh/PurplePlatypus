@@ -15,6 +15,7 @@
  */
 package com.glowingcat;
 
+
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Style;
@@ -154,7 +155,7 @@ public class FindDialog extends JDialog {
      */
     protected JPanel createTopPanel() {
         JPanel topPanel = new JPanel(new BorderLayout(8, 0));
-        topPanel.add(new JLabel("Find:"), BorderLayout.WEST);
+        topPanel.add(new JLabel(Messages.get("dialog.find.findField")), BorderLayout.WEST);
         searchField = new JTextField(24);
         addSelectAllOnFocus(searchField);
         topPanel.add(createFieldWithRecents(searchField, true), BorderLayout.CENTER);
@@ -176,12 +177,12 @@ public class FindDialog extends JDialog {
         optionsPanel.setBorder(BorderFactory.createTitledBorder("Options"));
 
         findInSelectionBox = new JCheckBox("Find in selection");
-        searchBackwardsBox = new JCheckBox("Search Backwards");
-        matchCaseBox = new JCheckBox("Match Case");
-        wrapAroundBox = new JCheckBox("Wrap Around");
+        searchBackwardsBox = new JCheckBox(Messages.get("dialog.find.searchBackwards"));
+        matchCaseBox = new JCheckBox(Messages.get("dialog.find.matchCase"));
+        wrapAroundBox = new JCheckBox(Messages.get("dialog.find.wrapAround"));
         wrapAroundBox.setSelected(true);
-        regexBox = new JCheckBox("Regular Expression");
-        escapesBox = new JCheckBox("Interpret Escapes");
+        regexBox = new JCheckBox(Messages.get("dialog.find.regex"));
+        escapesBox = new JCheckBox(Messages.get("dialog.find.escapes"));
 
         // When "Find in selection" is checked, capture the current selection
         findInSelectionBox.addActionListener(e -> {
@@ -195,7 +196,7 @@ public class FindDialog extends JDialog {
                     findInSelectionBox.setSelected(false);
                     JOptionPane.showMessageDialog(this,
                             "Please select text in the editor first.",
-                            "Find in Selection", JOptionPane.WARNING_MESSAGE);
+                            Messages.get("dialog.find.findInSelection"), JOptionPane.WARNING_MESSAGE);
                 }
             } else {
                 selectionStart = -1;
@@ -223,9 +224,9 @@ public class FindDialog extends JDialog {
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
 
-        JButton findNextBtn = createButton("Find Next");
-        JButton findAllBtn = createButton("Find All");
-        JButton countBtn = createButton("Count");
+        JButton findNextBtn = createButton(Messages.get("dialog.find.findNext"));
+        JButton findAllBtn = createButton(Messages.get("dialog.find.findAll"));
+        JButton countBtn = createButton(Messages.get("dialog.find.count"));
 
         findNextBtn.addActionListener(e -> findNext());
         findAllBtn.addActionListener(e -> findAll());
@@ -350,9 +351,9 @@ public class FindDialog extends JDialog {
         panel.add(field, BorderLayout.CENTER);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 1, 0));
-        JButton addBtn = createSmallButton("+", "Save to recents");
-        JButton removeBtn = createSmallButton("\u2212", "Remove from recents");
-        JButton dropBtn = createSmallButton("\u25BE", "Show recents");
+        JButton addBtn = createSmallButton("+", Messages.get("dialog.find.saveRecent"));
+        JButton removeBtn = createSmallButton("\u2212", Messages.get("dialog.find.removeRecent"));
+        JButton dropBtn = createSmallButton("\u25BE", Messages.get("dialog.find.showRecents"));
 
         addBtn.addActionListener(e -> {
             String text = field.getText();
@@ -452,7 +453,7 @@ public class FindDialog extends JDialog {
                 pattern = Pattern.compile(searchText, flags);
             } catch (PatternSyntaxException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
-                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("dialog.find.regexError"), JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -513,7 +514,7 @@ public class FindDialog extends JDialog {
                 textArea.setSelectionEnd(matchEnd + regionStart);
                 textArea.requestFocusInWindow();
             } else {
-                JOptionPane.showMessageDialog(this, "Text not found.",
+                JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),
                         "Find", JOptionPane.INFORMATION_MESSAGE);
             }
         } else {
@@ -553,7 +554,7 @@ public class FindDialog extends JDialog {
                 textArea.setSelectionEnd(end);
                 textArea.requestFocusInWindow();
             } else {
-                JOptionPane.showMessageDialog(this, "Text not found.",
+                JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),
                         "Find", JOptionPane.INFORMATION_MESSAGE);
             }
         }
@@ -593,7 +594,7 @@ public class FindDialog extends JDialog {
                 pattern = Pattern.compile(searchText, flags);
             } catch (PatternSyntaxException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
-                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("dialog.find.regexError"), JOptionPane.ERROR_MESSAGE);
                 return;
             }
             Matcher matcher = pattern.matcher(searchIn);
@@ -611,8 +612,8 @@ public class FindDialog extends JDialog {
         }
 
         if (matches.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Text not found.",
-                    "Find All", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),
+                    Messages.get("dialog.find.findAll"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -793,7 +794,7 @@ public class FindDialog extends JDialog {
                 pattern = Pattern.compile(searchText, flags);
             } catch (PatternSyntaxException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
-                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("dialog.find.regexError"), JOptionPane.ERROR_MESSAGE);
                 return;
             }
             Matcher matcher = pattern.matcher(searchIn);
@@ -812,7 +813,7 @@ public class FindDialog extends JDialog {
 
         JOptionPane.showMessageDialog(this,
                 count + " match" + (count != 1 ? "es" : "") + " found.",
-                "Count", JOptionPane.INFORMATION_MESSAGE);
+                Messages.get("dialog.find.count"), JOptionPane.INFORMATION_MESSAGE);
     }
 
     /**

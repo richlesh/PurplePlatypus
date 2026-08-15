@@ -51,7 +51,7 @@ public class TableDialog extends JDialog {
     }
 
     public TableDialog(JFrame owner, String tableText) {
-        super(owner, "Insert Table", true);
+        super(owner, Messages.get("dialog.table.title"), true);
 
         // Parse existing table or create empty model
         String[][] data;
@@ -423,8 +423,8 @@ public class TableDialog extends JDialog {
 
         // Options panel
         JPanel optionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        columnHeadersBox = new JCheckBox("Column Headers", detectedColHeaders);
-        rowHeadersBox = new JCheckBox("Row Headers", detectedRowHeaders);
+        columnHeadersBox = new JCheckBox(Messages.get("dialog.table.columnHeaders"), detectedColHeaders);
+        rowHeadersBox = new JCheckBox(Messages.get("dialog.table.rowHeaders"), detectedRowHeaders);
         optionsPanel.add(columnHeadersBox);
         optionsPanel.add(rowHeadersBox);
 
@@ -437,7 +437,7 @@ public class TableDialog extends JDialog {
         // Dialog buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton saveButton = new JButton("Save");
-        JButton cancelButton = new JButton("Cancel");
+        JButton cancelButton = new JButton(Messages.get("dialog.table.cancel"));
         saveButton.addActionListener(e -> {
             if (table.isEditing()) table.getCellEditor().stopCellEditing();
             confirmed = true;

@@ -26,7 +26,7 @@ public class LicenseDialog {
         panel.add(title);
         panel.add(Box.createVerticalStrut(8));
 
-        JLabel desc = new JLabel("Enter your email address and license key");
+        JLabel desc = new JLabel(Messages.get("dialog.license.prompt"));
         desc.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(desc);
         panel.add(Box.createVerticalStrut(12));
@@ -59,8 +59,8 @@ public class LicenseDialog {
         panel.add(Box.createVerticalStrut(12));
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        JButton cancelBtn = new JButton("Cancel");
-        JButton saveBtn = new JButton("Save");
+        JButton cancelBtn = new JButton(Messages.get("dialog.license.cancel"));
+        JButton saveBtn = new JButton(Messages.get("dialog.license.save"));
         saveBtn.setEnabled(false);
         buttons.add(cancelBtn);
         buttons.add(saveBtn);
@@ -110,7 +110,7 @@ public class LicenseDialog {
             Icon appIcon = null;
             var url = LicenseDialog.class.getClassLoader().getResource("app_icon_256.png");
             if (url != null) appIcon = new ImageIcon(new ImageIcon(url).getImage().getScaledInstance(64, 64, Image.SCALE_SMOOTH));
-            JOptionPane.showMessageDialog(dialog, "License saved. Thank you!",
+            JOptionPane.showMessageDialog(dialog, Messages.get("dialog.license.saved"),
                 "PurplePlatypus", JOptionPane.INFORMATION_MESSAGE, appIcon);
             dialog.dispose();
         });

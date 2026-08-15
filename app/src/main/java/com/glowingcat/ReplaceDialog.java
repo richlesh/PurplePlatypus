@@ -71,7 +71,7 @@ public class ReplaceDialog extends FindDialog {
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        topPanel.add(new JLabel("Replace:"), gbc);
+        topPanel.add(new JLabel(Messages.get("dialog.replace.replaceField")), gbc);
 
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -96,8 +96,8 @@ public class ReplaceDialog extends FindDialog {
 
         JButton findBtn = createButton("Find");
         JButton replaceBtn = createButton("Replace");
-        JButton replaceAndFindBtn = createButton("Replace and Find");
-        JButton replaceAllBtn = createButton("Replace All");
+        JButton replaceAndFindBtn = createButton(Messages.get("dialog.replace.replaceAndFind"));
+        JButton replaceAllBtn = createButton(Messages.get("dialog.replace.replaceAll"));
 
         findBtn.addActionListener(e -> findNext());
         replaceBtn.addActionListener(e -> replace());
@@ -235,7 +235,7 @@ public class ReplaceDialog extends FindDialog {
             while (matcher.find()) count++;
             if (count == 0) {
                 JOptionPane.showMessageDialog(this, "Text not found.",
-                        "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                        Messages.get("dialog.replace.replaceAll"), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
@@ -253,7 +253,7 @@ public class ReplaceDialog extends FindDialog {
 
             JOptionPane.showMessageDialog(this,
                     count + " replacement" + (count != 1 ? "s" : "") + " made.",
-                    "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("dialog.replace.replaceAll"), JOptionPane.INFORMATION_MESSAGE);
         } else {
             String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
             String compareText = matchCase ? searchText : searchText.toLowerCase();
@@ -275,7 +275,7 @@ public class ReplaceDialog extends FindDialog {
 
             if (count == 0) {
                 JOptionPane.showMessageDialog(this, "Text not found.",
-                        "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                        Messages.get("dialog.replace.replaceAll"), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
@@ -289,7 +289,7 @@ public class ReplaceDialog extends FindDialog {
 
             JOptionPane.showMessageDialog(this,
                     count + " replacement" + (count != 1 ? "s" : "") + " made.",
-                    "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("dialog.replace.replaceAll"), JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }

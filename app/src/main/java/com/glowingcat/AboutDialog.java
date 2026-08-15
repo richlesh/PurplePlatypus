@@ -36,7 +36,7 @@ public class AboutDialog {
         panel.add(name);
         panel.add(Box.createVerticalStrut(4));
 
-        JLabel subtitle = new JLabel("A Markdown Editor with AI Writing Assistant");
+        JLabel subtitle = new JLabel(Messages.get("app.description"));
         subtitle.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         subtitle.setForeground(new Color(150, 150, 150));
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
