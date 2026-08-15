@@ -297,10 +297,10 @@ public class TableDialog extends JDialog {
         scrollPane.setPreferredSize(new Dimension(600, 220));
 
         // Control buttons (vertical, right side)
-        JButton addRowBtn = new JButton("+ Row");
-        JButton removeRowBtn = new JButton("- Row");
-        JButton addColBtn = new JButton("+ Column");
-        JButton removeColBtn = new JButton("- Column");
+        JButton addRowBtn = new JButton(Messages.get("dialog.table.addRow"));
+        JButton removeRowBtn = new JButton(Messages.get("dialog.table.removeRow"));
+        JButton addColBtn = new JButton(Messages.get("dialog.table.addColumn"));
+        JButton removeColBtn = new JButton(Messages.get("dialog.table.removeColumn"));
 
         // Initially disable delete buttons (no selection)
         removeRowBtn.setEnabled(false);
