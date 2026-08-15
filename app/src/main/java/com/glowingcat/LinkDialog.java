@@ -78,7 +78,7 @@ public class LinkDialog extends JDialog {
 
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Save");
+        JButton saveButton = new JButton(Messages.get("dialog.link.insert"));
         JButton cancelButton = new JButton(Messages.get("dialog.link.cancel"));
 
         saveButton.addActionListener(e -> {

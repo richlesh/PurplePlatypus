@@ -136,7 +136,7 @@ public class ImageDialog extends JDialog {
         gbc.gridwidth = 1;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        contentPanel.add(new JLabel("Width:"), gbc);
+        contentPanel.add(new JLabel(Messages.get("dialog.image.width")), gbc);
 
         gbc.gridx = 1;
         gbc.gridwidth = 2;
@@ -173,14 +173,14 @@ public class ImageDialog extends JDialog {
         gbc.gridwidth = 3;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        centerCheckBox = new JCheckBox("Center", existingCenter);
+        centerCheckBox = new JCheckBox(Messages.get("menu.markdown.center"), existingCenter);
         contentPanel.add(centerCheckBox, gbc);
 
         add(contentPanel, BorderLayout.CENTER);
 
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Save");
+        JButton saveButton = new JButton(Messages.get("dialog.image.insert"));
         JButton cancelButton = new JButton(Messages.get("dialog.image.cancel"));
 
         saveButton.addActionListener(e -> {

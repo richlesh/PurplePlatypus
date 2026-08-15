@@ -87,7 +87,7 @@ public class FindDialog extends JDialog {
      * @param preferences the application preferences for storing recents
      */
     public FindDialog(JFrame owner, JTextArea textArea, Preferences preferences) {
-        this(owner, textArea, preferences, "Find");
+        this(owner, textArea, preferences, Messages.get("dialog.find.title"));
     }
 
     /**
@@ -515,7 +515,7 @@ public class FindDialog extends JDialog {
                 textArea.requestFocusInWindow();
             } else {
                 JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),
-                        "Find", JOptionPane.INFORMATION_MESSAGE);
+                        Messages.get("dialog.find.title"), JOptionPane.INFORMATION_MESSAGE);
             }
         } else {
             // Plain text search (original logic)
@@ -555,7 +555,7 @@ public class FindDialog extends JDialog {
                 textArea.requestFocusInWindow();
             } else {
                 JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),
-                        "Find", JOptionPane.INFORMATION_MESSAGE);
+                        Messages.get("dialog.find.title"), JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }
@@ -630,7 +630,7 @@ public class FindDialog extends JDialog {
      * @param content    the full document text (used for line extraction)
      */
     protected void showFindAllResults(String searchText, List<int[]> matches, String content) {
-        JFrame resultsFrame = new JFrame("Find All Results - \"" + searchText + "\" (" + matches.size() + " matches)");
+        JFrame resultsFrame = new JFrame(Messages.get("dialog.find.results", searchText) + " (" + matches.size() + " " + Messages.get("dialog.find.matches", matches.size()) + ")");
         resultsFrame.setSize(600, 400);
 
         JTextPane resultsPane = new JTextPane();

@@ -22,7 +22,7 @@ public class ZapGremlinsDialog extends JDialog {
     private boolean saved = false;
 
     public ZapGremlinsDialog(Window owner, Preferences preferences) {
-        super(owner, "Zap Gremlins", ModalityType.APPLICATION_MODAL);
+        super(owner, Messages.get("dialog.zapGremlins.title"), ModalityType.APPLICATION_MODAL);
 
         List<String[]> gremlins = preferences.getGremlins();
         tableModel = new GremlinTableModel(gremlins);
@@ -82,13 +82,13 @@ public class ZapGremlinsDialog extends JDialog {
         addRemovePanel.add(removeBtn);
 
         // Bottom buttons
-        JButton saveBtn = new JButton("Save");
+        JButton saveBtn = new JButton(Messages.get("dialog.license.save"));
         saveBtn.addActionListener(e -> {
             preferences.setGremlins(tableModel.getData());
             preferences.save();
             saved = true;
             JOptionPane.showMessageDialog(this, Messages.get("dialog.zapGremlins.saved"),
-                "Save", JOptionPane.INFORMATION_MESSAGE);
+                Messages.get("dialog.zapGremlins.title"), JOptionPane.INFORMATION_MESSAGE);
         });
 
         JButton cancelBtn = new JButton(Messages.get("dialog.zapGremlins.cancel"));

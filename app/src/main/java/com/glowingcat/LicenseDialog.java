@@ -13,14 +13,14 @@ import javax.crypto.spec.SecretKeySpec;
 public class LicenseDialog {
 
     public static void show(JFrame parent, Preferences prefs) {
-        JDialog dialog = new JDialog(parent, "License Key", true);
+        JDialog dialog = new JDialog(parent, Messages.get("dialog.license.title"), true);
         dialog.setLayout(new BorderLayout(10, 10));
 
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JLabel title = new JLabel("License Key");
+        JLabel title = new JLabel(Messages.get("dialog.license.title"));
         title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(title);

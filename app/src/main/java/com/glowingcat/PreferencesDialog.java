@@ -205,7 +205,7 @@ public class PreferencesDialog extends JDialog {
         hlSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         hlSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(PreferencesDialog.this, "Selection Color", selectionColor[0]);
+                Color c = JColorChooser.showDialog(PreferencesDialog.this, Messages.get("dialog.prefs.selectionColor"), selectionColor[0]);
                 if (c != null) { selectionColor[0] = c; hlSwatch.setBackground(c); }
             }
         });
@@ -248,7 +248,7 @@ public class PreferencesDialog extends JDialog {
         btnHlSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnHlSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(PreferencesDialog.this, "Button Highlight Color", buttonHighlightColor[0]);
+                Color c = JColorChooser.showDialog(PreferencesDialog.this, Messages.get("dialog.prefs.buttonHighlight"), buttonHighlightColor[0]);
                 if (c != null) { buttonHighlightColor[0] = c; btnHlSwatch.setBackground(c); }
             }
         });
