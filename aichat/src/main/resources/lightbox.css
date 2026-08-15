@@ -65,10 +65,9 @@ body.dark-mode .lightbox-toolbar button:hover {
     cursor: grabbing;
 }
 .lightbox-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: auto;
+    flex-shrink: 0;
+    min-width: min-content;
+    min-height: min-content;
 }
 .lightbox-wrapper img,
 .lightbox-wrapper svg {

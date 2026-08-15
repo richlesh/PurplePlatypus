@@ -200,15 +200,15 @@ public class Main {
                 }
             }
 
-            Path demoDest = desktop.resolve("demo");
+            Path demoDest = desktop.resolve("PurplePlatypus Demo");
             if (Files.exists(demoDest)) return; // Already copied
 
             copyDirectory(demoSource, demoDest);
 
-            // Also copy config folder if present
-            Path configSource = demoSource.getParent().resolve("config");
-            if (Files.isDirectory(configSource)) {
-                Path configDest = desktop.resolve("PurplePlatypus Configs");
+            // Also copy AI Config Examples folder if present
+            Path configSource = findConfigFolder(demoSource.getParent());
+            if (configSource != null) {
+                Path configDest = desktop.resolve("AI Config Examples");
                 if (!Files.exists(configDest)) {
                     copyDirectory(configSource, configDest);
                 }
@@ -246,6 +246,27 @@ public class Main {
 
         // Linux standard install location
         candidate = Path.of("/opt/purpleplatypus/demo");
+        if (Files.isDirectory(candidate)) return candidate;
+
+        return null;
+    }
+
+    /**
+     * Searches for the AI Config Examples folder in likely install locations.
+     */
+    private static Path findConfigFolder(Path baseDir) {
+        if (baseDir == null) return null;
+
+        // Check "AI Config Examples" name (as placed by installer)
+        Path candidate = baseDir.resolve("AI Config Examples");
+        if (Files.isDirectory(candidate)) return candidate;
+
+        // Check app/ subdirectory (Windows jpackage layout)
+        candidate = baseDir.resolve("app").resolve("AI Config Examples");
+        if (Files.isDirectory(candidate)) return candidate;
+
+        // Linux standard install location
+        candidate = Path.of("/opt/purpleplatypus/AI Config Examples");
         if (Files.isDirectory(candidate)) return candidate;
 
         return null;

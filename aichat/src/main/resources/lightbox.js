@@ -10,6 +10,7 @@
     var MIN_SCALE = 0.1;
     var MAX_SCALE = 5.0;
     var SCALE_STEP = 0.25;
+    var WHEEL_STEP = 0.1;
 
     function createOverlay() {
         if (overlay) return;
@@ -71,7 +72,7 @@
         // Mouse wheel zoom
         container.addEventListener('wheel', function(e) {
             e.preventDefault();
-            var delta = e.deltaY < 0 ? SCALE_STEP : -SCALE_STEP;
+            var delta = e.deltaY < 0 ? WHEEL_STEP : -WHEEL_STEP;
             zoom(delta);
         }, { passive: false });
 
@@ -131,6 +132,15 @@
             content.style.width = w + 'px';
             content.style.height = h + 'px';
         }
+        // Center the wrapper when smaller than the container
+        var cw = container.clientWidth;
+        var ch = container.clientHeight;
+        var padX = Math.max(0, (cw - w) / 2);
+        var padY = Math.max(0, (ch - h) / 2);
+        wrapper.style.marginLeft = padX + 'px';
+        wrapper.style.marginRight = padX + 'px';
+        wrapper.style.marginTop = padY + 'px';
+        wrapper.style.marginBottom = padY + 'px';
     }
 
     function fitToWindow() {
