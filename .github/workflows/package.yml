@@ -279,6 +279,12 @@ jobs:
                 dpkg-deb -R "$DEB_FILE" "$TMPDIR"
                 sed -i 's/^Depends:.*/Depends: xdg-utils/' "$TMPDIR/DEBIAN/control"
 
+                # Ensure demo folder and AI Config Examples are in the package
+                # (jpackage may not include extra directories from the app-image root)
+                mkdir -p "$TMPDIR/opt/purpleplatypus"
+                cp -R demo "$TMPDIR/opt/purpleplatypus/demo"
+                cp -R aichat/src/main/resources/config "$TMPDIR/opt/purpleplatypus/AI Config Examples"
+
                 # Fix .desktop file icon and categories, and ensure it's in /usr/share/applications
                 DESKTOP_FILE=$(find "$TMPDIR" -type f -name "*.desktop" | head -1)
                 if [ -n "$DESKTOP_FILE" ]; then
@@ -346,6 +352,11 @@ jobs:
                 # Extract RPM contents
                 cd "$RPMTMP"
                 rpm2cpio "$GITHUB_WORKSPACE/$RPM_FILE" | cpio -idmv 2>/dev/null
+
+                # Ensure demo folder and AI Config Examples are in the package
+                mkdir -p ./opt/purpleplatypus
+                cp -R "$GITHUB_WORKSPACE/demo" ./opt/purpleplatypus/demo
+                cp -R "$GITHUB_WORKSPACE/aichat/src/main/resources/config" "./opt/purpleplatypus/AI Config Examples"
 
                 # Fix .desktop file icon and categories
                 DESKTOP_FILE=$(find . -type f -name "*.desktop" | head -1)
