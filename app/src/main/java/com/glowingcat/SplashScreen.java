@@ -33,7 +33,7 @@ public class SplashScreen {
         panel.add(Box.createVerticalStrut(16));
 
         // App name
-        JLabel name = new JLabel("PurplePlatypus");
+        JLabel name = new JLabel(Messages.get("app.name"));
         name.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
         name.setForeground(Color.WHITE);
         name.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -41,7 +41,7 @@ public class SplashScreen {
         panel.add(Box.createVerticalStrut(6));
 
         // Version
-        JLabel version = new JLabel("Version " + AppVersion.get());
+        JLabel version = new JLabel(Messages.get("dialog.about.version", AppVersion.get()));
         version.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         version.setForeground(new Color(170, 170, 170));
         version.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -49,7 +49,7 @@ public class SplashScreen {
         panel.add(Box.createVerticalStrut(20));
 
         // Message
-        JLabel msg1 = new JLabel("If you enjoy using this product");
+        JLabel msg1 = new JLabel(Messages.get("splash.enjoy"));
         JLabel msg2 = new JLabel("please consider donating to help");
         JLabel msg3 = new JLabel("fund this and other open source");
         for (JLabel l : new JLabel[]{msg1, msg2, msg3}) {

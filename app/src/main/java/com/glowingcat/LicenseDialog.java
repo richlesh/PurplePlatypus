@@ -46,7 +46,7 @@ public class LicenseDialog {
         panel.add(keyField);
         panel.add(Box.createVerticalStrut(8));
 
-        JLabel link = new JLabel("<html><a href=''>Donate at Glowing Cat Software to get a license key.</a></html>");
+        JLabel link = new JLabel("<html><a href=''>" + Messages.get("dialog.license.donate") + "</a></html>");
         link.setAlignmentX(Component.CENTER_ALIGNMENT);
         link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         link.addMouseListener(new java.awt.event.MouseAdapter() {
