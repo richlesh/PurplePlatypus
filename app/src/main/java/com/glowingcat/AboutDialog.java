@@ -71,7 +71,7 @@ public class AboutDialog {
         panel.add(link1);
         panel.add(Box.createVerticalStrut(4));
 
-        JLabel link2 = new JLabel("<html><a style='color:#4da3ff;'>Report issues on GitHub</a></html>");
+        JLabel link2 = new JLabel("<html><a style='color:#4da3ff;'>" + Messages.get("dialog.about.reportBug") + "</a></html>");
         link2.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         link2.setHorizontalAlignment(SwingConstants.CENTER);
         link2.setAlignmentX(Component.CENTER_ALIGNMENT);

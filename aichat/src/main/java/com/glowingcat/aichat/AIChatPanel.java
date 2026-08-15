@@ -932,7 +932,7 @@ public class AIChatPanel extends JPanel {
 
         // Pulsing "thinking" indicator
         if (pulsing) {
-            html.append("<div class=\"thinking\"><img class=\"bubble-icon\" src=\"").append(aiIconSrc()).append("\">Thinking...</div>");
+            html.append("<div class=\"thinking\"><img class=\"bubble-icon\" src=\"").append(aiIconSrc()).append("\">" + AIChatMessages.get("aichat.thinking") + "</div>");
         }
 
         // Auto-scroll to bottom
@@ -969,7 +969,8 @@ public class AIChatPanel extends JPanel {
     private String buildSystemPrompt() {
         try (var is = AIChatPanel.class.getResourceAsStream("/system_prompt.md")) {
             if (is != null) {
-                return new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+                return new String(is.readAllBytes(), StandardCharsets.UTF_8).trim() +
+                        "\nResponses should be in " + AIChatMessages.get("aichat.languageName") + ".";
             }
         } catch (Exception e) {
             // Fall through to hardcoded fallback

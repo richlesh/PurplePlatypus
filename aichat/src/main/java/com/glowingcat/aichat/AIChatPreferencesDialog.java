@@ -248,7 +248,7 @@ public class AIChatPreferencesDialog extends JDialog {
         panel.add(llmApiKeyField, gbc);
 
         JLabel endpointLabel = new JLabel(AIChatMessages.get("aichat.prefs.endpoint"));
-        JLabel apiKeyLink = new JLabel("<html><nobr><a href=''>Get API key...</a></nobr></html>");
+        JLabel apiKeyLink = new JLabel("<html><nobr><a href=''>" + AIChatMessages.get("aichat.prefs.getApiKey") + "</a></nobr></html>");
         JLabel configureLink = new JLabel("<html><nobr><a href=''>Configure...</a></nobr></html>");
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
