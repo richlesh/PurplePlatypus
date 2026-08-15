@@ -93,7 +93,7 @@ public class AboutDialog {
 
         if (LicenseDialog.isLicensed(prefs)) {
             panel.add(Box.createVerticalStrut(14));
-            JLabel thanks = new JLabel("<html><p style='text-align: center;'><b>Thank you for purchasing a<br>license for PurplePlatypus!</b></p></html>");
+            JLabel thanks = new JLabel("<html><p style='text-align: center;'><b>" + Messages.get("dialog.about.thankYou") + "</b></p></html>");
             thanks.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
             thanks.setForeground(new Color(100, 200, 100));
             thanks.setHorizontalAlignment(SwingConstants.CENTER);
