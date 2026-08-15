@@ -135,9 +135,9 @@ public class Main {
     }
 
     /**
-     * Copies demo.textpack to the user's Desktop on first run, if the file exists
+     * Copies the demo folder to the user's Desktop on first run, if it exists
      * in the application's install directory and hasn't already been copied.
-     * Used by Windows and Linux installers to place the demo file on the Desktop.
+     * Used by Windows and Linux installers to place demo files on the Desktop.
      */
     private static void copyDemoFileToDesktop() {
         try {
@@ -174,8 +174,8 @@ public class Main {
                 }
             }
 
-            // Search for demo.textpack in likely locations
-            Path demoSource = findDemoFile(appDir);
+            // Search for demo folder in likely locations
+            Path demoSource = findDemoFolder(appDir);
             if (demoSource == null) return;
 
             // Determine Desktop path — use xdg-user-dir on Linux, shell folder on Windows
@@ -191,10 +191,10 @@ public class Main {
                 }
             }
 
-            Path demoDest = desktop.resolve("demo.textpack");
+            Path demoDest = desktop.resolve("demo");
             if (Files.exists(demoDest)) return; // Already copied
 
-            Files.copy(demoSource, demoDest, StandardCopyOption.COPY_ATTRIBUTES);
+            copyDirectory(demoSource, demoDest);
 
             // Also copy config folder if present
             Path configSource = demoSource.getParent().resolve("config");
@@ -212,33 +212,32 @@ public class Main {
     /**
      * Searches for demo.textpack in likely install locations relative to the app directory.
      */
-    private static Path findDemoFile(Path appDir) {
+    private static Path findDemoFolder(Path appDir) {
         if (appDir == null) return null;
 
-        // Direct: appDir/demo.textpack (Linux app-image root)
-        Path candidate = appDir.resolve("demo.textpack");
-        if (Files.exists(candidate)) return candidate;
+        // Direct: appDir/demo/ (Linux app-image root)
+        Path candidate = appDir.resolve("demo");
+        if (Files.isDirectory(candidate)) return candidate;
 
-        // Windows/jpackage: appDir/app/demo.textpack (input files in app/ subdir)
-        candidate = appDir.resolve("app").resolve("demo.textpack");
-        if (Files.exists(candidate)) return candidate;
+        // Windows/jpackage: appDir/app/demo/ (input files in app/ subdir)
+        candidate = appDir.resolve("app").resolve("demo");
+        if (Files.isDirectory(candidate)) return candidate;
 
         // If appDir is the runtime dir, check sibling app/ dir
-        // e.g. /opt/purpleplatypus/lib/runtime -> /opt/purpleplatypus/lib/app/
-        candidate = appDir.resolve("lib").resolve("app").resolve("demo.textpack");
-        if (Files.exists(candidate)) return candidate;
+        candidate = appDir.resolve("lib").resolve("app").resolve("demo");
+        if (Files.isDirectory(candidate)) return candidate;
 
         // Parent's app/ dir (if we're inside lib/runtime or similar)
         if (appDir.getParent() != null) {
-            candidate = appDir.getParent().resolve("app").resolve("demo.textpack");
-            if (Files.exists(candidate)) return candidate;
-            candidate = appDir.getParent().resolve("demo.textpack");
-            if (Files.exists(candidate)) return candidate;
+            candidate = appDir.getParent().resolve("app").resolve("demo");
+            if (Files.isDirectory(candidate)) return candidate;
+            candidate = appDir.getParent().resolve("demo");
+            if (Files.isDirectory(candidate)) return candidate;
         }
 
         // Linux standard install location
-        candidate = Path.of("/opt/purpleplatypus/demo.textpack");
-        if (Files.exists(candidate)) return candidate;
+        candidate = Path.of("/opt/purpleplatypus/demo");
+        if (Files.isDirectory(candidate)) return candidate;
 
         return null;
     }
