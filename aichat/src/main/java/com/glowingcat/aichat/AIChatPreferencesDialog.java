@@ -43,7 +43,7 @@ public class AIChatPreferencesDialog extends JDialog {
     }
 
     public AIChatPreferencesDialog(Window owner, AIChatPreferences prefs, ChatColors colors) {
-        super(owner, "AI Settings", ModalityType.APPLICATION_MODAL);
+        super(owner, AIChatMessages.get("aichat.prefs.title"), ModalityType.APPLICATION_MODAL);
 
         String[] fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getAvailableFontFamilyNames();
@@ -218,7 +218,7 @@ public class AIChatPreferencesDialog extends JDialog {
 
     private JPanel buildPanel(AIChatPreferences prefs) {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("AI Chat"));
+        panel.setBorder(BorderFactory.createTitledBorder(AIChatMessages.get("aichat.prefs.title")));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 6, 4, 6);
         gbc.anchor = GridBagConstraints.WEST;
@@ -308,33 +308,33 @@ public class AIChatPreferencesDialog extends JDialog {
 
         // Appearance
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2;
-        JLabel appearHeader = new JLabel("Appearance");
+        JLabel appearHeader = new JLabel(AIChatMessages.get("aichat.prefs.appearance"));
         appearHeader.setFont(appearHeader.getFont().deriveFont(Font.BOLD));
         panel.add(appearHeader, gbc);
 
         gbc.gridwidth = 1;
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Font:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.font")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(aiFontCombo, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Size:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.size")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(aiFontSizeCombo, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Code Font:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.codeFont")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(aiCodeFontCombo, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Code Size:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.codeSize")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(aiCodeFontSizeCombo, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("User Color:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.userBubble")), gbc);
         JPanel userColorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         userColorPanel.setOpaque(false);
         JPanel userSwatch = new JPanel();
@@ -345,12 +345,12 @@ public class AIChatPreferencesDialog extends JDialog {
         userSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         userSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(AIChatPreferencesDialog.this, "User Prompt Color", userPromptColor[0]);
+                Color c = JColorChooser.showDialog(AIChatPreferencesDialog.this, AIChatMessages.get("aichat.prefs.userBubble"), userPromptColor[0]);
                 if (c != null) { userPromptColor[0] = c; userSwatch.setBackground(c); }
             }
         });
         userColorPanel.add(userSwatch);
-        userColorPanel.add(new JLabel("Text:"));
+        userColorPanel.add(new JLabel(AIChatMessages.get("aichat.prefs.text")));
         JPanel userTextSwatch = new JPanel();
         userTextSwatch.setBackground(userTextColor[0]);
         userTextSwatch.setPreferredSize(new Dimension(60, 24));
@@ -359,7 +359,7 @@ public class AIChatPreferencesDialog extends JDialog {
         userTextSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         userTextSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(AIChatPreferencesDialog.this, "User Text Color", userTextColor[0]);
+                Color c = JColorChooser.showDialog(AIChatPreferencesDialog.this, AIChatMessages.get("aichat.prefs.userText"), userTextColor[0]);
                 if (c != null) { userTextColor[0] = c; userTextSwatch.setBackground(c); }
             }
         });
@@ -370,7 +370,7 @@ public class AIChatPreferencesDialog extends JDialog {
         panel.add(userColorPanel, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("AI Color:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.aiBubble")), gbc);
         JPanel aiColorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         aiColorPanel.setOpaque(false);
         JPanel aiSwatch = new JPanel();
@@ -381,12 +381,12 @@ public class AIChatPreferencesDialog extends JDialog {
         aiSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         aiSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(AIChatPreferencesDialog.this, "AI Response Color", aiResponseColor[0]);
+                Color c = JColorChooser.showDialog(AIChatPreferencesDialog.this, AIChatMessages.get("aichat.prefs.aiBubble"), aiResponseColor[0]);
                 if (c != null) { aiResponseColor[0] = c; aiSwatch.setBackground(c); }
             }
         });
         aiColorPanel.add(aiSwatch);
-        aiColorPanel.add(new JLabel("Text:"));
+        aiColorPanel.add(new JLabel(AIChatMessages.get("aichat.prefs.text")));
         JPanel aiTextSwatch = new JPanel();
         aiTextSwatch.setBackground(aiTextColor[0]);
         aiTextSwatch.setPreferredSize(new Dimension(60, 24));
@@ -395,7 +395,7 @@ public class AIChatPreferencesDialog extends JDialog {
         aiTextSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         aiTextSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(AIChatPreferencesDialog.this, "AI Text Color", aiTextColor[0]);
+                Color c = JColorChooser.showDialog(AIChatPreferencesDialog.this, AIChatMessages.get("aichat.prefs.aiText"), aiTextColor[0]);
                 if (c != null) { aiTextColor[0] = c; aiTextSwatch.setBackground(c); }
             }
         });
