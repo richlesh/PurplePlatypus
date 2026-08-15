@@ -379,9 +379,9 @@ jobs:
                 mkdir -p ./usr/share/pixmaps
                 cp "$GITHUB_WORKSPACE/${{ matrix.icon }}" ./usr/share/pixmaps/purpleplatypus.png
 
-                # Build file list for the RPM
-                find . -type f -o -type l | sed 's|^\.|/|' | sort > /tmp/rpm-filelist.txt
-                find . -type d | sed 's|^\.|%dir /|' | grep -v '^\%dir /$' | sort >> /tmp/rpm-filelist.txt
+                # Build file list for the RPM (quote paths to handle spaces)
+                find . -type f -o -type l | sed 's|^\./|/|; s|.*|"&"|' | sort > /tmp/rpm-filelist.txt
+                find . -type d | grep -v '^\.$' | sed 's|^\./|/|; s|.*|%dir "&"|' | sort >> /tmp/rpm-filelist.txt
 
                 # Get metadata from original RPM
                 RPM_VERSION=$(rpm -qp --queryformat '%{VERSION}' "$GITHUB_WORKSPACE/$RPM_FILE")
