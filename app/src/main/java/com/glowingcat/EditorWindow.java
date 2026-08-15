@@ -3625,11 +3625,20 @@ public class EditorWindow {
         PreferencesDialog dialog = new PreferencesDialog(frame, preferences);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
+            String oldUiLang = preferences.getUiLanguage();
             dialog.applyTo(preferences);
             preferences.save();
             editorPanel.applyPreferences(preferences);
             previewPanel.forceFullReload();
             updatePreview();
+            // Notify user if UI language changed (requires restart)
+            String newUiLang = preferences.getUiLanguage();
+            if (!oldUiLang.equals(newUiLang)) {
+                JOptionPane.showMessageDialog(frame,
+                        Messages.get("dialog.prefs.restartRequired"),
+                        Messages.get("dialog.prefs.title"),
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
             // Update spell check language if changed
             if (spellCheckController != null) {
                 String newLang = preferences.getSpellCheckLanguage();

@@ -132,6 +132,9 @@ public class Preferences {
     /** Spell check language code (e.g., "en", "fr", "de"). */
     private String spellCheckLanguage = "en";
 
+    /** UI language/locale code (e.g., "en", "es", "fr", "de", "it", "ja", "zh"). Empty = system default. */
+    private String uiLanguage = "";
+
     // --- License ---
 
     /** License email address. */
@@ -237,6 +240,8 @@ public class Preferences {
     public void setDarkMode(boolean darkMode) { this.darkMode = darkMode; }
     public String getSpellCheckLanguage() { return spellCheckLanguage != null ? spellCheckLanguage : "en"; }
     public void setSpellCheckLanguage(String spellCheckLanguage) { this.spellCheckLanguage = spellCheckLanguage; }
+    public String getUiLanguage() { return uiLanguage != null ? uiLanguage : ""; }
+    public void setUiLanguage(String uiLanguage) { this.uiLanguage = uiLanguage; }
 
     // --- License getters/setters ---
 

@@ -51,6 +51,13 @@ public class Main {
 
         // Use FlatLaf — load light or dark based on saved preference
         Preferences prefs = Preferences.load();
+
+        // Initialize UI locale from preferences
+        String uiLang = prefs.getUiLanguage();
+        if (uiLang != null && !uiLang.isEmpty()) {
+            Messages.setLocale(new java.util.Locale(uiLang));
+        }
+
         try {
             if (prefs.isDarkMode()) {
                 UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatDarkLaf());

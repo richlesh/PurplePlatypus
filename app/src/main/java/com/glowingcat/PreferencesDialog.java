@@ -24,6 +24,7 @@ public class PreferencesDialog extends JDialog {
     private final JComboBox<String> previewCodeFontCombo;
     private final JComboBox<Integer> previewCodeSizeCombo;
     private final JComboBox<String> spellCheckLanguageCombo;
+    private final JComboBox<String> uiLanguageCombo;
     private final Color[] selectionColor;
     private final JCheckBox useTabsBox;
     private final JSpinner tabSizeSpinner;
@@ -60,6 +61,21 @@ public class PreferencesDialog extends JDialog {
         tabSizeSpinner = new JSpinner(new SpinnerNumberModel(prefs.getTabSize(), 1, 8, 1));
 
         buttonHighlightColor = new Color[]{prefs.getButtonHighlightColorObj()};
+
+        // Initialize UI language combo
+        String[] uiLanguages = {"System Default", "English", "Español", "Français", "Deutsch", "Italiano", "日本語", "中文"};
+        uiLanguageCombo = new JComboBox<>(uiLanguages);
+        String currentUiLang = prefs.getUiLanguage();
+        uiLanguageCombo.setSelectedItem(switch (currentUiLang) {
+            case "es" -> "Español";
+            case "fr" -> "Français";
+            case "de" -> "Deutsch";
+            case "it" -> "Italiano";
+            case "ja" -> "日本語";
+            case "zh" -> "中文";
+            case "en" -> "English";
+            default -> "System Default";
+        });
 
         // Initialize spell check language combo — sorted by language code
         java.util.Map<String, String> langs = LanguageDownloader.getAvailableLanguages();
@@ -239,6 +255,11 @@ public class PreferencesDialog extends JDialog {
         gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
         panel.add(btnHlSwatch, gbc);
 
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Language:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(uiLanguageCombo, gbc);
+
         // Vertical glue to push content to top
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.weighty = 1;
         gbc.fill = GridBagConstraints.VERTICAL;
@@ -262,5 +283,16 @@ public class PreferencesDialog extends JDialog {
         prefs.setButtonHighlightColor(buttonHighlightColor[0]);
         String selectedDisplayName = (String) spellCheckLanguageCombo.getSelectedItem();
         prefs.setSpellCheckLanguage(LanguageDownloader.getCodeForDisplayName(selectedDisplayName));
+        String selectedUiLang = (String) uiLanguageCombo.getSelectedItem();
+        prefs.setUiLanguage(switch (selectedUiLang) {
+            case "Español" -> "es";
+            case "Français" -> "fr";
+            case "Deutsch" -> "de";
+            case "Italiano" -> "it";
+            case "日本語" -> "ja";
+            case "中文" -> "zh";
+            case "English" -> "en";
+            default -> "";
+        });
     }
 }
