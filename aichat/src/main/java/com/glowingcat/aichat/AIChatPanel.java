@@ -956,7 +956,7 @@ public class AIChatPanel extends JPanel {
         String converted = markdown.replaceAll("\\\\\\((.+?)\\\\\\)", "\\$$1\\$");
         converted = converted.replaceAll("(?s)\\\\\\[(.+?)\\\\\\]", "\\$\\$$1\\$\\$");
         Node document = mdParser.parse(converted);
-        return encodeNonBMP(mdRenderer.render(document));
+        return mdRenderer.render(document);
     }
 
     /**
@@ -980,28 +980,11 @@ public class AIChatPanel extends JPanel {
     }
 
     private static String escapeHtml(String text) {
-        StringBuilder sb = new StringBuilder(text.length());
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            switch (c) {
-                case '&' -> sb.append("&amp;");
-                case '<' -> sb.append("&lt;");
-                case '>' -> sb.append("&gt;");
-                case '"' -> sb.append("&quot;");
-                case '\n' -> sb.append("<br>");
-                default -> {
-                    if (Character.isHighSurrogate(c) && i + 1 < text.length() && Character.isLowSurrogate(text.charAt(i + 1))) {
-                        // Encode supplementary (non-BMP) characters as HTML numeric entities
-                        int codePoint = Character.toCodePoint(c, text.charAt(i + 1));
-                        sb.append("&#x").append(Integer.toHexString(codePoint)).append(";");
-                        i++; // skip low surrogate
-                    } else {
-                        sb.append(c);
-                    }
-                }
-            }
-        }
-        return sb.toString();
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("\n", "<br>");
     }
 
     private String buildSystemPrompt() {
