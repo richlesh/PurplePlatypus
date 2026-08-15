@@ -32,6 +32,9 @@ class WebViewHelper {
                 WebView webView = new WebView();
                 webEngine = webView.getEngine();
 
+                // Disable the default WebView context menu (prevents lock-up on Linux)
+                webView.setContextMenuEnabled(false);
+
                 webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
                     if (newState == Worker.State.SUCCEEDED) {
                         netscape.javascript.JSObject win =
