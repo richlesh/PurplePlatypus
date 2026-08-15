@@ -863,6 +863,51 @@ public class EditorWindow {
         previewToggle.addActionListener(e -> togglePreview());
         togglePanel.add(previewToggle);
 
+        // Reload preview button (circular arrow icon drawn programmatically)
+        JButton reloadButton = new JButton();
+        reloadButton.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        reloadButton.setToolTipText(Messages.get("toolbar.reload"));
+        reloadButton.setFocusPainted(false);
+        reloadButton.setBorderPainted(false);
+        reloadButton.setContentAreaFilled(false);
+        reloadButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        reloadButton.setPreferredSize(new Dimension(28, 28));
+        reloadButton.setIcon(new Icon() {
+            @Override public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(c.getForeground());
+                g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                // Draw circular arc (270 degrees)
+                int cx = x + 10, cy = y + 10, r = 6;
+                g2.drawArc(cx - r, cy - r, r * 2, r * 2, 60, 270);
+                // Draw arrowhead at the end of the arc (top-right area)
+                int ax = cx + (int)(r * Math.cos(Math.toRadians(60)));
+                int ay = cy - (int)(r * Math.sin(Math.toRadians(60)));
+                g2.drawLine(ax, ay, ax + 3, ay);
+                g2.drawLine(ax, ay, ax, ay + 3);
+                g2.dispose();
+            }
+            @Override public int getIconWidth() { return 20; }
+            @Override public int getIconHeight() { return 20; }
+        });
+        reloadButton.addActionListener(e -> {
+            // Briefly highlight while reloading
+            reloadButton.setContentAreaFilled(true);
+            reloadButton.setOpaque(true);
+            reloadButton.setBackground(preferences.getButtonHighlightColorObj());
+            previewPanel.forceFullReload();
+            previewPanel.updatePreview(editorPane.getText(), currentFile, preferences);
+            // Unhighlight after a short delay
+            javax.swing.Timer unhighlight = new javax.swing.Timer(300, ev -> {
+                reloadButton.setContentAreaFilled(false);
+                reloadButton.setOpaque(false);
+            });
+            unhighlight.setRepeats(false);
+            unhighlight.start();
+        });
+        togglePanel.add(reloadButton);
+
         // AI toggle button using AI.png
         ImageIcon aiIconFull = null;
         var aiUrl = getClass().getClassLoader().getResource("AI.png");
