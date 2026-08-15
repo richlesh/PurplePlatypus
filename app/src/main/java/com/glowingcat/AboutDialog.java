@@ -10,7 +10,7 @@ import java.awt.event.*;
 public class AboutDialog {
 
     public static void show(JFrame parent, Preferences prefs) {
-        JDialog dialog = new JDialog(parent, "About PurplePlatypus", true);
+        JDialog dialog = new JDialog(parent, Messages.get("dialog.about.title"), true);
         dialog.setUndecorated(true);
         dialog.getRootPane().setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 1));
 
@@ -43,7 +43,7 @@ public class AboutDialog {
         panel.add(subtitle);
         panel.add(Box.createVerticalStrut(10));
 
-        JLabel ver = new JLabel("Version " + AppVersion.get());
+        JLabel ver = new JLabel(Messages.get("dialog.about.version", AppVersion.get()));
         ver.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         ver.setForeground(new Color(180, 180, 180));
         ver.setAlignmentX(Component.CENTER_ALIGNMENT);

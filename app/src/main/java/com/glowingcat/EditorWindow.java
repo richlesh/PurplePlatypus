@@ -952,8 +952,8 @@ public class EditorWindow {
                     if (!truncationWarningShown) {
                         truncationWarningShown = true;
                         JOptionPane.showMessageDialog(frame,
-                                "This document is too large to send in full to the LLM.\nOnly 20,000 characters centered at the caret position are being sent.",
-                                "Document Truncated", JOptionPane.INFORMATION_MESSAGE);
+                                Messages.get("msg.documentTruncated"),
+                                Messages.get("msg.documentTruncatedTitle"), JOptionPane.INFORMATION_MESSAGE);
                     }
                     StringBuilder sb = new StringBuilder();
                     if (start > 0) {
@@ -1355,8 +1355,8 @@ public class EditorWindow {
     private void openRecentFile(File file) {
         if (!file.exists()) {
             JOptionPane.showMessageDialog(frame,
-                "File not found:\n" + file.getAbsolutePath(),
-                "File Not Found", JOptionPane.WARNING_MESSAGE);
+                Messages.get("msg.error.fileNotFound"),
+                Messages.get("msg.error.fileNotFoundTitle"), JOptionPane.WARNING_MESSAGE);
             // Remove from recents
             java.util.List<String> recents = new java.util.ArrayList<>(preferences.getRecentFiles());
             recents.remove(file.getAbsolutePath());
@@ -1382,8 +1382,8 @@ public class EditorWindow {
             openFileInTarget(file, content);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(frame,
-                "Error opening file:\n" + ex.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+                Messages.get("msg.error.readFile", ex.getMessage()),
+                Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -1396,7 +1396,7 @@ public class EditorWindow {
         if (now - lastOpenTime < 1000) return;
         lastOpenTime = now;
 
-        FileDialog dialog = new FileDialog(frame, "Open", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.open"), FileDialog.LOAD);
         dialog.setMultipleMode(true);
         dialog.setFilenameFilter((dir, name) -> {
             String lower = name.toLowerCase();
@@ -1424,8 +1424,8 @@ public class EditorWindow {
                                 newWindow.loadFileContent(textMd, content);
                             }
                         } catch (IOException ex) {
-                            JOptionPane.showMessageDialog(frame, "Error reading TextBundle: " + ex.getMessage(),
-                                    "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(frame, Messages.get("msg.error.readTextBundle", ex.getMessage()),
+                                    Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
                         }
                     }
                 } else if (file.isFile() && file.getName().toLowerCase().endsWith(".textpack")) {
@@ -1449,19 +1449,19 @@ public class EditorWindow {
                                 newWindow.saveItem.setEnabled(false);
                             }
                         } else {
-                            JOptionPane.showMessageDialog(frame, "TextPack does not contain a text.md file.",
-                                    "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(frame, Messages.get("msg.error.textPackNoFile"),
+                                    Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
                         }
                     } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(frame, "Error reading TextPack: " + ex.getMessage(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(frame, Messages.get("msg.error.readTextPack", ex.getMessage()),
+                                Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
                     }
                 } else if (file.isFile()) {
                     // Warn if file is larger than 2MB
                     if (file.length() > 2_000_000) {
                         int choice = JOptionPane.showOptionDialog(frame,
                                 "This document is " + (file.length() / 1_000_000) + " MB and may be too large to be responsive.",
-                                "Large File", JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                                Messages.get("msg.largeFileTitle"), JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
                                 null, new String[]{"Open", "Cancel"}, "Cancel");
                         if (choice != 0) continue;
                     }
@@ -1475,8 +1475,8 @@ public class EditorWindow {
                             newWindow.loadFileContent(file, content);
                         }
                     } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(frame, Messages.get("msg.error.readFile", ex.getMessage()),
+                                Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
                     }
                 }
             }
@@ -1506,8 +1506,8 @@ public class EditorWindow {
         if (file.length() > LARGE_FILE_THRESHOLD) {
             editorPane.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE);
             JOptionPane.showMessageDialog(frame,
-                    "Due to the size of this document, syntax highlighting has been\ndisabled to help keep the program responsive.",
-                    "Syntax Highlighting Disabled", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("msg.syntaxDisabled"),
+                    Messages.get("msg.syntaxDisabledTitle"), JOptionPane.INFORMATION_MESSAGE);
         } else {
             editorPane.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_MARKDOWN);
         }
@@ -1525,8 +1525,8 @@ public class EditorWindow {
     private void saveFile() {
         if (textPackSource) {
             JOptionPane.showMessageDialog(frame,
-                    "This file was opened from a TextPack archive.\nUse Save As or Export to save changes.",
-                    "Save Disabled", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("msg.saveDisabled"),
+                    Messages.get("msg.saveDisabledTitle"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         if (currentFile == null) saveFileAs();
@@ -1534,7 +1534,7 @@ public class EditorWindow {
     }
 
     private void saveFileAs() {
-        FileDialog dialog = new FileDialog(frame, "Save As", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.saveAs"), FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             dialog.setFile(currentFile.getName());
@@ -1569,8 +1569,8 @@ public class EditorWindow {
             dirty = false;
             updateTitle();
         } catch (IOException ex) {
-            JOptionPane.showMessageDialog(frame, "Error saving file: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.error.saveFile", ex.getMessage()),
+                    Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -1681,7 +1681,7 @@ public class EditorWindow {
 
         // Need at least 2 rows (header + separator)
         if (tableEnd - tableStart < 1) {
-            JOptionPane.showMessageDialog(frame, "No valid table found at the current position.",
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.noValidTable"),
                     Messages.get("msg.noTableFoundTitle"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
@@ -1864,10 +1864,10 @@ public class EditorWindow {
                 updatePreview();
                 JOptionPane.showMessageDialog(frame,
                     count + " substitution" + (count != 1 ? "s" : "") + " made.",
-                    "Zap Gremlins", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("msg.zapGremlinsTitle"), JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(frame, "No gremlin characters found.",
-                    "Zap Gremlins", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.noGremlinsFound"),
+                    Messages.get("msg.zapGremlinsTitle"), JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }
@@ -2021,21 +2021,21 @@ public class EditorWindow {
                 count + " character" + (count != 1 ? "s" : "") + " encoded.",
                 "HTML Encode", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(frame, "No non-ASCII characters found.",
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.noGremlinsFound"),
                 "HTML Encode", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
     /**
      * Updates the Convert Line Endings menu item text to reflect the current format.
-     * Shows "Convert to Windows Line Endings" when the document uses Unix format,
-     * and "Convert to Unix Line Endings" when it uses Windows format.
+     * Shows Messages.get("menu.edit.convertLineEndings") when the document uses Unix format,
+     * and Messages.get("menu.edit.convertLineEndings.unix") when it uses Windows format.
      */
     private void updateLineEndingsMenuItem() {
         if (windowsLineEndings) {
-            convertLineEndingsItem.setText("Convert to Unix Line Endings");
+            convertLineEndingsItem.setText(Messages.get("menu.edit.convertLineEndings.unix"));
         } else {
-            convertLineEndingsItem.setText("Convert to Windows Line Endings");
+            convertLineEndingsItem.setText(Messages.get("menu.edit.convertLineEndings"));
         }
     }
 
@@ -2054,7 +2054,7 @@ public class EditorWindow {
         int choice = JOptionPane.showOptionDialog(frame,
                 "The file \"" + currentFile.getName() + "\" has been modified by another program.\n\n"
                         + "Do you want to reload it? Any unsaved changes will be lost.",
-                "File Changed on Disk",
+                Messages.get("msg.fileModifiedTitle"),
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE,
                 null,
@@ -2075,8 +2075,8 @@ public class EditorWindow {
                 updateTitle();
                 updateLineEndingsMenuItem();
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error reloading file: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error.readFile", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         } else {
             // User chose to keep current changes; update timestamp to avoid repeated prompts
@@ -2110,7 +2110,7 @@ public class EditorWindow {
     }
 
     private void exportHtml() {
-        FileDialog dialog = new FileDialog(frame, "Export HTML", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " HTML", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2130,14 +2130,14 @@ public class EditorWindow {
             try {
                 Files.writeString(outFile.toPath(), html, StandardCharsets.UTF_8);
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting HTML: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void exportPdf() {
-        FileDialog dialog = new FileDialog(frame, "Export PDF", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " PDF", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2181,7 +2181,7 @@ public class EditorWindow {
     }
 
     private void exportTextBundle() {
-        FileDialog dialog = new FileDialog(frame, "Export TextBundle", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " TextBundle", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2260,8 +2260,8 @@ public class EditorWindow {
                 Files.writeString(bundleDir.toPath().resolve("text.md"), mdSb.toString(), StandardCharsets.UTF_8);
 
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting TextBundle: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -2271,7 +2271,7 @@ public class EditorWindow {
      * zipped TextBundle containing text.md, info.json, and an assets/ folder.
      */
     private void exportTextPack() {
-        FileDialog dialog = new FileDialog(frame, "Export TextPack", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " TextPack", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2353,8 +2353,8 @@ public class EditorWindow {
                 deleteRecursive(tempDir);
 
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting TextPack: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -2438,7 +2438,7 @@ public class EditorWindow {
     }
 
     private void exportRtf() {
-        FileDialog dialog = new FileDialog(frame, "Export RTF", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " RTF", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2458,14 +2458,14 @@ public class EditorWindow {
                 String rtf = markdownToRtf(editorPane.getText());
                 Files.writeString(outFile.toPath(), rtf, StandardCharsets.UTF_8);
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting RTF: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void exportDocx() {
-        FileDialog dialog = new FileDialog(frame, "Export Word Document", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " Word", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2503,14 +2503,14 @@ public class EditorWindow {
                 DocxExporter exporter = new DocxExporter(currentFile);
                 exporter.export(document, outFile);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting Word document: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void exportPlainText() {
-        FileDialog dialog = new FileDialog(frame, "Export Plain Text", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " Text", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2531,8 +2531,8 @@ public class EditorWindow {
                 String plainText = markdownToPlainText(editorPane.getText());
                 Files.writeString(outFile.toPath(), plainText, StandardCharsets.UTF_8);
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting plain text: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -2540,7 +2540,7 @@ public class EditorWindow {
     // --- Import methods ---
 
     private void importHtml() {
-        FileDialog dialog = new FileDialog(frame, "Import HTML", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.import") + " HTML", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".html") || name.toLowerCase().endsWith(".htm"));
         dialog.setVisible(true);
         if (dialog.getFile() != null) {
@@ -2551,13 +2551,13 @@ public class EditorWindow {
                 insertImportedText(markdown);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(frame, "Error importing HTML: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void importPlainText() {
-        FileDialog dialog = new FileDialog(frame, "Import Plain Text", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.import") + " Text", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".txt"));
         dialog.setVisible(true);
         if (dialog.getFile() != null) {
@@ -2567,13 +2567,13 @@ public class EditorWindow {
                 insertImportedText(text);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(frame, "Error importing plain text: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void importRtf() {
-        FileDialog dialog = new FileDialog(frame, "Import RTF", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.import") + " RTF", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".rtf"));
         dialog.setVisible(true);
         if (dialog.getFile() != null) {
@@ -2584,13 +2584,13 @@ public class EditorWindow {
                 insertImportedText(markdown);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(frame, "Error importing RTF: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void importDocx() {
-        FileDialog dialog = new FileDialog(frame, "Import Word Document", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.import") + " Word", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".docx"));
         dialog.setVisible(true);
         if (dialog.getFile() != null) {
@@ -2600,7 +2600,7 @@ public class EditorWindow {
                 insertImportedText(markdown);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Error importing Word document: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -3160,7 +3160,7 @@ public class EditorWindow {
         String filename = currentFile != null ? currentFile.getName() : "Untitled";
         int choice = JOptionPane.showOptionDialog(frame,
                 "\"" + filename + "\" has unsaved changes. Do you want to save before closing?",
-                "Unsaved Changes", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE,
+                Messages.get("msg.unsavedTitle"), JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE,
                 null, new String[]{"Save", "Don't Save", "Cancel"}, "Save");
         if (choice == 0) { saveFile(); return !dirty; }
         else if (choice == 1) return true;
