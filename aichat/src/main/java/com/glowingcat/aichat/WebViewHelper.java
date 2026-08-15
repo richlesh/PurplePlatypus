@@ -32,8 +32,8 @@ class WebViewHelper {
                 WebView webView = new WebView();
                 webEngine = webView.getEngine();
 
-                // Disable the default WebView context menu (prevents lock-up on Linux)
-                webView.setContextMenuEnabled(false);
+                // Prevent the WebView from opening new windows (prevents lock-up on Linux)
+                webEngine.setCreatePopupHandler(features -> null);
 
                 webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
                     if (newState == Worker.State.SUCCEEDED) {

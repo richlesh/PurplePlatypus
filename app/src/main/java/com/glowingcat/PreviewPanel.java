@@ -124,9 +124,9 @@ public class PreviewPanel extends JPanel {
                             }
                         }
                     });
-                    // Disable the default WebView context menu (which can lock up on
-                    // Linux when "Open Image in new Window" is selected for emoji/images)
-                    webView.setContextMenuEnabled(false);
+                    // Prevent the WebView from opening new windows (e.g. "Open Image in
+                    // new Window" from the context menu), which locks up on Linux ARM64.
+                    webView.getEngine().setCreatePopupHandler(features -> null);
 
                     javafx.scene.Scene scene = new javafx.scene.Scene(webView);
                     jfxPanel.setScene(scene);
