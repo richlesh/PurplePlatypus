@@ -840,6 +840,7 @@ public class AIChatPanel extends JPanel {
         // Dynamic styles that depend on preferences
         html.append("body { font-family: '").append(fontFamily).append("', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; ");
         html.append("font-size: ").append(fontSize).append("pt; }");
+        html.append("p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th { unicode-bidi: plaintext; }");
         html.append(".user-bubble { background: ").append(userBg).append("; color: ").append(userText).append("; }");
         html.append(".ai-bubble { background: ").append(aiBg).append("; color: ").append(aiText).append("; }");
         html.append(".approval-btns button { font-size: ").append(fontSize).append("pt; }");
