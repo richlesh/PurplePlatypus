@@ -67,7 +67,7 @@ public class PreviewPanel extends JPanel {
 
     public PreviewPanel() {
         super(new BorderLayout());
-        setBorder(BorderFactory.createTitledBorder("Preview"));
+        setBorder(BorderFactory.createTitledBorder(Messages.get("toolbar.preview.title")));
 
         List<Extension> extensions = Arrays.asList(
                 TablesExtension.create(),

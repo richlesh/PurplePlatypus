@@ -38,7 +38,7 @@ public class EditorPanel extends JPanel {
 
         scrollPane = new RTextScrollPane(textArea);
         scrollPane.setLineNumbersEnabled(true);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Markdown Source"));
+        scrollPane.setBorder(BorderFactory.createTitledBorder(Messages.get("editor.borderTitle")));
 
         add(scrollPane, BorderLayout.CENTER);
     }

@@ -201,7 +201,7 @@ public class AIChatPanel extends JPanel {
         mdRenderer = HtmlRenderer.builder().extensions(extensions).build();
 
         setPreferredSize(new Dimension(380, 0));
-        setBorder(BorderFactory.createTitledBorder("AI Assistant"));
+        setBorder(BorderFactory.createTitledBorder(AIChatMessages.get("aichat.title")));
 
         // Initialize chat display (WebView or fallback)
         initChatDisplay();

@@ -174,7 +174,7 @@ public class FindDialog extends JDialog {
     protected JPanel createOptionsPanel() {
         JPanel optionsPanel = new JPanel();
         optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.Y_AXIS));
-        optionsPanel.setBorder(BorderFactory.createTitledBorder("Options"));
+        optionsPanel.setBorder(BorderFactory.createTitledBorder(Messages.get("dialog.find.options")));
 
         findInSelectionBox = new JCheckBox(Messages.get("dialog.find.findInSelection"));
         searchBackwardsBox = new JCheckBox(Messages.get("dialog.find.searchBackwards"));
