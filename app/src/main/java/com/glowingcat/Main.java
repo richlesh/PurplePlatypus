@@ -55,7 +55,9 @@ public class Main {
         // Initialize UI locale from preferences
         String uiLang = prefs.getUiLanguage();
         if (uiLang != null && !uiLang.isEmpty()) {
-            Messages.setLocale(new java.util.Locale(uiLang));
+            java.util.Locale locale = new java.util.Locale(uiLang);
+            Messages.setLocale(locale);
+            com.glowingcat.aichat.AIChatMessages.setLocale(locale);
         }
 
         try {

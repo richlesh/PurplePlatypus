@@ -99,8 +99,8 @@ public class AIChatPreferencesDialog extends JDialog {
 
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton okButton = new JButton("OK");
-        JButton cancelButton = new JButton("Cancel");
+        JButton okButton = new JButton(AIChatMessages.get("aichat.prefs.ok"));
+        JButton cancelButton = new JButton(AIChatMessages.get("aichat.prefs.cancel"));
         okButton.addActionListener(e -> { confirmed = true; dispose(); });
         cancelButton.addActionListener(e -> dispose());
         buttonPanel.add(okButton);
@@ -232,22 +232,22 @@ public class AIChatPreferencesDialog extends JDialog {
 
         gbc.gridwidth = 1;
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Vendor:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.vendor")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1;
         panel.add(llmVendorCombo, gbc);
         gbc.weightx = 0;
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Model:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.model")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(llmModelCombo, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("API Key:"), gbc);
+        panel.add(new JLabel(AIChatMessages.get("aichat.prefs.apiKey")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(llmApiKeyField, gbc);
 
-        JLabel endpointLabel = new JLabel("Endpoint:");
+        JLabel endpointLabel = new JLabel(AIChatMessages.get("aichat.prefs.endpoint"));
         JLabel apiKeyLink = new JLabel("<html><nobr><a href=''>Get API key...</a></nobr></html>");
         JLabel configureLink = new JLabel("<html><nobr><a href=''>Configure...</a></nobr></html>");
 
