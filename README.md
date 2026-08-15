@@ -10,6 +10,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Live preview** — The preview updates in real time as you type, with no manual refresh needed
 - **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
 - **Live spell checker** — Real-time spell and grammar checking powered by LanguageTool with support for 31 languages; right-click suggestions and user dictionary; language packs download on demand from Maven Central
+- **Localization** — Full UI localization in English, Spanish, French, German, Italian, Japanese, and Simplified Chinese; select language in Preferences; RTL content support (Arabic, Hebrew) in preview and AI chat
 - **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, DeepSeek, Alibaba, Cerebras, Groq, Meta, Mistral, Moonshot AI, Perplexity, xAI, or local Ollama models
 - **Generic LLM vendor** — YAML-configurable API endpoint for any LLM service (corporate APIs, custom proxies, etc.) with OAuth/IAM token exchange, configurable request/response format, and single-shot or multi-turn conversation modes
 - **Multi-window** — Open multiple editor windows with File > New
