@@ -344,7 +344,7 @@ public class PreviewPanel extends JPanel {
                             webViewInitialLoadDone = false;
                             webEngine.load(tempHtmlFile.toURI().toString());
                         } catch (Exception ex) {
-                            webEngine.loadContent(fullHtml, "text/html");
+                            webEngine.loadContent(fullHtml);
                         }
                     }
                 }
