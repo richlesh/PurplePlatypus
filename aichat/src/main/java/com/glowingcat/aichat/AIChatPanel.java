@@ -974,7 +974,8 @@ public class AIChatPanel extends JPanel {
         } catch (Exception e) {
             // Fall through to hardcoded fallback
         }
-        return "You are an AI writing assistant. Help users write and improve markdown documents.";
+        return "You are an AI writing assistant. Help users write and improve markdown documents. "
+                + "Responses should be in " + AIChatMessages.get("aichat.languageName") + ".";
     }
 
     private String humanIconSrc() {
