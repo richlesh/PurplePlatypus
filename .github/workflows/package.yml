@@ -695,6 +695,8 @@ jobs:
           cp -r staging/javafx "$DIST/javafx"
           cp LICENSE "$DIST/"
           cp README.md "$DIST/"
+          cp -R demo "$DIST/PurplePlatypus Demo"
+          cp -R aichat/src/main/resources/config "$DIST/AI Config Examples"
 
           # Create shell launcher (macOS / Linux)
           cat > "$DIST/PurplePlatypus.sh" <<'LAUNCHER_SH'
