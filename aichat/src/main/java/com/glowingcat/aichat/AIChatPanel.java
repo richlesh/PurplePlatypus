@@ -1042,14 +1042,14 @@ public class AIChatPanel extends JPanel {
 
     /**
      * Copy bundled config files from resources/config/ to the user's Desktop
-     * as "Generic AI Configurations" folder. Only runs once — skips if the folder already exists.
+     * as "AI Config Examples" folder. Only runs once — skips if the folder already exists.
      */
     private static void installConfigToDesktop() {
         try {
             Path desktopDir = Path.of(System.getProperty("user.home"), "Desktop");
             if (!Files.isDirectory(desktopDir)) return;
 
-            Path destDir = desktopDir.resolve("Generic AI Configurations");
+            Path destDir = desktopDir.resolve("AI Config Examples");
             if (Files.exists(destDir)) return; // already installed
 
             // Read the index of config files

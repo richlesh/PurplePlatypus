@@ -11,6 +11,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="aichat" />
         <module name="App" />
+        <module name="spellcheck" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="17" />
