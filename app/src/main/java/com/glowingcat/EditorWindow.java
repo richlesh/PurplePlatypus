@@ -3544,7 +3544,7 @@ public class EditorWindow {
     private void gotoLine() {
         int totalLines = editorPane.getLineCount();
         String input = JOptionPane.showInputDialog(frame,
-            "Line number (1\u2013" + totalLines + "):", Messages.get("menu.search.goToLine"), JOptionPane.PLAIN_MESSAGE);
+            Messages.get("msg.goToLine.prompt", totalLines), Messages.get("msg.goToLine.title"), JOptionPane.PLAIN_MESSAGE);
         if (input == null || input.trim().isEmpty()) return;
         try {
             int line = Integer.parseInt(input.trim());
