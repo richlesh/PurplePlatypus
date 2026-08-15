@@ -3094,6 +3094,9 @@ public class EditorWindow {
         // Mark links where the display text matches the href URL
         html = PreviewPanel.markUrlLinks(html);
 
+        // Replace non-BMP characters (emoji) with Twemoji SVG images
+        html = com.glowingcat.aichat.EmojiReplacer.replaceEmoji(html);
+
         // Resolve relative image paths - keep them relative since the exported
         // HTML will be placed alongside the markdown file. Just decode %20 back
         // to spaces for readable paths, but leave them relative.

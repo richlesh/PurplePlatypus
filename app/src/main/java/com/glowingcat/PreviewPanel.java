@@ -285,6 +285,9 @@ public class PreviewPanel extends JPanel {
             html = sb.toString();
         }
 
+        // Replace non-BMP characters (emoji) with Twemoji SVG images
+        html = com.glowingcat.aichat.EmojiReplacer.replaceEmoji(html);
+
         String styledHtml = getStyledHtml(html, currentFile, preferences, false, markdown);
         lastHtml = styledHtml;
 
@@ -433,6 +436,8 @@ public class PreviewPanel extends JPanel {
         sb.append("::selection { background: ").append(selColor).append("; }");
         sb.append("</style>");
         sb.append("<style>").append(loadPreviewCss(dark)).append("</style>");
+        // Emoji image styles
+        sb.append("<style>").append(com.glowingcat.aichat.EmojiReplacer.emojiCss()).append("</style>");
 
         if (needsHighlightJs) {
             if (forExport) {

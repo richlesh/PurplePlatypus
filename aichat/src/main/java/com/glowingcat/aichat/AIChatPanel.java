@@ -849,6 +849,8 @@ public class AIChatPanel extends JPanel {
         html.append("</style>");
         // Static styles from resource file
         html.append("<style>").append(loadCssResource(darkMode)).append("</style>");
+        // Emoji image styles
+        html.append("<style>").append(EmojiReplacer.emojiCss()).append("</style>");
         html.append("<script>");
         html.append("MathJax = {");
         html.append("  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },");
@@ -894,7 +896,7 @@ public class AIChatPanel extends JPanel {
                 html.append("<div class=\"bubble-row\">");
                 html.append("<img class=\"bubble-icon\" src=\"").append(humanIconSrc()).append("\">");
                 html.append("<div class=\"bubble user-bubble bubble-content\">");
-                html.append(escapeHtml(msg.markdown));
+                html.append(EmojiReplacer.replaceEmoji(escapeHtml(msg.markdown)));
                 html.append("</div></div>");
             } else {
                 // AI message — render markdown as HTML
@@ -956,27 +958,9 @@ public class AIChatPanel extends JPanel {
         String converted = markdown.replaceAll("\\\\\\((.+?)\\\\\\)", "\\$$1\\$");
         converted = converted.replaceAll("(?s)\\\\\\[(.+?)\\\\\\]", "\\$\\$$1\\$\\$");
         Node document = mdParser.parse(converted);
-        return mdRenderer.render(document);
-    }
-
-    /**
-     * Encodes non-BMP characters (emoji, supplementary) as HTML numeric entities
-     * to avoid corruption by JavaFX WebEngine's Latin-1 default encoding.
-     */
-    private static String encodeNonBMP(String html) {
-        if (html == null) return null;
-        StringBuilder sb = new StringBuilder(html.length());
-        for (int i = 0; i < html.length(); i++) {
-            char c = html.charAt(i);
-            if (Character.isHighSurrogate(c) && i + 1 < html.length() && Character.isLowSurrogate(html.charAt(i + 1))) {
-                int codePoint = Character.toCodePoint(c, html.charAt(i + 1));
-                sb.append("&#x").append(Integer.toHexString(codePoint)).append(";");
-                i++;
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
+        String html = mdRenderer.render(document);
+        // Replace non-BMP characters (emoji) with Twemoji SVG images
+        return EmojiReplacer.replaceEmoji(html);
     }
 
     private static String escapeHtml(String text) {
