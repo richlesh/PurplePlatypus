@@ -887,7 +887,10 @@ public class AIChatPanel extends JPanel {
         html.append("  if(window.hljs){hljs.highlightAll();}");
         html.append("});");
         html.append("</script>");
-        html.append("</head><body dir=\"auto\">");
+        // Lightbox for images and Mermaid diagrams (right-click to enlarge)
+        html.append("<style>").append(WebResources.lightboxCss()).append("</style>");
+        html.append("<script>").append(WebResources.lightboxJs()).append("</script>");
+        html.append("</head><body dir=\"auto\"").append(darkMode ? " class=\"dark-mode\"" : "").append(">");
 
         // Render all chat messages
         for (int i = 0; i < chatMessages.size(); i++) {

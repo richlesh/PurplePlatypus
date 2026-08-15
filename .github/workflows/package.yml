@@ -189,9 +189,10 @@ jobs:
       - name: Run jpackage
         shell: bash
         run: |
-          # Include demo folder in lib for Windows installer
+          # Include demo folder and AI Config Examples in lib for Windows installer
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp -R demo lib/
+            cp -R aichat/src/main/resources/config "lib/AI Config Examples"
           fi
           # Ensure WiX is on PATH for Windows builds
           if [ -d "$GITHUB_WORKSPACE/wix" ]; then
@@ -243,6 +244,9 @@ jobs:
 
             # Include demo folder in the app image
             cp -R demo PurplePlatypus/
+
+            # Include AI Config Examples in the app image
+            cp -R aichat/src/main/resources/config "PurplePlatypus/AI Config Examples"
 
             # Ensure icon is in the app image for the second jpackage pass
             cp ${{ matrix.icon }} PurplePlatypus/lib/PurplePlatypus.png
@@ -323,7 +327,9 @@ jobs:
                   '  DESKTOP="${DESKTOP:-$USER_HOME/Desktop}"' \
                   '  mkdir -p "$DESKTOP"' \
                   '  cp -R /opt/purpleplatypus/demo "$DESKTOP/" 2>/dev/null || true' \
+                  '  cp -R "/opt/purpleplatypus/AI Config Examples" "$DESKTOP/" 2>/dev/null || true' \
                   '  chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo" 2>/dev/null || true' \
+                  '  chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/AI Config Examples" 2>/dev/null || true' \
                   'fi' \
                   'exit 0' > "$TMPDIR/DEBIAN/postinst"
                 chmod 755 "$TMPDIR/DEBIAN/postinst"
@@ -410,7 +416,9 @@ jobs:
                   '  if [ -d "$DESKTOP" ] || [ -d "$USER_HOME" ]; then' \
                   '    mkdir -p "$DESKTOP"' \
                   '    cp -R /opt/purpleplatypus/demo "$DESKTOP/" 2>/dev/null || true' \
+                  '    cp -R "/opt/purpleplatypus/AI Config Examples" "$DESKTOP/" 2>/dev/null || true' \
                   '    chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/demo" 2>/dev/null || true' \
+                  '    chown -R "$REAL_USER":"$(id -gn "$REAL_USER" 2>/dev/null)" "$DESKTOP/AI Config Examples" 2>/dev/null || true' \
                   '  fi' \
                   'fi' \
                   "" \
@@ -510,6 +518,7 @@ jobs:
           ln -s /Applications "$DMG_DIR/Applications"
           cp app/src/main/resources/app_icon.icns "$DMG_DIR/.VolumeIcon.icns"
           cp -R demo "$DMG_DIR/"
+          cp -R aichat/src/main/resources/config "$DMG_DIR/AI Config Examples"
 
           hdiutil create -volname PurplePlatypus -srcfolder "$DMG_DIR" -ov -format UDRW /tmp/purpleplatypus-rw.dmg
           hdiutil attach /tmp/purpleplatypus-rw.dmg -mountpoint /tmp/dmg-vol

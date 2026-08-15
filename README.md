@@ -18,7 +18,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Cross-platform** — Runs on macOS (ARM64), Windows (x64, ARM64), and Linux (x64, ARM64)
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
-- **Toolbar** — Status bar showing the full file path with document statistics, toggle buttons for word wrap, invisible characters, spell check, synchronized scrolling, preview, and AI panels
+- **Toolbar** — Status bar showing the full file path with document statistics, toggle buttons for word wrap, invisible characters, spell check, synchronized scrolling, preview, reload, AI panel and light/dark UI modes.
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
 - **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt`/`.textbundle`/`.textpack` files, and save your work
 - **Recent files** — File > Recents menu shows recently opened documents; selecting one brings its window to front if already open
@@ -32,8 +32,9 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Horizontal Rule** — Insert a `---` separator via the Markdown menu
 - **Footnotes** — Insert footnote references and definitions via the Markdown menu
 - **Image drag-and-drop** — Drag GIF, JPEG, or PNG files onto the editor to insert markdown image links with relative paths; the caret tracks the pointer for precise placement
+- **Lightbox viewer** - View images in a lightbox with zoom and pan features via right-click on image
 - **Links and Images** — Insert or edit markdown links and images via dialogs
-- **Tables** — Insert or edit GFM-style markdown tables via a visual dialog
+- **Tables** — Insert or edit GFM pipe-style markdown tables via a visual dialog.  Pandoc grid tables also supported.
 - **Lists** — Convert lines to ordered, unordered, or task lists
 - **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, and Block Math
 - **Print** — Page Setup and Print (⌘/Ctrl+P) using the native system print dialog
@@ -48,7 +49,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Find in Preview** — Search for selected editor text in the rendered preview (⇧⌘F); right-click selected preview text to find it in the source
 - **Go to Line** — Jump to a specific line number in the source (⇧⌘J)
 - **Line ending conversion** — Detect and convert between Unix (`\n`) and Windows (`\r\n`) line endings via the Edit menu; line ending format is preserved on save
-- **Cleanup Pandoc Tables** — Convert grid/Pandoc-style tables to standard GFM pipe tables (also auto-converted in preview)
+- **Cleanup Pandoc Tables** — Convert Pandoc grid-style tables to standard GFM pipe-style tables
 - **Format Table** — Auto-format the GFM table at the cursor, padding columns to uniform width respecting header alignment (left, center, right)
 - **Zap Gremlins** — Configurable substitution of Unicode characters (smart quotes, em-dashes, non-breaking spaces, etc.) with ASCII equivalents; user-editable rules saved to preferences
 - **HTML Encode** — Convert non-ASCII characters to HTML entities (named where available per HTML5, otherwise numeric code points)
@@ -58,11 +59,11 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **External change detection** — Detects when a file is modified on disk by another program and prompts to reload or keep current changes
 - **Large file performance** — Preview updates and document statistics are debounced for large files; syntax highlighting is disabled above 1 MB; AI context is truncated above 20K characters
 
-- **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, ins (underline), and YAML front matter
+- **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, insert (underline), and YAML front matter
 - **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
 - **Syntax highlighting** — Code blocks in the preview and AI chat are syntax-highlighted via highlight.js with automatic language detection and light/dark theme support
 - **Live Spellcheck** - Live spell and grammar check with customizable dictionaries and language support
-- **Mermaid diagrams** — Mermaid code blocks are rendered as diagrams in both the preview and AI chat panes
+- **Mermaid diagrams** — Mermaid code blocks are rendered as diagrams in both the preview and AI chat panes and right-click to enlarge in lightbox format.
 - **Figure captions** — Images with alt text are rendered as `<figure>` elements with a visible `<figcaption>` in the preview
 - **Preview fallback** — On platforms where JavaFX WebView is unavailable (e.g. Windows ARM64), the preview gracefully falls back to a Swing-based HTML renderer with reduced functionality
 - **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors; toolbar button highlight color
@@ -78,7 +79,7 @@ The built-in AI chat panel helps you write and improve markdown content:
 - Generate tables from descriptions
 - Help with technical writing, blog posts, documentation, and READMEs
 
-When the AI suggests a complete document replacement, you're given Allow/Reject buttons to accept or decline the changes.
+When the AI suggests a document change, you're given Allow/Reject buttons to accept or decline the changes.
 
 The AI chat panel renders responses with full markdown support (tables, code blocks, math, links) via an embedded WebView with MathJax. A copy button on each AI response copies the raw markdown to the clipboard. For large documents, the AI returns efficient unified diffs instead of full replacements, reducing token usage and response time.
 

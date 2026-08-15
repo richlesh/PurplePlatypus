@@ -510,7 +510,11 @@ public class PreviewPanel extends JPanel {
             sb.append("});</script>");
         }
 
-        sb.append("</head><body dir=\"auto\">").append(bodyHtml).append("</body></html>");
+        // Lightbox for images and Mermaid diagrams (right-click to enlarge)
+        sb.append("<style>").append(WebResources.lightboxCss()).append("</style>");
+        sb.append("<script>").append(WebResources.lightboxJs()).append("</script>");
+
+        sb.append("</head><body dir=\"auto\"").append(dark ? " class=\"dark-mode\"" : "").append(">").append(bodyHtml).append("</body></html>");
         return sb.toString();
     }
 
