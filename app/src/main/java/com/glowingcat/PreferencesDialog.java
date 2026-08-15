@@ -24,6 +24,7 @@ public class PreferencesDialog extends JDialog {
     private final JComboBox<String> previewCodeFontCombo;
     private final JComboBox<Integer> previewCodeSizeCombo;
     private final JComboBox<String> spellCheckLanguageCombo;
+    private final JComboBox<String> uiLanguageCombo;
     private final Color[] selectionColor;
     private final JCheckBox useTabsBox;
     private final JSpinner tabSizeSpinner;
@@ -33,7 +34,7 @@ public class PreferencesDialog extends JDialog {
     private static final Integer[] FONT_SIZES = {8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36};
 
     public PreferencesDialog(JFrame owner, Preferences prefs) {
-        super(owner, "Preferences", true);
+        super(owner, Messages.get("dialog.prefs.title"), true);
 
         String[] fontFamilies = GraphicsEnvironment.getLocalGraphicsEnvironment()
                 .getAvailableFontFamilyNames();
@@ -56,10 +57,25 @@ public class PreferencesDialog extends JDialog {
 
         // Initialize editor settings
         selectionColor = new Color[]{prefs.getSelectionColorObj()};
-        useTabsBox = new JCheckBox("Use Tabs", prefs.isUseTabs());
+        useTabsBox = new JCheckBox(Messages.get("dialog.prefs.useTabs"), prefs.isUseTabs());
         tabSizeSpinner = new JSpinner(new SpinnerNumberModel(prefs.getTabSize(), 1, 8, 1));
 
         buttonHighlightColor = new Color[]{prefs.getButtonHighlightColorObj()};
+
+        // Initialize UI language combo
+        String[] uiLanguages = {"System Default", "English", "Español", "Français", "Deutsch", "Italiano", "日本語", "中文"};
+        uiLanguageCombo = new JComboBox<>(uiLanguages);
+        String currentUiLang = prefs.getUiLanguage();
+        uiLanguageCombo.setSelectedItem(switch (currentUiLang) {
+            case "es" -> "Español";
+            case "fr" -> "Français";
+            case "de" -> "Deutsch";
+            case "it" -> "Italiano";
+            case "ja" -> "日本語";
+            case "zh" -> "中文";
+            case "en" -> "English";
+            default -> "System Default";
+        });
 
         // Initialize spell check language combo — sorted by language code
         java.util.Map<String, String> langs = LanguageDownloader.getAvailableLanguages();
@@ -81,8 +97,8 @@ public class PreferencesDialog extends JDialog {
 
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton okButton = new JButton("OK");
-        JButton cancelButton = new JButton("Cancel");
+        JButton okButton = new JButton(Messages.get("dialog.prefs.ok"));
+        JButton cancelButton = new JButton(Messages.get("dialog.prefs.cancel"));
         okButton.addActionListener(e -> { confirmed = true; dispose(); });
         cancelButton.addActionListener(e -> dispose());
         buttonPanel.add(okButton);
@@ -97,7 +113,7 @@ public class PreferencesDialog extends JDialog {
 
     private JPanel buildFontPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Fonts"));
+        panel.setBorder(BorderFactory.createTitledBorder(Messages.get("dialog.prefs.fonts")));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 6, 4, 6);
         gbc.anchor = GridBagConstraints.WEST;
@@ -105,19 +121,19 @@ public class PreferencesDialog extends JDialog {
 
         // Editor section
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
-        JLabel editorHeader = new JLabel("Markdown Source");
+        JLabel editorHeader = new JLabel(Messages.get("dialog.prefs.markdownSource"));
         editorHeader.setFont(editorHeader.getFont().deriveFont(Font.BOLD));
         panel.add(editorHeader, gbc);
 
         gbc.gridwidth = 1;
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Font:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.font")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1;
         panel.add(editorFontCombo, gbc);
         gbc.weightx = 0;
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Size:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.size")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(editorSizeCombo, gbc);
 
@@ -129,18 +145,18 @@ public class PreferencesDialog extends JDialog {
 
         // Preview Text section
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2;
-        JLabel previewHeader = new JLabel("Preview Text");
+        JLabel previewHeader = new JLabel(Messages.get("dialog.prefs.previewText"));
         previewHeader.setFont(previewHeader.getFont().deriveFont(Font.BOLD));
         panel.add(previewHeader, gbc);
 
         gbc.gridwidth = 1;
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Font:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.font")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(previewFontCombo, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Size:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.size")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(previewSizeCombo, gbc);
 
@@ -152,18 +168,18 @@ public class PreferencesDialog extends JDialog {
 
         // Preview Code section
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2;
-        JLabel previewCodeHeader = new JLabel("Preview Code");
+        JLabel previewCodeHeader = new JLabel(Messages.get("dialog.prefs.previewCode"));
         previewCodeHeader.setFont(previewCodeHeader.getFont().deriveFont(Font.BOLD));
         panel.add(previewCodeHeader, gbc);
 
         gbc.gridwidth = 1;
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Font:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.font")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(previewCodeFontCombo, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Size:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.size")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(previewCodeSizeCombo, gbc);
 
@@ -175,13 +191,13 @@ public class PreferencesDialog extends JDialog {
 
         // Editor section
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2;
-        JLabel editorSettingsHeader = new JLabel("Editor");
+        JLabel editorSettingsHeader = new JLabel(Messages.get("dialog.prefs.editor"));
         editorSettingsHeader.setFont(editorSettingsHeader.getFont().deriveFont(Font.BOLD));
         panel.add(editorSettingsHeader, gbc);
 
         gbc.gridwidth = 1;
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Selection Color:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.selectionColor")), gbc);
         JPanel hlSwatch = new JPanel();
         hlSwatch.setBackground(selectionColor[0]);
         hlSwatch.setPreferredSize(new Dimension(60, 24));
@@ -189,7 +205,7 @@ public class PreferencesDialog extends JDialog {
         hlSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         hlSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(PreferencesDialog.this, "Selection Color", selectionColor[0]);
+                Color c = JColorChooser.showDialog(PreferencesDialog.this, Messages.get("dialog.prefs.selectionColor"), selectionColor[0]);
                 if (c != null) { selectionColor[0] = c; hlSwatch.setBackground(c); }
             }
         });
@@ -201,12 +217,12 @@ public class PreferencesDialog extends JDialog {
 
         gbc.gridwidth = 1;
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Spaces for tab:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.spacesForTab")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
         panel.add(tabSizeSpinner, gbc);
 
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Spell Check Language:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.spellCheckLanguage")), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(spellCheckLanguageCombo, gbc);
 
@@ -218,13 +234,13 @@ public class PreferencesDialog extends JDialog {
 
         // Appearance section
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2;
-        JLabel appearHeader = new JLabel("Appearance");
+        JLabel appearHeader = new JLabel(Messages.get("dialog.prefs.appearance"));
         appearHeader.setFont(appearHeader.getFont().deriveFont(Font.BOLD));
         panel.add(appearHeader, gbc);
 
         gbc.gridwidth = 1;
         gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Button Highlight:"), gbc);
+        panel.add(new JLabel(Messages.get("dialog.prefs.buttonHighlight")), gbc);
         JPanel btnHlSwatch = new JPanel();
         btnHlSwatch.setBackground(buttonHighlightColor[0]);
         btnHlSwatch.setPreferredSize(new Dimension(60, 24));
@@ -232,12 +248,17 @@ public class PreferencesDialog extends JDialog {
         btnHlSwatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnHlSwatch.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                Color c = JColorChooser.showDialog(PreferencesDialog.this, "Button Highlight Color", buttonHighlightColor[0]);
+                Color c = JColorChooser.showDialog(PreferencesDialog.this, Messages.get("dialog.prefs.buttonHighlight"), buttonHighlightColor[0]);
                 if (c != null) { buttonHighlightColor[0] = c; btnHlSwatch.setBackground(c); }
             }
         });
         gbc.gridx = 1; gbc.fill = GridBagConstraints.NONE;
         panel.add(btnHlSwatch, gbc);
+
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel(Messages.get("dialog.prefs.language")), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(uiLanguageCombo, gbc);
 
         // Vertical glue to push content to top
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.weighty = 1;
@@ -262,5 +283,16 @@ public class PreferencesDialog extends JDialog {
         prefs.setButtonHighlightColor(buttonHighlightColor[0]);
         String selectedDisplayName = (String) spellCheckLanguageCombo.getSelectedItem();
         prefs.setSpellCheckLanguage(LanguageDownloader.getCodeForDisplayName(selectedDisplayName));
+        String selectedUiLang = (String) uiLanguageCombo.getSelectedItem();
+        prefs.setUiLanguage(switch (selectedUiLang) {
+            case "Español" -> "es";
+            case "Français" -> "fr";
+            case "Deutsch" -> "de";
+            case "Italiano" -> "it";
+            case "日本語" -> "ja";
+            case "中文" -> "zh";
+            case "English" -> "en";
+            default -> "";
+        });
     }
 }

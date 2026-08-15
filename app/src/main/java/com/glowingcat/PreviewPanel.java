@@ -67,7 +67,7 @@ public class PreviewPanel extends JPanel {
 
     public PreviewPanel() {
         super(new BorderLayout());
-        setBorder(BorderFactory.createTitledBorder("Preview"));
+        setBorder(BorderFactory.createTitledBorder(Messages.get("toolbar.preview.title")));
 
         List<Extension> extensions = Arrays.asList(
                 TablesExtension.create(),
@@ -505,7 +505,7 @@ public class PreviewPanel extends JPanel {
             sb.append("});</script>");
         }
 
-        sb.append("</head><body>").append(bodyHtml).append("</body></html>");
+        sb.append("</head><body dir=\"auto\">").append(bodyHtml).append("</body></html>");
         return sb.toString();
     }
 

@@ -79,7 +79,7 @@ public class ImageDialog extends JDialog {
      * @param documentFile   the current document file (used to compute relative paths), may be null
      */
     public ImageDialog(JFrame owner, String altText, String existingPath, String existingWidth, boolean existingCenter, File documentFile) {
-        super(owner, "Insert Image", true);
+        super(owner, Messages.get("dialog.image.title"), true);
         this.ownerFrame = owner;
         this.documentFile = documentFile;
 
@@ -92,7 +92,7 @@ public class ImageDialog extends JDialog {
         // Alt text field
         gbc.gridx = 0;
         gbc.gridy = 0;
-        contentPanel.add(new JLabel("Alt Text:"), gbc);
+        contentPanel.add(new JLabel(Messages.get("dialog.image.altText")), gbc);
 
         gbc.gridx = 1;
         gbc.gridwidth = 2;
@@ -110,7 +110,7 @@ public class ImageDialog extends JDialog {
         gbc.gridwidth = 1;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        contentPanel.add(new JLabel("Image:"), gbc);
+        contentPanel.add(new JLabel(Messages.get("dialog.image.file")), gbc);
 
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -126,7 +126,7 @@ public class ImageDialog extends JDialog {
         gbc.gridx = 2;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        JButton browseButton = new JButton("Browse...");
+        JButton browseButton = new JButton(Messages.get("dialog.image.browse"));
         browseButton.addActionListener(e -> browseForImage());
         contentPanel.add(browseButton, gbc);
 
@@ -136,7 +136,7 @@ public class ImageDialog extends JDialog {
         gbc.gridwidth = 1;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        contentPanel.add(new JLabel("Width:"), gbc);
+        contentPanel.add(new JLabel(Messages.get("dialog.image.width")), gbc);
 
         gbc.gridx = 1;
         gbc.gridwidth = 2;
@@ -173,20 +173,20 @@ public class ImageDialog extends JDialog {
         gbc.gridwidth = 3;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        centerCheckBox = new JCheckBox("Center", existingCenter);
+        centerCheckBox = new JCheckBox(Messages.get("menu.markdown.center"), existingCenter);
         contentPanel.add(centerCheckBox, gbc);
 
         add(contentPanel, BorderLayout.CENTER);
 
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Save");
-        JButton cancelButton = new JButton("Cancel");
+        JButton saveButton = new JButton(Messages.get("dialog.image.insert"));
+        JButton cancelButton = new JButton(Messages.get("dialog.image.cancel"));
 
         saveButton.addActionListener(e -> {
             if (imagePath.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please select an image file.",
-                        "No Image Selected", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, Messages.get("dialog.image.noImageMsg"),
+                        Messages.get("dialog.image.noImage"), JOptionPane.WARNING_MESSAGE);
                 return;
             }
             confirmed = true;
@@ -208,7 +208,7 @@ public class ImageDialog extends JDialog {
      * Opens a native file dialog for selecting image files.
      */
     private void browseForImage() {
-        FileDialog fileDialog = new FileDialog(ownerFrame, "Select Image", FileDialog.LOAD);
+        FileDialog fileDialog = new FileDialog(ownerFrame, Messages.get("dialog.image.selectImage"), FileDialog.LOAD);
         fileDialog.setFilenameFilter((dir, name) -> {
             String lower = name.toLowerCase();
             return lower.endsWith(".gif") || lower.endsWith(".jpg")

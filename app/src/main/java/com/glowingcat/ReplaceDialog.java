@@ -38,7 +38,7 @@ public class ReplaceDialog extends FindDialog {
      * @param preferences the application preferences for storing recents
      */
     public ReplaceDialog(JFrame owner, JTextArea textArea, Preferences preferences) {
-        super(owner, textArea, preferences, "Replace");
+        super(owner, textArea, preferences, Messages.get("dialog.replace.title"));
     }
 
     /**
@@ -57,7 +57,7 @@ public class ReplaceDialog extends FindDialog {
         // Find label and field
         gbc.gridx = 0;
         gbc.gridy = 0;
-        topPanel.add(new JLabel("Find:"), gbc);
+        topPanel.add(new JLabel(Messages.get("dialog.find.findField")), gbc);
 
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -71,7 +71,7 @@ public class ReplaceDialog extends FindDialog {
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        topPanel.add(new JLabel("Replace:"), gbc);
+        topPanel.add(new JLabel(Messages.get("dialog.replace.replaceField")), gbc);
 
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -94,10 +94,10 @@ public class ReplaceDialog extends FindDialog {
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
 
-        JButton findBtn = createButton("Find");
-        JButton replaceBtn = createButton("Replace");
-        JButton replaceAndFindBtn = createButton("Replace and Find");
-        JButton replaceAllBtn = createButton("Replace All");
+        JButton findBtn = createButton(Messages.get("dialog.find.findNext"));
+        JButton replaceBtn = createButton(Messages.get("dialog.replace.replace"));
+        JButton replaceAndFindBtn = createButton(Messages.get("dialog.replace.replaceAndFind"));
+        JButton replaceAllBtn = createButton(Messages.get("dialog.replace.replaceAll"));
 
         findBtn.addActionListener(e -> findNext());
         replaceBtn.addActionListener(e -> replace());
@@ -156,8 +156,8 @@ public class ReplaceDialog extends FindDialog {
                     return true;
                 }
             } catch (PatternSyntaxException ex) {
-                JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
-                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, Messages.get("dialog.find.invalidRegex", ex.getMessage()),
+                        Messages.get("dialog.find.regexError"), JOptionPane.ERROR_MESSAGE);
             }
             return false;
         } else {
@@ -224,8 +224,8 @@ public class ReplaceDialog extends FindDialog {
                 int flags = Pattern.MULTILINE | (matchCase ? 0 : Pattern.CASE_INSENSITIVE);
                 pattern = Pattern.compile(searchText, flags);
             } catch (PatternSyntaxException ex) {
-                JOptionPane.showMessageDialog(this, "Invalid regular expression: " + ex.getMessage(),
-                        "Regex Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, Messages.get("dialog.find.invalidRegex", ex.getMessage()),
+                        Messages.get("dialog.find.regexError"), JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -234,8 +234,8 @@ public class ReplaceDialog extends FindDialog {
             // Count matches first
             while (matcher.find()) count++;
             if (count == 0) {
-                JOptionPane.showMessageDialog(this, "Text not found.",
-                        "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),
+                        Messages.get("dialog.replace.replaceAll"), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
@@ -253,7 +253,7 @@ public class ReplaceDialog extends FindDialog {
 
             JOptionPane.showMessageDialog(this,
                     count + " replacement" + (count != 1 ? "s" : "") + " made.",
-                    "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("dialog.replace.replaceAll"), JOptionPane.INFORMATION_MESSAGE);
         } else {
             String compareIn = matchCase ? searchIn : searchIn.toLowerCase();
             String compareText = matchCase ? searchText : searchText.toLowerCase();
@@ -274,8 +274,8 @@ public class ReplaceDialog extends FindDialog {
             }
 
             if (count == 0) {
-                JOptionPane.showMessageDialog(this, "Text not found.",
-                        "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),
+                        Messages.get("dialog.replace.replaceAll"), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
@@ -289,7 +289,7 @@ public class ReplaceDialog extends FindDialog {
 
             JOptionPane.showMessageDialog(this,
                     count + " replacement" + (count != 1 ? "s" : "") + " made.",
-                    "Replace All", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("dialog.replace.replaceAll"), JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }

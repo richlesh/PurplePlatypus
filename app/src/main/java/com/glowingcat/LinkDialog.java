@@ -40,7 +40,7 @@ public class LinkDialog extends JDialog {
      * @param linkUri      the URI to pre-fill, may be null or empty
      */
     public LinkDialog(JFrame owner, String linkText, String linkUri) {
-        super(owner, "Insert Link", true);
+        super(owner, Messages.get("dialog.link.title"), true);
 
         JPanel contentPanel = new JPanel(new GridBagLayout());
         contentPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
@@ -50,7 +50,7 @@ public class LinkDialog extends JDialog {
 
         gbc.gridx = 0;
         gbc.gridy = 0;
-        contentPanel.add(new JLabel("Text:"), gbc);
+        contentPanel.add(new JLabel(Messages.get("dialog.link.text")), gbc);
 
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -65,7 +65,7 @@ public class LinkDialog extends JDialog {
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
-        contentPanel.add(new JLabel("URL:"), gbc);
+        contentPanel.add(new JLabel(Messages.get("dialog.link.url")), gbc);
 
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -78,8 +78,8 @@ public class LinkDialog extends JDialog {
 
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Save");
-        JButton cancelButton = new JButton("Cancel");
+        JButton saveButton = new JButton(Messages.get("dialog.link.insert"));
+        JButton cancelButton = new JButton(Messages.get("dialog.link.cancel"));
 
         saveButton.addActionListener(e -> {
             confirmed = true;

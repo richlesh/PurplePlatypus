@@ -201,7 +201,7 @@ public class AIChatPanel extends JPanel {
         mdRenderer = HtmlRenderer.builder().extensions(extensions).build();
 
         setPreferredSize(new Dimension(380, 0));
-        setBorder(BorderFactory.createTitledBorder("AI Assistant"));
+        setBorder(BorderFactory.createTitledBorder(AIChatMessages.get("aichat.title")));
 
         // Initialize chat display (WebView or fallback)
         initChatDisplay();
@@ -226,8 +226,8 @@ public class AIChatPanel extends JPanel {
         JScrollPane inputScroll = new JScrollPane(inputArea);
         inputScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
-        sendBtn = new JButton("Send");
-        JButton clearBtn = new JButton("Clear");
+        sendBtn = new JButton(AIChatMessages.get("aichat.send"));
+        JButton clearBtn = new JButton(AIChatMessages.get("aichat.clear"));
         JPanel btnPanel = new JPanel(new GridLayout(2, 1, 0, 2));
         btnPanel.add(sendBtn);
         btnPanel.add(clearBtn);
@@ -246,9 +246,9 @@ public class AIChatPanel extends JPanel {
             int sp = systemPrompt.length();
             int doc = editor.getText().length();
             String docInfo = doc > 20_000
-                ? String.format("Document: %,d chars (truncated to 20,000 for LLM)", doc)
-                : String.format("Document: %,d chars", doc);
-            statusBar.setText(String.format("System: %,d chars    %s", sp, docInfo));
+                ? String.format(AIChatMessages.get("aichat.status.docTruncated"), doc)
+                : String.format(AIChatMessages.get("aichat.status.doc"), doc);
+            statusBar.setText(String.format(AIChatMessages.get("aichat.status.system"), sp, docInfo));
         };
         statusUpdater.run();
 
@@ -335,8 +335,8 @@ public class AIChatPanel extends JPanel {
                 final int idx = i;
                 JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
                 btnPanel.setOpaque(false);
-                JButton acceptBtn = new JButton("Accept");
-                JButton rejectBtn = new JButton("Reject");
+                JButton acceptBtn = new JButton(AIChatMessages.get("aichat.accept"));
+                JButton rejectBtn = new JButton(AIChatMessages.get("aichat.reject"));
                 acceptBtn.addActionListener(e -> {
                     if (idx < chatMessages.size()) {
                         ChatMessage m = chatMessages.get(idx);
@@ -348,8 +348,8 @@ public class AIChatPanel extends JPanel {
                                     m.accepted = true;
                                 } catch (Exception ex) {
                                     JOptionPane.showMessageDialog(null,
-                                        "Failed to apply diff: " + ex.getMessage(),
-                                        "Diff Error", JOptionPane.ERROR_MESSAGE);
+                                        AIChatMessages.get("aichat.diffError", ex.getMessage()),
+                                        AIChatMessages.get("aichat.diffErrorTitle"), JOptionPane.ERROR_MESSAGE);
                                     return;
                                 }
                             } else if (am.replacementMarkdown != null) {
@@ -404,7 +404,7 @@ public class AIChatPanel extends JPanel {
             thinkingRow.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
             thinkingRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
             thinkingRow.add(new JLabel(aiIcon), BorderLayout.WEST);
-            JLabel thinkingLabel = new JLabel("Thinking...");
+            JLabel thinkingLabel = new JLabel(AIChatMessages.get("aichat.thinking"));
             thinkingLabel.setFont(chatFont.deriveFont(Font.ITALIC));
             thinkingRow.add(thinkingLabel, BorderLayout.CENTER);
             fallbackChatPanel.add(thinkingRow);
@@ -415,7 +415,7 @@ public class AIChatPanel extends JPanel {
                 private int dots = 3;
                 @Override public void actionPerformed(ActionEvent e) {
                     dots = (dots % 3) + 1;
-                    thinkingLabel.setText("Thinking" + ".".repeat(dots));
+                    thinkingLabel.setText(AIChatMessages.get("aichat.thinking").replace("...", ".".repeat(dots)));
                 }
             });
             thinkingTimer.start();
@@ -457,7 +457,7 @@ public class AIChatPanel extends JPanel {
                             } catch (DiffApplier.DiffException ex) {
                                 // If diff fails, show error in chat
                                 ChatMessage errMsg = new ChatMessage("assistant",
-                                    "Failed to apply diff: " + ex.getMessage() + ". Try asking the AI to regenerate the changes.");
+                                    AIChatMessages.get("aichat.diffErrorRetry", ex.getMessage()));
                                 chatMessages.add(errMsg);
                             }
                         } else if (am.replacementMarkdown != null) {
@@ -554,8 +554,8 @@ public class AIChatPanel extends JPanel {
         String vendor = aiPreferences.getLlmVendor();
         JDialog dialog = new JDialog(
             (java.awt.Frame) SwingUtilities.getWindowAncestor(this),
-            "Indexing", true);
-        JLabel label = new JLabel("Indexing context documents for use by " + vendor + "...");
+            AIChatMessages.get("aichat.indexing"), true);
+        JLabel label = new JLabel(AIChatMessages.get("aichat.indexingMsg", vendor));
         label.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
         JProgressBar progress = new JProgressBar();
         progress.setIndeterminate(true);
@@ -666,7 +666,7 @@ public class AIChatPanel extends JPanel {
                     pulsing = false;
                     if (!Thread.currentThread().isInterrupted()) {
                         ChatMessage errMsg = new ChatMessage("assistant",
-                            "Error (" + ex.getClass().getSimpleName() + "): " + ex.getMessage());
+                            AIChatMessages.get("aichat.error", ex.getClass().getSimpleName(), ex.getMessage()));
                         chatMessages.add(errMsg);
                     }
                     renderChat();
@@ -716,7 +716,7 @@ public class AIChatPanel extends JPanel {
                 // Apply directly to editor
                 editor.setText(newSource);
                 // Show explanation as a normal message (or a default if none)
-                String display = explanation.isEmpty() ? "Updated the source code." : explanation;
+                String display = explanation.isEmpty() ? AIChatMessages.get("aichat.updatedSource") : explanation;
                 ChatMessage msg = new ChatMessage("assistant", display);
                 msg.copyContent = newSource;
                 chatMessages.add(msg);
@@ -803,8 +803,8 @@ public class AIChatPanel extends JPanel {
 
         ApprovalMessage(String explanation, String replacementMarkdown, String diff) {
             super("assistant", explanation.isEmpty()
-                ? (diff != null ? "Here are the proposed changes. Review and accept or reject."
-                    : "Here's the updated document. Review and accept or reject the changes.")
+                ? (diff != null ? AIChatMessages.get("aichat.proposedChanges")
+                    : AIChatMessages.get("aichat.updatedDocument"))
                 : explanation);
             this.explanation = explanation;
             this.replacementMarkdown = replacementMarkdown;
@@ -840,6 +840,7 @@ public class AIChatPanel extends JPanel {
         // Dynamic styles that depend on preferences
         html.append("body { font-family: '").append(fontFamily).append("', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; ");
         html.append("font-size: ").append(fontSize).append("pt; }");
+        html.append("p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th { unicode-bidi: plaintext; }");
         html.append(".user-bubble { background: ").append(userBg).append("; color: ").append(userText).append("; }");
         html.append(".ai-bubble { background: ").append(aiBg).append("; color: ").append(aiText).append("; }");
         html.append(".approval-btns button { font-size: ").append(fontSize).append("pt; }");
@@ -884,7 +885,7 @@ public class AIChatPanel extends JPanel {
         html.append("  if(window.hljs){hljs.highlightAll();}");
         html.append("});");
         html.append("</script>");
-        html.append("</head><body>");
+        html.append("</head><body dir=\"auto\">");
 
         // Render all chat messages
         for (int i = 0; i < chatMessages.size(); i++) {
@@ -900,7 +901,7 @@ public class AIChatPanel extends JPanel {
                 String renderedContent;
                 if (msg instanceof ApprovalMessage am) {
                     renderedContent = renderMarkdownToHtml(am.explanation.isEmpty()
-                        ? "Here's the updated document. Review and accept or reject the changes."
+                        ? AIChatMessages.get("aichat.updatedDocument")
                         : am.explanation);
                 } else {
                     renderedContent = renderMarkdownToHtml(msg.markdown);
@@ -932,7 +933,7 @@ public class AIChatPanel extends JPanel {
 
         // Pulsing "thinking" indicator
         if (pulsing) {
-            html.append("<div class=\"thinking\"><img class=\"bubble-icon\" src=\"").append(aiIconSrc()).append("\">Thinking...</div>");
+            html.append("<div class=\"thinking\"><img class=\"bubble-icon\" src=\"").append(aiIconSrc()).append("\">" + AIChatMessages.get("aichat.thinking") + "</div>");
         }
 
         // Auto-scroll to bottom
@@ -969,12 +970,14 @@ public class AIChatPanel extends JPanel {
     private String buildSystemPrompt() {
         try (var is = AIChatPanel.class.getResourceAsStream("/system_prompt.md")) {
             if (is != null) {
-                return new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+                return new String(is.readAllBytes(), StandardCharsets.UTF_8).trim() +
+                        "\nResponses should be in " + AIChatMessages.get("aichat.languageName") + ".";
             }
         } catch (Exception e) {
             // Fall through to hardcoded fallback
         }
-        return "You are an AI writing assistant. Help users write and improve markdown documents.";
+        return "You are an AI writing assistant. Help users write and improve markdown documents. "
+                + "Responses should be in " + AIChatMessages.get("aichat.languageName") + ".";
     }
 
     private String humanIconSrc() {

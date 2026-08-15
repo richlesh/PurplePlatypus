@@ -23,6 +23,11 @@ body {
     padding-right: 18px;
     line-height: 1.6;
     overflow-x: hidden;
+    direction: auto;
+}
+
+p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th {
+    unicode-bidi: plaintext;
 }
 
 h1, h2, h3 {

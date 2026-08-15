@@ -51,7 +51,7 @@ public class TableDialog extends JDialog {
     }
 
     public TableDialog(JFrame owner, String tableText) {
-        super(owner, "Insert Table", true);
+        super(owner, Messages.get("dialog.table.title"), true);
 
         // Parse existing table or create empty model
         String[][] data;
@@ -92,7 +92,7 @@ public class TableDialog extends JDialog {
                     // Replace empty headers with defaults
                     for (int i = 0; i < colHeaders.length; i++) {
                         if (colHeaders[i] == null || colHeaders[i].trim().isEmpty()) {
-                            colHeaders[i] = "Col " + (i + 1);
+                            colHeaders[i] = Messages.get("dialog.table.col", i + 1);
                         }
                     }
 
@@ -164,7 +164,7 @@ public class TableDialog extends JDialog {
 
         // Pad row headers to match data rows
         while (rowHeaderValues.size() < data.length) {
-            rowHeaderValues.add("Row " + (rowHeaderValues.size() + 1));
+            rowHeaderValues.add(Messages.get("dialog.table.row", rowHeaderValues.size() + 1));
         }
 
         // Parse column alignments from separator row
@@ -244,7 +244,7 @@ public class TableDialog extends JDialog {
                     if (idx >= 0 && idx < rowHeaderValues.size()) {
                         String current = rowHeaderValues.get(idx);
                         String newVal = JOptionPane.showInputDialog(
-                                TableDialog.this, "Row header:", current);
+                                TableDialog.this, Messages.get("dialog.table.rowHeader"), current);
                         if (newVal != null) {
                             rowHeaderValues.set(idx, newVal);
                             rowHeaderList.repaint();
@@ -297,10 +297,10 @@ public class TableDialog extends JDialog {
         scrollPane.setPreferredSize(new Dimension(600, 220));
 
         // Control buttons (vertical, right side)
-        JButton addRowBtn = new JButton("+ Row");
-        JButton removeRowBtn = new JButton("- Row");
-        JButton addColBtn = new JButton("+ Column");
-        JButton removeColBtn = new JButton("- Column");
+        JButton addRowBtn = new JButton(Messages.get("dialog.table.addRow"));
+        JButton removeRowBtn = new JButton(Messages.get("dialog.table.removeRow"));
+        JButton addColBtn = new JButton(Messages.get("dialog.table.addColumn"));
+        JButton removeColBtn = new JButton(Messages.get("dialog.table.removeColumn"));
 
         // Initially disable delete buttons (no selection)
         removeRowBtn.setEnabled(false);
@@ -322,7 +322,7 @@ public class TableDialog extends JDialog {
             int selectedRow = table.getSelectedRow();
             int insertAt = (selectedRow >= 0) ? selectedRow + 1 : tableModel.getRowCount();
             tableModel.insertRow(insertAt, new String[tableModel.getColumnCount()]);
-            rowHeaderValues.add(insertAt, "Row " + (insertAt + 1));
+            rowHeaderValues.add(insertAt, Messages.get("dialog.table.row", insertAt + 1));
             rowHeaderList.updateUI();
         });
         removeRowBtn.addActionListener(e -> {
@@ -346,7 +346,7 @@ public class TableDialog extends JDialog {
                 String[] newHeaders = new String[colCount + 1];
                 for (int c = 0; c < colCount + 1; c++) {
                     if (c < insertAt) newHeaders[c] = tableModel.getColumnName(c);
-                    else if (c == insertAt) newHeaders[c] = "Col " + (c + 1);
+                    else if (c == insertAt) newHeaders[c] = Messages.get("dialog.table.col", c + 1);
                     else newHeaders[c] = tableModel.getColumnName(c - 1);
                 }
                 String[][] newData = new String[rows][colCount + 1];
@@ -365,7 +365,7 @@ public class TableDialog extends JDialog {
                 }
                 tableModel.setDataVector(newData, newHeaders);
             } else {
-                tableModel.addColumn("Col " + (tableModel.getColumnCount() + 1));
+                tableModel.addColumn(Messages.get("dialog.table.col", tableModel.getColumnCount() + 1));
             }
         });
         removeColBtn.addActionListener(e -> {
@@ -423,21 +423,21 @@ public class TableDialog extends JDialog {
 
         // Options panel
         JPanel optionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        columnHeadersBox = new JCheckBox("Column Headers", detectedColHeaders);
-        rowHeadersBox = new JCheckBox("Row Headers", detectedRowHeaders);
+        columnHeadersBox = new JCheckBox(Messages.get("dialog.table.columnHeaders"), detectedColHeaders);
+        rowHeadersBox = new JCheckBox(Messages.get("dialog.table.rowHeaders"), detectedRowHeaders);
         optionsPanel.add(columnHeadersBox);
         optionsPanel.add(rowHeadersBox);
 
         // Hint
-        JLabel hintLabel = new JLabel("Double-click column or row headers to edit them. Cmd/Ctrl+C/X/V for clipboard.");
+        JLabel hintLabel = new JLabel(Messages.get("dialog.table.instructions"));
         hintLabel.setForeground(Color.GRAY);
         hintLabel.setFont(hintLabel.getFont().deriveFont(Font.ITALIC, 11f));
         hintLabel.setBorder(BorderFactory.createEmptyBorder(4, 4, 0, 0));
 
         // Dialog buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Save");
-        JButton cancelButton = new JButton("Cancel");
+        JButton saveButton = new JButton(Messages.get("dialog.table.insert"));
+        JButton cancelButton = new JButton(Messages.get("dialog.table.cancel"));
         saveButton.addActionListener(e -> {
             if (table.isEditing()) table.getCellEditor().stopCellEditing();
             confirmed = true;
@@ -518,7 +518,7 @@ public class TableDialog extends JDialog {
             int neededCols = startCol + maxPasteCols;
             int currentCols = tableModel.getColumnCount();
             for (int c = currentCols; c < neededCols; c++) {
-                tableModel.addColumn("Col " + (c + 1));
+                tableModel.addColumn(Messages.get("dialog.table.col", c + 1));
             }
 
             // Add rows and paste data
@@ -527,7 +527,7 @@ public class TableDialog extends JDialog {
                 int targetRow = startRow + r;
                 while (targetRow >= tableModel.getRowCount()) {
                     tableModel.addRow(new String[tableModel.getColumnCount()]);
-                    rowHeaderValues.add("Row " + (rowHeaderValues.size() + 1));
+                    rowHeaderValues.add(Messages.get("dialog.table.row", rowHeaderValues.size() + 1));
                 }
                 for (int c = 0; c < cells.length; c++) {
                     int targetCol = startCol + c;
@@ -544,7 +544,7 @@ public class TableDialog extends JDialog {
 
     private void editColumnHeader(int col) {
         String current = tableModel.getColumnName(col);
-        String newName = JOptionPane.showInputDialog(this, "Column header:", current);
+        String newName = JOptionPane.showInputDialog(this, Messages.get("dialog.table.columnHeader"), current);
         if (newName != null) {
             int colCount = tableModel.getColumnCount();
             String[] headers = new String[colCount];
@@ -694,7 +694,7 @@ public class TableDialog extends JDialog {
 
     private String[] createDefaultHeaders(int cols) {
         String[] headers = new String[cols];
-        for (int i = 0; i < cols; i++) headers[i] = "Col " + (i + 1);
+        for (int i = 0; i < cols; i++) headers[i] = Messages.get("dialog.table.col", i + 1);
         return headers;
     }
 

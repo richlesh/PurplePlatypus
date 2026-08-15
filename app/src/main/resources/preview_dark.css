@@ -25,6 +25,11 @@ body {
     overflow-x: hidden;
     background: #1e1e1e;
     color: #d4d4d4;
+    direction: auto;
+}
+
+p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th {
+    unicode-bidi: plaintext;
 }
 
 h1, h2, h3 {

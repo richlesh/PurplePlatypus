@@ -22,7 +22,7 @@ public class ZapGremlinsDialog extends JDialog {
     private boolean saved = false;
 
     public ZapGremlinsDialog(Window owner, Preferences preferences) {
-        super(owner, "Zap Gremlins", ModalityType.APPLICATION_MODAL);
+        super(owner, Messages.get("dialog.zapGremlins.title"), ModalityType.APPLICATION_MODAL);
 
         List<String[]> gremlins = preferences.getGremlins();
         tableModel = new GremlinTableModel(gremlins);
@@ -60,7 +60,7 @@ public class ZapGremlinsDialog extends JDialog {
 
         // Add/Remove row buttons
         JButton addBtn = new JButton("+");
-        addBtn.setToolTipText("Add substitution");
+        addBtn.setToolTipText(Messages.get("dialog.zapGremlins.add"));
         addBtn.addActionListener(e -> {
             tableModel.addRow(new String[]{"true", "", ""});
             int newRow = tableModel.getRowCount() - 1;
@@ -69,7 +69,7 @@ public class ZapGremlinsDialog extends JDialog {
         });
 
         JButton removeBtn = new JButton("\u2212");
-        removeBtn.setToolTipText("Remove selected substitution");
+        removeBtn.setToolTipText(Messages.get("dialog.zapGremlins.remove"));
         removeBtn.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row >= 0) {
@@ -82,19 +82,19 @@ public class ZapGremlinsDialog extends JDialog {
         addRemovePanel.add(removeBtn);
 
         // Bottom buttons
-        JButton saveBtn = new JButton("Save");
+        JButton saveBtn = new JButton(Messages.get("dialog.license.save"));
         saveBtn.addActionListener(e -> {
             preferences.setGremlins(tableModel.getData());
             preferences.save();
             saved = true;
-            JOptionPane.showMessageDialog(this, "Gremlin substitutions saved.",
-                "Save", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, Messages.get("dialog.zapGremlins.saved"),
+                Messages.get("dialog.zapGremlins.title"), JOptionPane.INFORMATION_MESSAGE);
         });
 
-        JButton cancelBtn = new JButton("Cancel");
+        JButton cancelBtn = new JButton(Messages.get("dialog.zapGremlins.cancel"));
         cancelBtn.addActionListener(e -> dispose());
 
-        JButton zapBtn = new JButton("Zap");
+        JButton zapBtn = new JButton(Messages.get("dialog.zapGremlins.zap"));
         zapBtn.addActionListener(e -> {
             preferences.setGremlins(tableModel.getData());
             preferences.save();
@@ -111,7 +111,7 @@ public class ZapGremlinsDialog extends JDialog {
         // Layout
         JPanel contentPanel = new JPanel(new BorderLayout(8, 8));
         contentPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        contentPanel.add(new JLabel("Configure character substitutions:"), BorderLayout.NORTH);
+        contentPanel.add(new JLabel(Messages.get("dialog.zapGremlins.configure")), BorderLayout.NORTH);
         contentPanel.add(scrollPane, BorderLayout.CENTER);
 
         JPanel southPanel = new JPanel(new BorderLayout());
@@ -147,7 +147,7 @@ public class ZapGremlinsDialog extends JDialog {
 
     private static class GremlinTableModel extends AbstractTableModel {
         private final List<String[]> data;
-        private static final String[] COLUMNS = {"On", "Character", "Replacement"};
+        private static final String[] COLUMNS = {Messages.get("dialog.zapGremlins.on"), Messages.get("dialog.zapGremlins.character"), Messages.get("dialog.zapGremlins.replacement")};
 
         GremlinTableModel(List<String[]> source) {
             // Deep copy

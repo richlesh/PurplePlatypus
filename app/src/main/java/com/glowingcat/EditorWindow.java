@@ -192,16 +192,16 @@ public class EditorWindow {
         // On non-macOS, add a "PurplePlatypus" application menu with About, Preferences, License Key, Quit
         boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
         if (!isMac) {
-            JMenu appMenu = new JMenu("PurplePlatypus");
-            JMenuItem aboutItem = new JMenuItem("About PurplePlatypus");
+            JMenu appMenu = new JMenu(Messages.get("app.name"));
+            JMenuItem aboutItem = new JMenuItem(Messages.get("menu.app.about"));
             aboutItem.addActionListener(e -> showAboutDialog());
-            JMenuItem prefsItem = new JMenuItem("Settings...");
+            JMenuItem prefsItem = new JMenuItem(Messages.get("menu.app.settings"));
             prefsItem.addActionListener(e -> showPreferencesDialog());
-            JMenuItem aiSettingsItem = new JMenuItem("AI Settings...");
+            JMenuItem aiSettingsItem = new JMenuItem(Messages.get("menu.app.aiSettings"));
             aiSettingsItem.addActionListener(e -> showAiSettingsDialog());
-            JMenuItem licenseItem = new JMenuItem("License Key...");
+            JMenuItem licenseItem = new JMenuItem(Messages.get("menu.file.licenseKey"));
             licenseItem.addActionListener(e -> showLicenseDialog());
-            JMenuItem quitItem = new JMenuItem("Quit PurplePlatypus");
+            JMenuItem quitItem = new JMenuItem(Messages.get("menu.app.quit"));
             quitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q,
                     Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
             quitItem.addActionListener(e -> exitApplication());
@@ -216,31 +216,31 @@ public class EditorWindow {
         }
 
         // File menu
-        JMenu fileMenu = new JMenu("File");
-        JMenuItem newItem = new JMenuItem("New");
+        JMenu fileMenu = new JMenu(Messages.get("menu.file"));
+        JMenuItem newItem = new JMenuItem(Messages.get("menu.file.new"));
         newItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_N, shortcutMask));
         newItem.addActionListener(e -> newFile());
 
-        JMenuItem openItem = new JMenuItem("Open...");
+        JMenuItem openItem = new JMenuItem(Messages.get("menu.file.open"));
         openItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, shortcutMask));
         openItem.addActionListener(e -> openFile());
 
-        JMenuItem closeItem = new JMenuItem("Close");
+        JMenuItem closeItem = new JMenuItem(Messages.get("menu.file.close"));
         closeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, shortcutMask));
         closeItem.addActionListener(e -> { if (confirmClose()) frame.dispose(); });
 
-        JMenuItem saveItem = new JMenuItem("Save");
+        JMenuItem saveItem = new JMenuItem(Messages.get("menu.file.save"));
         saveItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, shortcutMask));
         saveItem.addActionListener(e -> saveFile());
         this.saveItem = saveItem;
 
-        saveAsItem = new JMenuItem("Save As...");
+        saveAsItem = new JMenuItem(Messages.get("menu.file.saveAs"));
         saveAsItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         saveAsItem.addActionListener(e -> saveFileAs());
 
         fileMenu.add(newItem);
         fileMenu.add(openItem);
-        recentsMenu = new JMenu("Recents");
+        recentsMenu = new JMenu(Messages.get("menu.file.recents"));
         rebuildRecentsMenu();
         fileMenu.add(recentsMenu);
         fileMenu.addSeparator();
@@ -250,10 +250,10 @@ public class EditorWindow {
         fileMenu.add(saveAsItem);
         fileMenu.addSeparator();
 
-        JMenuItem pageSetupItem = new JMenuItem("Page Setup...");
+        JMenuItem pageSetupItem = new JMenuItem(Messages.get("menu.file.pageSetup"));
         pageSetupItem.addActionListener(e -> showPageSetup());
 
-        JMenuItem printItem = new JMenuItem("Print...");
+        JMenuItem printItem = new JMenuItem(Messages.get("menu.file.print"));
         printItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_P, shortcutMask));
         printItem.addActionListener(e -> printPreview());
 
@@ -261,14 +261,14 @@ public class EditorWindow {
         fileMenu.add(printItem);
         fileMenu.addSeparator();
 
-        JMenu importMenu = new JMenu("Import");
-        JMenuItem importHtmlItem = new JMenuItem("HTML...");
+        JMenu importMenu = new JMenu(Messages.get("menu.file.import"));
+        JMenuItem importHtmlItem = new JMenuItem(Messages.get("menu.file.import.html"));
         importHtmlItem.addActionListener(e -> importHtml());
-        JMenuItem importPlainTextItem = new JMenuItem("Plain Text...");
+        JMenuItem importPlainTextItem = new JMenuItem(Messages.get("menu.file.import.plainText"));
         importPlainTextItem.addActionListener(e -> importPlainText());
-        JMenuItem importRtfItem = new JMenuItem("RTF...");
+        JMenuItem importRtfItem = new JMenuItem(Messages.get("menu.file.import.rtf"));
         importRtfItem.addActionListener(e -> importRtf());
-        JMenuItem importDocxItem = new JMenuItem("Word Document...");
+        JMenuItem importDocxItem = new JMenuItem(Messages.get("menu.file.import.word"));
         importDocxItem.addActionListener(e -> importDocx());
         importMenu.add(importHtmlItem);
         importMenu.add(importPlainTextItem);
@@ -276,26 +276,26 @@ public class EditorWindow {
         importMenu.add(importDocxItem);
         fileMenu.add(importMenu);
 
-        JMenu exportMenu = new JMenu("Export");
-        JMenuItem exportHtmlItem = new JMenuItem("HTML...");
+        JMenu exportMenu = new JMenu(Messages.get("menu.file.export"));
+        JMenuItem exportHtmlItem = new JMenuItem(Messages.get("menu.file.export.html"));
         exportHtmlItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportHtmlItem.addActionListener(e -> exportHtml());
-        JMenuItem exportPdfItem = new JMenuItem("PDF...");
+        JMenuItem exportPdfItem = new JMenuItem(Messages.get("menu.file.export.pdf"));
         exportPdfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_P, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportPdfItem.addActionListener(e -> exportPdf());
-        JMenuItem exportTextItem = new JMenuItem("Plain Text...");
+        JMenuItem exportTextItem = new JMenuItem(Messages.get("menu.file.export.plainText"));
         exportTextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextItem.addActionListener(e -> exportPlainText());
-        JMenuItem exportRtfItem = new JMenuItem("RTF...");
+        JMenuItem exportRtfItem = new JMenuItem(Messages.get("menu.file.export.rtf"));
         exportRtfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportRtfItem.addActionListener(e -> exportRtf());
-        JMenuItem exportTextBundleItem = new JMenuItem("TextBundle...");
+        JMenuItem exportTextBundleItem = new JMenuItem(Messages.get("menu.file.export.textBundle"));
         exportTextBundleItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextBundleItem.addActionListener(e -> exportTextBundle());
-        JMenuItem exportTextPackItem = new JMenuItem("TextPack...");
+        JMenuItem exportTextPackItem = new JMenuItem(Messages.get("menu.file.export.textPack"));
         exportTextPackItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Z, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportTextPackItem.addActionListener(e -> exportTextPack());
-        JMenuItem exportDocxItem = new JMenuItem("Word Document...");
+        JMenuItem exportDocxItem = new JMenuItem(Messages.get("menu.file.export.word"));
         exportDocxItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         exportDocxItem.addActionListener(e -> exportDocx());
         exportMenu.add(exportHtmlItem);
@@ -308,31 +308,31 @@ public class EditorWindow {
         fileMenu.add(exportMenu);
         if (isMac) {
             fileMenu.addSeparator();
-            JMenuItem licenseItem = new JMenuItem("License Key...");
+            JMenuItem licenseItem = new JMenuItem(Messages.get("menu.file.licenseKey"));
             licenseItem.addActionListener(e -> showLicenseDialog());
             fileMenu.add(licenseItem);
         }
         menuBar.add(fileMenu);
 
         // Edit menu
-        JMenu editMenu = new JMenu("Edit");
-        JMenuItem undoItem = new JMenuItem("Undo");
+        JMenu editMenu = new JMenu(Messages.get("menu.edit"));
+        JMenuItem undoItem = new JMenuItem(Messages.get("menu.edit.undo"));
         undoItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Z, shortcutMask));
         undoItem.addActionListener(e -> { if (undoManager.canUndo()) undoManager.undo(); });
 
-        JMenuItem redoItem = new JMenuItem("Redo");
+        JMenuItem redoItem = new JMenuItem(Messages.get("menu.edit.redo"));
         redoItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Y, shortcutMask));
         redoItem.addActionListener(e -> { if (undoManager.canRedo()) undoManager.redo(); });
 
-        JMenuItem cutItem = new JMenuItem("Cut");
+        JMenuItem cutItem = new JMenuItem(Messages.get("menu.edit.cut"));
         cutItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_X, shortcutMask));
         cutItem.addActionListener(e -> editorPane.cut());
 
-        JMenuItem copyItem = new JMenuItem("Copy");
+        JMenuItem copyItem = new JMenuItem(Messages.get("menu.edit.copy"));
         copyItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C, shortcutMask));
         copyItem.addActionListener(e -> editorPane.copy());
 
-        JMenuItem pasteItem = new JMenuItem("Paste");
+        JMenuItem pasteItem = new JMenuItem(Messages.get("menu.edit.paste"));
         pasteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V, shortcutMask));
         pasteItem.addActionListener(e -> editorPane.paste());
 
@@ -343,23 +343,23 @@ public class EditorWindow {
         editMenu.add(copyItem);
         editMenu.add(pasteItem);
         editMenu.addSeparator();
-        convertLineEndingsItem = new JMenuItem("Convert to Windows Line Endings");
+        convertLineEndingsItem = new JMenuItem(Messages.get("menu.edit.convertLineEndings"));
         convertLineEndingsItem.addActionListener(e -> convertLineEndings());
         editMenu.add(convertLineEndingsItem);
 
-        JMenuItem cleanupTablesItem = new JMenuItem("Convert All Pandoc Tables");
+        JMenuItem cleanupTablesItem = new JMenuItem(Messages.get("menu.edit.convertPandocTable"));
         cleanupTablesItem.addActionListener(e -> cleanupPandocTables());
         editMenu.add(cleanupTablesItem);
 
-        JMenuItem formatTableItem = new JMenuItem("Format Table");
+        JMenuItem formatTableItem = new JMenuItem(Messages.get("menu.edit.formatTable"));
         formatTableItem.addActionListener(e -> formatTable());
         editMenu.add(formatTableItem);
 
-        JMenuItem htmlEncodeItem = new JMenuItem("HTML Encode");
+        JMenuItem htmlEncodeItem = new JMenuItem(Messages.get("menu.edit.htmlEncode"));
         htmlEncodeItem.addActionListener(e -> htmlEncodeNonAscii());
         editMenu.add(htmlEncodeItem);
 
-        JMenuItem zapGremlinsItem = new JMenuItem("Zap Gremlins...");
+        JMenuItem zapGremlinsItem = new JMenuItem(Messages.get("menu.edit.zapGremlins"));
         zapGremlinsItem.addActionListener(e -> zapGremlins());
         editMenu.add(zapGremlinsItem);
 
@@ -367,9 +367,9 @@ public class EditorWindow {
         editMenu.addMenuListener(new javax.swing.event.MenuListener() {
             @Override public void menuSelected(javax.swing.event.MenuEvent e) {
                 boolean hasSel = editorPane.getSelectionStart() != editorPane.getSelectionEnd();
-                cleanupTablesItem.setText(hasSel ? "Convert Pandoc Table in Selection" : "Convert All Pandoc Tables");
-                zapGremlinsItem.setText(hasSel ? "Zap Gremlins in Selection..." : "Zap Gremlins...");
-                htmlEncodeItem.setText(hasSel ? "HTML Encode Selection" : "HTML Encode");
+                cleanupTablesItem.setText(hasSel ? Messages.get("menu.edit.convertPandocTable.selection") : Messages.get("menu.edit.convertPandocTable"));
+                zapGremlinsItem.setText(hasSel ? Messages.get("menu.edit.zapGremlins.selection") : Messages.get("menu.edit.zapGremlins"));
+                htmlEncodeItem.setText(hasSel ? Messages.get("menu.edit.htmlEncode.selection") : Messages.get("menu.edit.htmlEncode"));
             }
             @Override public void menuDeselected(javax.swing.event.MenuEvent e) {}
             @Override public void menuCanceled(javax.swing.event.MenuEvent e) {}
@@ -377,69 +377,69 @@ public class EditorWindow {
 
         if (isMac) {
             editMenu.addSeparator();
-            JMenuItem aiSettingsMenuItem = new JMenuItem("AI Settings...");
+            JMenuItem aiSettingsMenuItem = new JMenuItem(Messages.get("menu.app.aiSettings"));
             aiSettingsMenuItem.addActionListener(e -> showAiSettingsDialog());
             editMenu.add(aiSettingsMenuItem);
         }
         menuBar.add(editMenu);
 
         // Search menu
-        JMenu searchMenu = new JMenu("Search");
-        JMenuItem findItem = new JMenuItem("Find...");
+        JMenu searchMenu = new JMenu(Messages.get("menu.search"));
+        JMenuItem findItem = new JMenuItem(Messages.get("menu.search.find"));
         findItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask));
         findItem.addActionListener(e -> showFindDialog());
 
-        JMenuItem replaceItem = new JMenuItem("Replace...");
+        JMenuItem replaceItem = new JMenuItem(Messages.get("menu.search.replace"));
         replaceItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask));
         replaceItem.addActionListener(e -> showReplaceDialog());
 
         searchMenu.add(findItem);
         searchMenu.add(replaceItem);
         searchMenu.addSeparator();
-        JMenuItem findInPreviewItem = new JMenuItem("Find in Preview");
+        JMenuItem findInPreviewItem = new JMenuItem(Messages.get("menu.search.findInPreview"));
         findInPreviewItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         findInPreviewItem.addActionListener(e -> findInPreview());
         searchMenu.add(findInPreviewItem);
         searchMenu.addSeparator();
-        JMenuItem gotoLineItem = new JMenuItem("Go to Line...");
+        JMenuItem gotoLineItem = new JMenuItem(Messages.get("menu.search.goToLine"));
         gotoLineItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_J, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         gotoLineItem.addActionListener(e -> gotoLine());
         searchMenu.add(gotoLineItem);
         menuBar.add(searchMenu);
 
         // Markdown menu
-        JMenu markdownMenu = new JMenu("Markdown");
+        JMenu markdownMenu = new JMenu(Messages.get("menu.markdown"));
 
-        JMenuItem boldItem = new JMenuItem("Bold");
+        JMenuItem boldItem = new JMenuItem(Messages.get("menu.markdown.bold"));
         boldItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask));
         boldItem.setEnabled(false);
         boldItem.addActionListener(e -> wrapSelection("**", "**"));
 
-        JMenuItem italicItem = new JMenuItem("Italic");
+        JMenuItem italicItem = new JMenuItem(Messages.get("menu.markdown.italic"));
         italicItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_I, shortcutMask));
         italicItem.setEnabled(false);
         italicItem.addActionListener(e -> wrapSelection("*", "*"));
 
-        JMenuItem strikethroughItem = new JMenuItem("Strikethrough");
+        JMenuItem strikethroughItem = new JMenuItem(Messages.get("menu.markdown.strikethrough"));
         strikethroughItem.setEnabled(false);
         strikethroughItem.addActionListener(e -> wrapSelection("~~", "~~"));
 
-        JMenuItem superscriptItem = new JMenuItem("Superscript");
+        JMenuItem superscriptItem = new JMenuItem(Messages.get("menu.markdown.superscript"));
         superscriptItem.setEnabled(false);
         superscriptItem.addActionListener(e -> wrapSelection("<sup>", "</sup>"));
 
-        JMenuItem subscriptItem = new JMenuItem("Subscript");
+        JMenuItem subscriptItem = new JMenuItem(Messages.get("menu.markdown.subscript"));
         subscriptItem.setEnabled(false);
         subscriptItem.addActionListener(e -> wrapSelection("<sub>", "</sub>"));
 
-        JMenuItem insItem = new JMenuItem("Underline (Insert)");
+        JMenuItem insItem = new JMenuItem(Messages.get("menu.markdown.underline"));
         insItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, shortcutMask));
         insItem.setEnabled(false);
         insItem.addActionListener(e -> wrapSelection("++", "++"));
 
         markdownMenu.add(boldItem);
 
-        JMenuItem centerItem = new JMenuItem("Center");
+        JMenuItem centerItem = new JMenuItem(Messages.get("menu.markdown.center"));
         centerItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         centerItem.addActionListener(e -> wrapBlock("<div style=\"text-align: center;\">\n\n", "\n\n</div>"));
         markdownMenu.add(centerItem);
@@ -451,15 +451,15 @@ public class EditorWindow {
         markdownMenu.add(insItem);
         markdownMenu.addSeparator();
 
-        JMenuItem linkItem = new JMenuItem("Link...");
+        JMenuItem linkItem = new JMenuItem(Messages.get("menu.markdown.link"));
         linkItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, shortcutMask));
         linkItem.addActionListener(e -> showLinkDialog());
 
-        JMenuItem imageItem = new JMenuItem("Image...");
+        JMenuItem imageItem = new JMenuItem(Messages.get("menu.markdown.image"));
         imageItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_G, shortcutMask));
         imageItem.addActionListener(e -> showImageDialog());
 
-        JMenuItem tableItem = new JMenuItem("Table...");
+        JMenuItem tableItem = new JMenuItem(Messages.get("menu.markdown.table"));
         tableItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask));
         tableItem.addActionListener(e -> showTableDialog());
 
@@ -467,19 +467,19 @@ public class EditorWindow {
         markdownMenu.add(imageItem);
         markdownMenu.add(tableItem);
 
-        JMenuItem footnoteItem = new JMenuItem("Footnote");
+        JMenuItem footnoteItem = new JMenuItem(Messages.get("menu.markdown.footnote"));
         footnoteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         footnoteItem.addActionListener(e -> insertFootnote());
         markdownMenu.add(footnoteItem);
         markdownMenu.addSeparator();
 
-        JMenuItem orderedListItem = new JMenuItem("Ordered List");
+        JMenuItem orderedListItem = new JMenuItem(Messages.get("menu.markdown.orderedList"));
         orderedListItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         orderedListItem.addActionListener(e -> convertToList("ordered"));
-        JMenuItem unorderedListItem = new JMenuItem("Unordered List");
+        JMenuItem unorderedListItem = new JMenuItem(Messages.get("menu.markdown.unorderedList"));
         unorderedListItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         unorderedListItem.addActionListener(e -> convertToList("unordered"));
-        JMenuItem taskListItem = new JMenuItem("Task List");
+        JMenuItem taskListItem = new JMenuItem(Messages.get("menu.markdown.taskList"));
         taskListItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         taskListItem.addActionListener(e -> convertToList("task"));
 
@@ -488,23 +488,23 @@ public class EditorWindow {
         markdownMenu.add(taskListItem);
         markdownMenu.addSeparator();
 
-        JMenuItem blockQuoteItem = new JMenuItem("Block Quote");
+        JMenuItem blockQuoteItem = new JMenuItem(Messages.get("menu.markdown.blockQuote"));
         blockQuoteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         blockQuoteItem.addActionListener(e -> prefixLines("> "));
 
-        JMenuItem inlineCodeItem = new JMenuItem("Inline Code");
+        JMenuItem inlineCodeItem = new JMenuItem(Messages.get("menu.markdown.inlineCode"));
         inlineCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask));
         inlineCodeItem.addActionListener(e -> wrapSelection("`", "`"));
 
-        JMenuItem blockCodeItem = new JMenuItem("Block Code");
+        JMenuItem blockCodeItem = new JMenuItem(Messages.get("menu.markdown.blockCode"));
         blockCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         blockCodeItem.addActionListener(e -> wrapBlock("```\n", "\n```"));
 
-        JMenuItem inlineMathItem = new JMenuItem("Inline Math");
+        JMenuItem inlineMathItem = new JMenuItem(Messages.get("menu.markdown.inlineMath"));
         inlineMathItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         inlineMathItem.addActionListener(e -> wrapSelection("$", "$"));
 
-        JMenuItem blockMathItem = new JMenuItem("Block Math");
+        JMenuItem blockMathItem = new JMenuItem(Messages.get("menu.markdown.blockMath"));
         blockMathItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         blockMathItem.addActionListener(e -> wrapBlock("$$\n", "\n$$"));
 
@@ -514,30 +514,30 @@ public class EditorWindow {
         markdownMenu.add(inlineMathItem);
         markdownMenu.add(blockMathItem);
 
-        JMenuItem mermaidItem = new JMenuItem("Mermaid Graph");
+        JMenuItem mermaidItem = new JMenuItem(Messages.get("menu.markdown.mermaid"));
         mermaidItem.addActionListener(e -> wrapBlock("```mermaid\n", "\n```"));
         markdownMenu.add(mermaidItem);
         markdownMenu.addSeparator();
 
-        JMenuItem h1Item = new JMenuItem("Heading 1");
+        JMenuItem h1Item = new JMenuItem(Messages.get("menu.markdown.heading1"));
         h1Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_1, shortcutMask));
         h1Item.addActionListener(e -> prefixCurrentLine("# "));
-        JMenuItem h2Item = new JMenuItem("Heading 2");
+        JMenuItem h2Item = new JMenuItem(Messages.get("menu.markdown.heading2"));
         h2Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_2, shortcutMask));
         h2Item.addActionListener(e -> prefixCurrentLine("## "));
-        JMenuItem h3Item = new JMenuItem("Heading 3");
+        JMenuItem h3Item = new JMenuItem(Messages.get("menu.markdown.heading3"));
         h3Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_3, shortcutMask));
         h3Item.addActionListener(e -> prefixCurrentLine("### "));
-        JMenuItem h4Item = new JMenuItem("Heading 4");
+        JMenuItem h4Item = new JMenuItem(Messages.get("menu.markdown.heading4"));
         h4Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_4, shortcutMask));
         h4Item.addActionListener(e -> prefixCurrentLine("#### "));
-        JMenuItem h5Item = new JMenuItem("Heading 5");
+        JMenuItem h5Item = new JMenuItem(Messages.get("menu.markdown.heading5"));
         h5Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_5, shortcutMask));
         h5Item.addActionListener(e -> prefixCurrentLine("##### "));
-        JMenuItem h6Item = new JMenuItem("Heading 6");
+        JMenuItem h6Item = new JMenuItem(Messages.get("menu.markdown.heading6"));
         h6Item.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_6, shortcutMask));
         h6Item.addActionListener(e -> prefixCurrentLine("###### "));
-        JMenuItem hrItem = new JMenuItem("Horizontal Rule");
+        JMenuItem hrItem = new JMenuItem(Messages.get("menu.markdown.horizontalRule"));
         hrItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_MINUS, shortcutMask));
         hrItem.addActionListener(e -> insertHorizontalRule());
 
@@ -553,18 +553,18 @@ public class EditorWindow {
         menuBar.add(markdownMenu);
 
         // Window menu
-        JMenu windowMenu = new JMenu("Window");
+        JMenu windowMenu = new JMenu(Messages.get("menu.window"));
         windowMenu.addMenuListener(new javax.swing.event.MenuListener() {
             @Override
             public void menuSelected(javax.swing.event.MenuEvent e) {
                 windowMenu.removeAll();
 
-                JMenuItem minimizeItem = new JMenuItem("Minimize");
+                JMenuItem minimizeItem = new JMenuItem(Messages.get("menu.window.minimize"));
                 minimizeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask));
                 minimizeItem.addActionListener(ev -> frame.setState(Frame.ICONIFIED));
                 windowMenu.add(minimizeItem);
 
-                JMenuItem zoomItem = new JMenuItem("Zoom");
+                JMenuItem zoomItem = new JMenuItem(Messages.get("menu.window.zoom"));
                 zoomItem.addActionListener(ev -> {
                     if ((frame.getExtendedState() & Frame.MAXIMIZED_BOTH) != 0) {
                         frame.setExtendedState(Frame.NORMAL);
@@ -576,7 +576,7 @@ public class EditorWindow {
 
                 windowMenu.addSeparator();
 
-                JMenuItem previousItem = new JMenuItem("Previous");
+                JMenuItem previousItem = new JMenuItem(Messages.get("menu.window.previous"));
                 previousItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_COMMA, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
                 previousItem.addActionListener(ev -> {
                     int idx = openInstances.indexOf(EditorWindow.this);
@@ -590,7 +590,7 @@ public class EditorWindow {
                 previousItem.setEnabled(openInstances.size() > 1);
                 windowMenu.add(previousItem);
 
-                JMenuItem nextItem = new JMenuItem("Next");
+                JMenuItem nextItem = new JMenuItem(Messages.get("menu.window.next"));
                 nextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_PERIOD, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
                 nextItem.addActionListener(ev -> {
                     int idx = openInstances.indexOf(EditorWindow.this);
@@ -606,7 +606,7 @@ public class EditorWindow {
 
                 windowMenu.addSeparator();
 
-                JMenuItem cascadeItem = new JMenuItem("Cascade All");
+                JMenuItem cascadeItem = new JMenuItem(Messages.get("menu.window.cascadeAll"));
                 cascadeItem.addActionListener(ev -> {
                     int x = 20, y = 20;
                     for (EditorWindow instance : openInstances) {
@@ -622,7 +622,7 @@ public class EditorWindow {
                 cascadeItem.setEnabled(openInstances.size() > 1);
                 windowMenu.add(cascadeItem);
 
-                JMenuItem tileItem = new JMenuItem("Tile All");
+                JMenuItem tileItem = new JMenuItem(Messages.get("menu.window.tileAll"));
                 tileItem.addActionListener(ev -> {
                     GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
                     Rectangle screenBounds = ge.getMaximumWindowBounds();
@@ -708,7 +708,7 @@ public class EditorWindow {
         // Word wrap toggle button
         wordWrapToggle = new JToggleButton();
         wordWrapToggle.setUI(new BasicToggleButtonUI());
-        wordWrapToggle.setToolTipText("Word Wrap");
+        wordWrapToggle.setToolTipText(Messages.get("toolbar.wordWrap"));
         wordWrapToggle.setIcon(new Icon() {
             @Override public void paintIcon(Component c, Graphics g, int x, int y) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -755,7 +755,7 @@ public class EditorWindow {
         }
         hiddenCharsToggle = new JToggleButton(hiddenCharsIconFull, false);
         hiddenCharsToggle.setUI(new BasicToggleButtonUI());
-        hiddenCharsToggle.setToolTipText("Show/Hide Invisible Characters");
+        hiddenCharsToggle.setToolTipText(Messages.get("toolbar.hiddenChars"));
         hiddenCharsToggle.setFocusPainted(false);
         hiddenCharsToggle.setBorderPainted(false);
         hiddenCharsToggle.setContentAreaFilled(false);
@@ -774,7 +774,7 @@ public class EditorWindow {
         // Spell check toggle button
         spellCheckToggle = new JToggleButton();
         spellCheckToggle.setUI(new BasicToggleButtonUI());
-        spellCheckToggle.setToolTipText("Spell Check");
+        spellCheckToggle.setToolTipText(Messages.get("toolbar.spellCheck"));
         spellCheckToggle.setIcon(new Icon() {
             @Override public void paintIcon(Component c, Graphics g, int x, int y) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -830,7 +830,7 @@ public class EditorWindow {
         }
         syncScrollToggle = new JToggleButton(syncIconFull, false);
         syncScrollToggle.setUI(new BasicToggleButtonUI());
-        syncScrollToggle.setToolTipText("Synchronized Scrolling");
+        syncScrollToggle.setToolTipText(Messages.get("toolbar.syncScroll"));
         syncScrollToggle.setFocusPainted(false);
         syncScrollToggle.setBorderPainted(false);
         syncScrollToggle.setContentAreaFilled(false);
@@ -852,7 +852,7 @@ public class EditorWindow {
         }
         previewToggle = new JToggleButton(eyeIconFull, true);
         previewToggle.setUI(new BasicToggleButtonUI());
-        previewToggle.setToolTipText("Show/Hide Preview");
+        previewToggle.setToolTipText(Messages.get("toolbar.preview"));
         previewToggle.setFocusPainted(false);
         previewToggle.setBorderPainted(false);
         previewToggle.setContentAreaFilled(true);
@@ -871,7 +871,7 @@ public class EditorWindow {
         }
         aiToggle = new JToggleButton(aiIconFull, true);
         aiToggle.setUI(new BasicToggleButtonUI());
-        aiToggle.setToolTipText("Show/Hide AI Assistant");
+        aiToggle.setToolTipText(Messages.get("toolbar.ai"));
         aiToggle.setFocusPainted(false);
         aiToggle.setBorderPainted(false);
         aiToggle.setContentAreaFilled(true);
@@ -885,7 +885,7 @@ public class EditorWindow {
         // Dark mode toggle button (moon/sun)
         darkModeToggle = new JToggleButton();
         darkModeToggle.setUI(new BasicToggleButtonUI());
-        darkModeToggle.setToolTipText("Toggle Dark Mode");
+        darkModeToggle.setToolTipText(Messages.get("toolbar.darkMode"));
         darkModeToggle.setSelected(preferences.isDarkMode());
         darkModeToggle.setIcon(new Icon() {
             @Override public void paintIcon(Component c, Graphics g, int x, int y) {
@@ -952,8 +952,8 @@ public class EditorWindow {
                     if (!truncationWarningShown) {
                         truncationWarningShown = true;
                         JOptionPane.showMessageDialog(frame,
-                                "This document is too large to send in full to the LLM.\nOnly 20,000 characters centered at the caret position are being sent.",
-                                "Document Truncated", JOptionPane.INFORMATION_MESSAGE);
+                                Messages.get("msg.documentTruncated"),
+                                Messages.get("msg.documentTruncatedTitle"), JOptionPane.INFORMATION_MESSAGE);
                     }
                     StringBuilder sb = new StringBuilder();
                     if (start > 0) {
@@ -1192,13 +1192,13 @@ public class EditorWindow {
 
         // Editor right-click context menu
         JPopupMenu editorContextMenu = new JPopupMenu();
-        JMenuItem ctxCut = new JMenuItem("Cut");
+        JMenuItem ctxCut = new JMenuItem(Messages.get("context.cut"));
         ctxCut.addActionListener(e -> editorPane.cut());
-        JMenuItem ctxCopy = new JMenuItem("Copy");
+        JMenuItem ctxCopy = new JMenuItem(Messages.get("context.copy"));
         ctxCopy.addActionListener(e -> editorPane.copy());
-        JMenuItem ctxPaste = new JMenuItem("Paste");
+        JMenuItem ctxPaste = new JMenuItem(Messages.get("context.paste"));
         ctxPaste.addActionListener(e -> editorPane.paste());
-        JMenuItem ctxFindInPreview = new JMenuItem("Find in Preview");
+        JMenuItem ctxFindInPreview = new JMenuItem(Messages.get("context.findInPreview"));
         ctxFindInPreview.addActionListener(e -> findInPreview());
         editorContextMenu.add(ctxCut);
         editorContextMenu.add(ctxCopy);
@@ -1213,8 +1213,8 @@ public class EditorWindow {
         spellCheckController.setOnLanguageReady(() -> {
             String langName = LanguageDownloader.getDisplayName(spellCheckController.getLanguage());
             JOptionPane.showMessageDialog(frame,
-                    "Spell check dictionary ready: " + langName,
-                    "Spell Check", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("msg.spellCheckReady", langName),
+                    Messages.get("msg.spellCheckReadyTitle"), JOptionPane.INFORMATION_MESSAGE);
         });
         spellCheckController.setEnabled(true);
 
@@ -1317,7 +1317,7 @@ public class EditorWindow {
         recentsMenu.removeAll();
         java.util.List<String> recentFiles = preferences.getRecentFiles();
         if (recentFiles.isEmpty()) {
-            JMenuItem emptyItem = new JMenuItem("(No Recent Files)");
+            JMenuItem emptyItem = new JMenuItem(Messages.get("menu.file.recents.none"));
             emptyItem.setEnabled(false);
             recentsMenu.add(emptyItem);
         } else {
@@ -1329,7 +1329,7 @@ public class EditorWindow {
                 recentsMenu.add(item);
             }
             recentsMenu.addSeparator();
-            JMenuItem clearItem = new JMenuItem("Clear All Recents");
+            JMenuItem clearItem = new JMenuItem(Messages.get("menu.file.recents.clearAll"));
             clearItem.addActionListener(e -> {
                 preferences.clearRecentFiles();
                 preferences.save();
@@ -1355,8 +1355,8 @@ public class EditorWindow {
     private void openRecentFile(File file) {
         if (!file.exists()) {
             JOptionPane.showMessageDialog(frame,
-                "File not found:\n" + file.getAbsolutePath(),
-                "File Not Found", JOptionPane.WARNING_MESSAGE);
+                Messages.get("msg.error.fileNotFound"),
+                Messages.get("msg.error.fileNotFoundTitle"), JOptionPane.WARNING_MESSAGE);
             // Remove from recents
             java.util.List<String> recents = new java.util.ArrayList<>(preferences.getRecentFiles());
             recents.remove(file.getAbsolutePath());
@@ -1382,8 +1382,8 @@ public class EditorWindow {
             openFileInTarget(file, content);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(frame,
-                "Error opening file:\n" + ex.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+                Messages.get("msg.error.readFile", ex.getMessage()),
+                Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -1396,7 +1396,7 @@ public class EditorWindow {
         if (now - lastOpenTime < 1000) return;
         lastOpenTime = now;
 
-        FileDialog dialog = new FileDialog(frame, "Open", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.open"), FileDialog.LOAD);
         dialog.setMultipleMode(true);
         dialog.setFilenameFilter((dir, name) -> {
             String lower = name.toLowerCase();
@@ -1424,8 +1424,8 @@ public class EditorWindow {
                                 newWindow.loadFileContent(textMd, content);
                             }
                         } catch (IOException ex) {
-                            JOptionPane.showMessageDialog(frame, "Error reading TextBundle: " + ex.getMessage(),
-                                    "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(frame, Messages.get("msg.error.readTextBundle", ex.getMessage()),
+                                    Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
                         }
                     }
                 } else if (file.isFile() && file.getName().toLowerCase().endsWith(".textpack")) {
@@ -1449,20 +1449,20 @@ public class EditorWindow {
                                 newWindow.saveItem.setEnabled(false);
                             }
                         } else {
-                            JOptionPane.showMessageDialog(frame, "TextPack does not contain a text.md file.",
-                                    "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(frame, Messages.get("msg.error.textPackNoFile"),
+                                    Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
                         }
                     } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(frame, "Error reading TextPack: " + ex.getMessage(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(frame, Messages.get("msg.error.readTextPack", ex.getMessage()),
+                                Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
                     }
                 } else if (file.isFile()) {
                     // Warn if file is larger than 2MB
                     if (file.length() > 2_000_000) {
                         int choice = JOptionPane.showOptionDialog(frame,
-                                "This document is " + (file.length() / 1_000_000) + " MB and may be too large to be responsive.",
-                                "Large File", JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
-                                null, new String[]{"Open", "Cancel"}, "Cancel");
+                                Messages.get("msg.largeFile", file.length() / 1_000_000),
+                                Messages.get("msg.largeFileTitle"), JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                                null, new String[]{Messages.get("menu.file.open"), Messages.get("msg.cancel")}, Messages.get("msg.cancel"));
                         if (choice != 0) continue;
                     }
                     try {
@@ -1475,8 +1475,8 @@ public class EditorWindow {
                             newWindow.loadFileContent(file, content);
                         }
                     } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(frame, "Error reading file: " + ex.getMessage(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(frame, Messages.get("msg.error.readFile", ex.getMessage()),
+                                Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
                     }
                 }
             }
@@ -1506,8 +1506,8 @@ public class EditorWindow {
         if (file.length() > LARGE_FILE_THRESHOLD) {
             editorPane.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_NONE);
             JOptionPane.showMessageDialog(frame,
-                    "Due to the size of this document, syntax highlighting has been\ndisabled to help keep the program responsive.",
-                    "Syntax Highlighting Disabled", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("msg.syntaxDisabled"),
+                    Messages.get("msg.syntaxDisabledTitle"), JOptionPane.INFORMATION_MESSAGE);
         } else {
             editorPane.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_MARKDOWN);
         }
@@ -1525,8 +1525,8 @@ public class EditorWindow {
     private void saveFile() {
         if (textPackSource) {
             JOptionPane.showMessageDialog(frame,
-                    "This file was opened from a TextPack archive.\nUse Save As or Export to save changes.",
-                    "Save Disabled", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("msg.saveDisabled"),
+                    Messages.get("msg.saveDisabledTitle"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         if (currentFile == null) saveFileAs();
@@ -1534,7 +1534,7 @@ public class EditorWindow {
     }
 
     private void saveFileAs() {
-        FileDialog dialog = new FileDialog(frame, "Save As", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.saveAs"), FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             dialog.setFile(currentFile.getName());
@@ -1569,8 +1569,8 @@ public class EditorWindow {
             dirty = false;
             updateTitle();
         } catch (IOException ex) {
-            JOptionPane.showMessageDialog(frame, "Error saving file: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.error.saveFile", ex.getMessage()),
+                    Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -1637,8 +1637,8 @@ public class EditorWindow {
             updateTitle();
             updatePreview();
         } else {
-            JOptionPane.showMessageDialog(frame, "No Pandoc-style tables found.",
-                "Convert Pandoc Table", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.noPandocTables"),
+                Messages.get("msg.noPandocTablesTitle"), JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -1664,8 +1664,8 @@ public class EditorWindow {
 
         // Check if the current line is part of a table (contains |)
         if (caretLine >= allLines.length || !allLines[caretLine].contains("|")) {
-            JOptionPane.showMessageDialog(frame, "No table found at the current position.",
-                    "Format Table", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.noTableFound"),
+                    Messages.get("msg.noTableFoundTitle"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -1681,8 +1681,8 @@ public class EditorWindow {
 
         // Need at least 2 rows (header + separator)
         if (tableEnd - tableStart < 1) {
-            JOptionPane.showMessageDialog(frame, "No valid table found at the current position.",
-                    "Format Table", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.noValidTable"),
+                    Messages.get("msg.noTableFoundTitle"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -1864,10 +1864,10 @@ public class EditorWindow {
                 updatePreview();
                 JOptionPane.showMessageDialog(frame,
                     count + " substitution" + (count != 1 ? "s" : "") + " made.",
-                    "Zap Gremlins", JOptionPane.INFORMATION_MESSAGE);
+                    Messages.get("msg.zapGremlinsTitle"), JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(frame, "No gremlin characters found.",
-                    "Zap Gremlins", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.noGremlinsFound"),
+                    Messages.get("msg.zapGremlinsTitle"), JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }
@@ -2021,21 +2021,21 @@ public class EditorWindow {
                 count + " character" + (count != 1 ? "s" : "") + " encoded.",
                 "HTML Encode", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(frame, "No non-ASCII characters found.",
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.noGremlinsFound"),
                 "HTML Encode", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
     /**
      * Updates the Convert Line Endings menu item text to reflect the current format.
-     * Shows "Convert to Windows Line Endings" when the document uses Unix format,
-     * and "Convert to Unix Line Endings" when it uses Windows format.
+     * Shows Messages.get("menu.edit.convertLineEndings") when the document uses Unix format,
+     * and Messages.get("menu.edit.convertLineEndings.unix") when it uses Windows format.
      */
     private void updateLineEndingsMenuItem() {
         if (windowsLineEndings) {
-            convertLineEndingsItem.setText("Convert to Unix Line Endings");
+            convertLineEndingsItem.setText(Messages.get("menu.edit.convertLineEndings.unix"));
         } else {
-            convertLineEndingsItem.setText("Convert to Windows Line Endings");
+            convertLineEndingsItem.setText(Messages.get("menu.edit.convertLineEndings"));
         }
     }
 
@@ -2050,11 +2050,10 @@ public class EditorWindow {
         long diskModified = currentFile.lastModified();
         if (diskModified == 0 || diskModified == lastModifiedOnDisk) return;
 
-        Object[] options = {"Reload", "Keep Changes"};
+        Object[] options = {Messages.get("msg.reload"), Messages.get("msg.keep")};
         int choice = JOptionPane.showOptionDialog(frame,
-                "The file \"" + currentFile.getName() + "\" has been modified by another program.\n\n"
-                        + "Do you want to reload it? Any unsaved changes will be lost.",
-                "File Changed on Disk",
+                Messages.get("msg.fileModified", currentFile.getName()),
+                Messages.get("msg.fileModifiedTitle"),
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE,
                 null,
@@ -2075,8 +2074,8 @@ public class EditorWindow {
                 updateTitle();
                 updateLineEndingsMenuItem();
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error reloading file: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error.readFile", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         } else {
             // User chose to keep current changes; update timestamp to avoid repeated prompts
@@ -2110,7 +2109,7 @@ public class EditorWindow {
     }
 
     private void exportHtml() {
-        FileDialog dialog = new FileDialog(frame, "Export HTML", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " HTML", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2130,14 +2129,14 @@ public class EditorWindow {
             try {
                 Files.writeString(outFile.toPath(), html, StandardCharsets.UTF_8);
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting HTML: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void exportPdf() {
-        FileDialog dialog = new FileDialog(frame, "Export PDF", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " PDF", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2172,7 +2171,7 @@ public class EditorWindow {
                         } else {
                             JOptionPane.showMessageDialog(frame,
                                     "PDF export may require a PDF printer to be installed on your system.",
-                                    "Export PDF", JOptionPane.INFORMATION_MESSAGE);
+                                    Messages.get("menu.file.export.pdf"), JOptionPane.INFORMATION_MESSAGE);
                         }
                     });
                 }
@@ -2181,7 +2180,7 @@ public class EditorWindow {
     }
 
     private void exportTextBundle() {
-        FileDialog dialog = new FileDialog(frame, "Export TextBundle", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " TextBundle", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2260,8 +2259,8 @@ public class EditorWindow {
                 Files.writeString(bundleDir.toPath().resolve("text.md"), mdSb.toString(), StandardCharsets.UTF_8);
 
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting TextBundle: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -2271,7 +2270,7 @@ public class EditorWindow {
      * zipped TextBundle containing text.md, info.json, and an assets/ folder.
      */
     private void exportTextPack() {
-        FileDialog dialog = new FileDialog(frame, "Export TextPack", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " TextPack", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2353,8 +2352,8 @@ public class EditorWindow {
                 deleteRecursive(tempDir);
 
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting TextPack: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -2438,7 +2437,7 @@ public class EditorWindow {
     }
 
     private void exportRtf() {
-        FileDialog dialog = new FileDialog(frame, "Export RTF", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " RTF", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2458,14 +2457,14 @@ public class EditorWindow {
                 String rtf = markdownToRtf(editorPane.getText());
                 Files.writeString(outFile.toPath(), rtf, StandardCharsets.UTF_8);
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting RTF: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void exportDocx() {
-        FileDialog dialog = new FileDialog(frame, "Export Word Document", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " Word", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2503,14 +2502,14 @@ public class EditorWindow {
                 DocxExporter exporter = new DocxExporter(currentFile);
                 exporter.export(document, outFile);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting Word document: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void exportPlainText() {
-        FileDialog dialog = new FileDialog(frame, "Export Plain Text", FileDialog.SAVE);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.export") + " Text", FileDialog.SAVE);
         if (currentFile != null) {
             dialog.setDirectory(currentFile.getParent());
             String name = currentFile.getName();
@@ -2531,8 +2530,8 @@ public class EditorWindow {
                 String plainText = markdownToPlainText(editorPane.getText());
                 Files.writeString(outFile.toPath(), plainText, StandardCharsets.UTF_8);
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(frame, "Error exporting plain text: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -2540,7 +2539,7 @@ public class EditorWindow {
     // --- Import methods ---
 
     private void importHtml() {
-        FileDialog dialog = new FileDialog(frame, "Import HTML", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.import") + " HTML", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".html") || name.toLowerCase().endsWith(".htm"));
         dialog.setVisible(true);
         if (dialog.getFile() != null) {
@@ -2551,13 +2550,13 @@ public class EditorWindow {
                 insertImportedText(markdown);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(frame, "Error importing HTML: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void importPlainText() {
-        FileDialog dialog = new FileDialog(frame, "Import Plain Text", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.import") + " Text", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".txt"));
         dialog.setVisible(true);
         if (dialog.getFile() != null) {
@@ -2567,13 +2566,13 @@ public class EditorWindow {
                 insertImportedText(text);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(frame, "Error importing plain text: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void importRtf() {
-        FileDialog dialog = new FileDialog(frame, "Import RTF", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.import") + " RTF", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".rtf"));
         dialog.setVisible(true);
         if (dialog.getFile() != null) {
@@ -2584,13 +2583,13 @@ public class EditorWindow {
                 insertImportedText(markdown);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(frame, "Error importing RTF: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void importDocx() {
-        FileDialog dialog = new FileDialog(frame, "Import Word Document", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(frame, Messages.get("menu.file.import") + " Word", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".docx"));
         dialog.setVisible(true);
         if (dialog.getFile() != null) {
@@ -2600,7 +2599,7 @@ public class EditorWindow {
                 insertImportedText(markdown);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Error importing Word document: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                        Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -3119,7 +3118,7 @@ public class EditorWindow {
             if (currentFile != null) {
                 filePathLabel.setText(currentFile.getAbsolutePath());
             } else {
-                filePathLabel.setText("Untitled");
+                filePathLabel.setText(Messages.get("msg.untitled"));
             }
         }
     }
@@ -3157,11 +3156,11 @@ public class EditorWindow {
 
     public boolean confirmClose() {
         if (!dirty) return true;
-        String filename = currentFile != null ? currentFile.getName() : "Untitled";
+        String filename = currentFile != null ? currentFile.getName() : Messages.get("msg.untitled");
         int choice = JOptionPane.showOptionDialog(frame,
                 "\"" + filename + "\" has unsaved changes. Do you want to save before closing?",
-                "Unsaved Changes", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE,
-                null, new String[]{"Save", "Don't Save", "Cancel"}, "Save");
+                Messages.get("msg.unsavedTitle"), JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE,
+                null, new String[]{Messages.get("msg.save"), Messages.get("msg.dontSave"), Messages.get("msg.cancel")}, "Save");
         if (choice == 0) { saveFile(); return !dirty; }
         else if (choice == 1) return true;
         else return false;
@@ -3545,7 +3544,7 @@ public class EditorWindow {
     private void gotoLine() {
         int totalLines = editorPane.getLineCount();
         String input = JOptionPane.showInputDialog(frame,
-            "Line number (1\u2013" + totalLines + "):", "Go to Line", JOptionPane.PLAIN_MESSAGE);
+            Messages.get("msg.goToLine.prompt", totalLines), Messages.get("msg.goToLine.title"), JOptionPane.PLAIN_MESSAGE);
         if (input == null || input.trim().isEmpty()) return;
         try {
             int line = Integer.parseInt(input.trim());
@@ -3555,7 +3554,7 @@ public class EditorWindow {
             editorPane.setCaretPosition(offset);
             editorPane.requestFocusInWindow();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(frame, "Invalid line number.", "Go to Line", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.invalidLineNumber"), Messages.get("menu.search.goToLine"), JOptionPane.WARNING_MESSAGE);
         } catch (javax.swing.text.BadLocationException ex) {
             // Silently fail
         }
@@ -3625,11 +3624,20 @@ public class EditorWindow {
         PreferencesDialog dialog = new PreferencesDialog(frame, preferences);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
+            String oldUiLang = preferences.getUiLanguage();
             dialog.applyTo(preferences);
             preferences.save();
             editorPanel.applyPreferences(preferences);
             previewPanel.forceFullReload();
             updatePreview();
+            // Notify user if UI language changed (requires restart)
+            String newUiLang = preferences.getUiLanguage();
+            if (!oldUiLang.equals(newUiLang)) {
+                JOptionPane.showMessageDialog(frame,
+                        Messages.get("dialog.prefs.restartRequired"),
+                        Messages.get("dialog.prefs.title"),
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
             // Update spell check language if changed
             if (spellCheckController != null) {
                 String newLang = preferences.getSpellCheckLanguage();

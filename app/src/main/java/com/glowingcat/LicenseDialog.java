@@ -13,20 +13,20 @@ import javax.crypto.spec.SecretKeySpec;
 public class LicenseDialog {
 
     public static void show(JFrame parent, Preferences prefs) {
-        JDialog dialog = new JDialog(parent, "License Key", true);
+        JDialog dialog = new JDialog(parent, Messages.get("dialog.license.title"), true);
         dialog.setLayout(new BorderLayout(10, 10));
 
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JLabel title = new JLabel("License Key");
+        JLabel title = new JLabel(Messages.get("dialog.license.title"));
         title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(title);
         panel.add(Box.createVerticalStrut(8));
 
-        JLabel desc = new JLabel("Enter your email address and license key");
+        JLabel desc = new JLabel(Messages.get("dialog.license.prompt"));
         desc.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(desc);
         panel.add(Box.createVerticalStrut(12));
@@ -46,7 +46,7 @@ public class LicenseDialog {
         panel.add(keyField);
         panel.add(Box.createVerticalStrut(8));
 
-        JLabel link = new JLabel("<html><a href=''>Donate at Glowing Cat Software to get a license key.</a></html>");
+        JLabel link = new JLabel("<html><a href=''>" + Messages.get("dialog.license.donate") + "</a></html>");
         link.setAlignmentX(Component.CENTER_ALIGNMENT);
         link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         link.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -59,8 +59,8 @@ public class LicenseDialog {
         panel.add(Box.createVerticalStrut(12));
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        JButton cancelBtn = new JButton("Cancel");
-        JButton saveBtn = new JButton("Save");
+        JButton cancelBtn = new JButton(Messages.get("dialog.license.cancel"));
+        JButton saveBtn = new JButton(Messages.get("dialog.license.save"));
         saveBtn.setEnabled(false);
         buttons.add(cancelBtn);
         buttons.add(saveBtn);
@@ -110,7 +110,7 @@ public class LicenseDialog {
             Icon appIcon = null;
             var url = LicenseDialog.class.getClassLoader().getResource("app_icon_256.png");
             if (url != null) appIcon = new ImageIcon(new ImageIcon(url).getImage().getScaledInstance(64, 64, Image.SCALE_SMOOTH));
-            JOptionPane.showMessageDialog(dialog, "License saved. Thank you!",
+            JOptionPane.showMessageDialog(dialog, Messages.get("dialog.license.saved"),
                 "PurplePlatypus", JOptionPane.INFORMATION_MESSAGE, appIcon);
             dialog.dispose();
         });

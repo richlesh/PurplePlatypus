@@ -10,7 +10,7 @@ import java.awt.event.*;
 public class AboutDialog {
 
     public static void show(JFrame parent, Preferences prefs) {
-        JDialog dialog = new JDialog(parent, "About PurplePlatypus", true);
+        JDialog dialog = new JDialog(parent, Messages.get("dialog.about.title"), true);
         dialog.setUndecorated(true);
         dialog.getRootPane().setBorder(BorderFactory.createLineBorder(new Color(80, 80, 80), 1));
 
@@ -36,14 +36,14 @@ public class AboutDialog {
         panel.add(name);
         panel.add(Box.createVerticalStrut(4));
 
-        JLabel subtitle = new JLabel("A Markdown Editor with AI Writing Assistant");
+        JLabel subtitle = new JLabel(Messages.get("app.description"));
         subtitle.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         subtitle.setForeground(new Color(150, 150, 150));
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(subtitle);
         panel.add(Box.createVerticalStrut(10));
 
-        JLabel ver = new JLabel("Version " + AppVersion.get());
+        JLabel ver = new JLabel(Messages.get("dialog.about.version", AppVersion.get()));
         ver.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         ver.setForeground(new Color(180, 180, 180));
         ver.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -71,7 +71,7 @@ public class AboutDialog {
         panel.add(link1);
         panel.add(Box.createVerticalStrut(4));
 
-        JLabel link2 = new JLabel("<html><a style='color:#4da3ff;'>Report issues on GitHub</a></html>");
+        JLabel link2 = new JLabel("<html><a style='color:#4da3ff;'>" + Messages.get("dialog.about.reportBug") + "</a></html>");
         link2.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         link2.setHorizontalAlignment(SwingConstants.CENTER);
         link2.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -93,7 +93,7 @@ public class AboutDialog {
 
         if (LicenseDialog.isLicensed(prefs)) {
             panel.add(Box.createVerticalStrut(14));
-            JLabel thanks = new JLabel("<html><p style='text-align: center;'><b>Thank you for purchasing a<br>license for PurplePlatypus!</b></p></html>");
+            JLabel thanks = new JLabel("<html><p style='text-align: center;'><b>" + Messages.get("dialog.about.thankYou") + "</b></p></html>");
             thanks.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
             thanks.setForeground(new Color(100, 200, 100));
             thanks.setHorizontalAlignment(SwingConstants.CENTER);

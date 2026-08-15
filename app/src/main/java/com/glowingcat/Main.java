@@ -51,6 +51,15 @@ public class Main {
 
         // Use FlatLaf — load light or dark based on saved preference
         Preferences prefs = Preferences.load();
+
+        // Initialize UI locale from preferences
+        String uiLang = prefs.getUiLanguage();
+        if (uiLang != null && !uiLang.isEmpty()) {
+            java.util.Locale locale = new java.util.Locale(uiLang);
+            Messages.setLocale(locale);
+            com.glowingcat.aichat.AIChatMessages.setLocale(locale);
+        }
+
         try {
             if (prefs.isDarkMode()) {
                 UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatDarkLaf());
