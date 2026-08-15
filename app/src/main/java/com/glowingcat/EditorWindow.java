@@ -1460,9 +1460,9 @@ public class EditorWindow {
                     // Warn if file is larger than 2MB
                     if (file.length() > 2_000_000) {
                         int choice = JOptionPane.showOptionDialog(frame,
-                                "This document is " + (file.length() / 1_000_000) + " MB and may be too large to be responsive.",
+                                Messages.get("msg.largeFile", file.length() / 1_000_000),
                                 Messages.get("msg.largeFileTitle"), JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
-                                null, new String[]{Messages.get("menu.file.open"), Messages.get("msg.cancel")}, "Cancel");
+                                null, new String[]{Messages.get("menu.file.open"), Messages.get("msg.cancel")}, Messages.get("msg.cancel"));
                         if (choice != 0) continue;
                     }
                     try {
@@ -2052,8 +2052,7 @@ public class EditorWindow {
 
         Object[] options = {Messages.get("msg.reload"), Messages.get("msg.keep")};
         int choice = JOptionPane.showOptionDialog(frame,
-                "The file \"" + currentFile.getName() + "\" has been modified by another program.\n\n"
-                        + "Do you want to reload it? Any unsaved changes will be lost.",
+                Messages.get("msg.fileModified", currentFile.getName()),
                 Messages.get("msg.fileModifiedTitle"),
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE,
