@@ -884,7 +884,7 @@ public class AIChatPanel extends JPanel {
         html.append("  if(window.hljs){hljs.highlightAll();}");
         html.append("});");
         html.append("</script>");
-        html.append("</head><body>");
+        html.append("</head><body dir=\"auto\">");
 
         // Render all chat messages
         for (int i = 0; i < chatMessages.size(); i++) {
