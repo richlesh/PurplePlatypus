@@ -246,9 +246,9 @@ public class AIChatPanel extends JPanel {
             int sp = systemPrompt.length();
             int doc = editor.getText().length();
             String docInfo = doc > 20_000
-                ? String.format("Document: %,d chars (truncated to 20,000 for LLM)", doc)
-                : String.format("Document: %,d chars", doc);
-            statusBar.setText(String.format("System: %,d chars    %s", sp, docInfo));
+                ? String.format(AIChatMessages.get("aichat.status.docTruncated"), doc)
+                : String.format(AIChatMessages.get("aichat.status.doc"), doc);
+            statusBar.setText(String.format(AIChatMessages.get("aichat.status.system"), sp, docInfo));
         };
         statusUpdater.run();
 
