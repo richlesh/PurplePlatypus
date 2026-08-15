@@ -64,7 +64,7 @@ class WebViewHelper {
     public void loadContent(String html) {
         if (webEngine == null) return;
         Platform.runLater(() -> {
-            webEngine.loadContent(html);
+            webEngine.loadContent(html, "text/html");
         });
     }
 }
