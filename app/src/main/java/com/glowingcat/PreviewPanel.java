@@ -189,10 +189,18 @@ public class PreviewPanel extends JPanel {
         editorPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
         editorPane.addHyperlinkListener(e -> {
             if (e.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED) {
-                try {
-                    java.awt.Desktop.getDesktop().browse(e.getURL().toURI());
-                } catch (Exception ex) {
-                    // Silently fail
+                String desc = e.getDescription();
+                if (desc != null && desc.startsWith("#")) {
+                    // Internal anchor link — navigate to the heading in the source
+                    if (anchorNavigationCallback != null) {
+                        anchorNavigationCallback.accept(desc.substring(1));
+                    }
+                } else {
+                    try {
+                        java.awt.Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (Exception ex) {
+                        // Silently fail
+                    }
                 }
             }
         });
@@ -503,6 +511,9 @@ public class PreviewPanel extends JPanel {
             sb.append("  if(a && a.href && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {");
             sb.append("    e.preventDefault();");
             sb.append("    if(window.java) window.java.openLink(a.href);");
+            sb.append("  } else if(a && a.getAttribute('href') && a.getAttribute('href').startsWith('#')) {");
+            sb.append("    e.preventDefault();");
+            sb.append("    if(window.java) window.java.navigateToAnchor(a.getAttribute('href').substring(1));");
             sb.append("  }");
             sb.append("});");
             sb.append("document.addEventListener('contextmenu', function(e) {");
@@ -538,6 +549,24 @@ public class PreviewPanel extends JPanel {
             if (max > 0) {
                 vBar.setValue((int) (max * ratio));
             }
+        }
+    }
+
+    /**
+     * Scrolls the preview to the element with the given anchor ID.
+     */
+    public void scrollToAnchor(String anchor) {
+        if (anchor == null || anchor.isEmpty()) return;
+        String escaped = anchor.replace("'", "\\'");
+        if (useWebView && webEngine != null) {
+            javafx.application.Platform.runLater(() -> {
+                webEngine.executeScript(
+                    "var el = document.getElementById('" + escaped + "'); if(el) el.scrollIntoView({behavior:'smooth'});");
+            });
+        } else if (scrollPane != null && editorPane != null) {
+            // Fallback: try to find the anchor element and scroll to it
+            // JEditorPane supports scrollToReference for named anchors
+            editorPane.scrollToReference(anchor);
         }
     }
 
@@ -613,6 +642,15 @@ public class PreviewPanel extends JPanel {
     private java.util.function.Consumer<String> findInSourceCallback;
 
     /**
+     * Sets a callback for internal anchor link navigation from the preview.
+     */
+    public void setAnchorNavigationCallback(java.util.function.Consumer<String> callback) {
+        this.anchorNavigationCallback = callback;
+    }
+
+    private java.util.function.Consumer<String> anchorNavigationCallback;
+
+    /**
      * Bridge object exposed to JavaScript as window.java for scroll event callbacks
      * and external link opening.
      */
@@ -641,6 +679,15 @@ public class PreviewPanel extends JPanel {
         public void findInSource(String text) {
             if (findInSourceCallback != null && text != null && !text.isEmpty()) {
                 SwingUtilities.invokeLater(() -> findInSourceCallback.accept(text));
+            }
+        }
+
+        /**
+         * Called from JavaScript when the user clicks an internal anchor link.
+         */
+        public void navigateToAnchor(String anchor) {
+            if (anchorNavigationCallback != null && anchor != null && !anchor.isEmpty()) {
+                SwingUtilities.invokeLater(() -> anchorNavigationCallback.accept(anchor));
             }
         }
     }

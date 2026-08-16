@@ -363,6 +363,10 @@ public class EditorWindow {
         zapGremlinsItem.addActionListener(e -> zapGremlins());
         editMenu.add(zapGremlinsItem);
 
+        JMenuItem tocItem = new JMenuItem(Messages.get("menu.edit.createToc"));
+        tocItem.addActionListener(e -> createOrUpdateToc());
+        editMenu.add(tocItem);
+
         // Update menu item text based on selection when Edit menu opens
         editMenu.addMenuListener(new javax.swing.event.MenuListener() {
             @Override public void menuSelected(javax.swing.event.MenuEvent e) {
@@ -370,6 +374,8 @@ public class EditorWindow {
                 cleanupTablesItem.setText(hasSel ? Messages.get("menu.edit.convertPandocTable.selection") : Messages.get("menu.edit.convertPandocTable"));
                 zapGremlinsItem.setText(hasSel ? Messages.get("menu.edit.zapGremlins.selection") : Messages.get("menu.edit.zapGremlins"));
                 htmlEncodeItem.setText(hasSel ? Messages.get("menu.edit.htmlEncode.selection") : Messages.get("menu.edit.htmlEncode"));
+                // Update TOC item text based on whether a TOC already exists
+                tocItem.setText(hasTocSection() ? Messages.get("menu.edit.updateToc") : Messages.get("menu.edit.createToc"));
             }
             @Override public void menuDeselected(javax.swing.event.MenuEvent e) {}
             @Override public void menuCanceled(javax.swing.event.MenuEvent e) {}
@@ -1235,6 +1241,9 @@ public class EditorWindow {
         // "Find in Source" callback from preview right-click
         previewPanel.setFindInSourceCallback(text -> findInSource(text));
 
+        // Internal anchor link navigation callback from preview
+        previewPanel.setAnchorNavigationCallback(anchor -> navigateToAnchor(anchor));
+
         // Editor right-click context menu
         JPopupMenu editorContextMenu = new JPopupMenu();
         JMenuItem ctxCut = new JMenuItem(Messages.get("context.cut"));
@@ -1913,6 +1922,153 @@ public class EditorWindow {
             } else {
                 JOptionPane.showMessageDialog(frame, Messages.get("msg.noGremlinsFound"),
                     Messages.get("msg.zapGremlinsTitle"), JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Returns true if the document contains an H2 heading matching the localized TOC heading.
+     */
+    private boolean hasTocSection() {
+        String content = editorPane.getText();
+        String tocHeading = Messages.get("toc.heading");
+        return java.util.regex.Pattern.compile("^## " + java.util.regex.Pattern.quote(tocHeading) + "\\s*$", java.util.regex.Pattern.MULTILINE | java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(content).find();
+    }
+
+    /**
+     * Creates or updates a Table of Contents in the document.
+     * Asks the user for the maximum heading level (2-6) to include.
+     */
+    private void createOrUpdateToc() {
+        boolean updating = hasTocSection();
+
+        // Ask user for maximum heading level
+        String[] options = {"2", "3", "4", "5", "6"};
+        String result = (String) JOptionPane.showInputDialog(frame,
+                Messages.get("dialog.toc.prompt"),
+                updating ? Messages.get("menu.edit.updateToc") : Messages.get("menu.edit.createToc"),
+                JOptionPane.QUESTION_MESSAGE, null, options, "3");
+        if (result == null) return; // User cancelled
+
+        int maxLevel = Integer.parseInt(result);
+        String tocHeading = Messages.get("toc.heading");
+        String content = editorPane.getText();
+        String lineEnding = content.contains("\r\n") ? "\r\n" : "\n";
+        String[] lines = content.split("\r?\n", -1);
+
+        // Collect headings (level 2 through maxLevel), skipping the TOC section itself
+        java.util.List<int[]> headings = new java.util.ArrayList<>(); // [level, lineIndex]
+        java.util.List<String> headingTexts = new java.util.ArrayList<>();
+        boolean inTocSection = false;
+        for (int i = 0; i < lines.length; i++) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(#{1,6})\\s+(.+)").matcher(lines[i]);
+            if (m.matches()) {
+                int level = m.group(1).length();
+                String text = m.group(2).trim();
+                // Detect start/end of existing TOC section
+                if (level == 2 && text.equalsIgnoreCase(tocHeading)) {
+                    inTocSection = true;
+                    continue;
+                }
+                if (inTocSection && level <= 2) {
+                    inTocSection = false;
+                }
+                if (inTocSection) continue;
+                if (level >= 2 && level <= maxLevel) {
+                    headings.add(new int[]{level, i});
+                    headingTexts.add(text);
+                }
+            } else if (inTocSection) {
+                // Still in TOC section (non-heading lines like the list items)
+                continue;
+            }
+        }
+
+        // Build the TOC content
+        StringBuilder toc = new StringBuilder();
+        toc.append("## ").append(tocHeading).append(lineEnding).append(lineEnding);
+        for (int i = 0; i < headings.size(); i++) {
+            int level = headings.get(i)[0];
+            String text = headingTexts.get(i);
+            // Generate slug matching HeadingAnchorExtension
+            String slug = text.toLowerCase()
+                    .replaceAll("[^\\p{L}\\p{N}\\s-]", "")
+                    .trim()
+                    .replaceAll("\\s+", "-");
+            // Indentation: level 2 = no indent, level 3 = 1 indent, etc.
+            int indent = level - 2;
+            for (int j = 0; j < indent; j++) {
+                toc.append("    ");
+            }
+            toc.append("- [").append(text).append("](#").append(slug).append(")").append(lineEnding);
+        }
+        toc.append(lineEnding).append("---").append(lineEnding).append(lineEnding); // Blank line, horizontal rule, blank line after TOC
+
+        if (updating) {
+            // Find and replace the existing TOC section
+            int tocStart = -1;
+            int tocEnd = -1;
+            boolean foundTocHeading = false;
+            for (int i = 0; i < lines.length; i++) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(#{1,6})\\s+(.+)").matcher(lines[i]);
+                if (m.matches()) {
+                    int level = m.group(1).length();
+                    String text = m.group(2).trim();
+                    if (!foundTocHeading && level == 2 && text.equalsIgnoreCase(tocHeading)) {
+                        foundTocHeading = true;
+                        tocStart = i;
+                        continue;
+                    }
+                    if (foundTocHeading && level <= 2) {
+                        tocEnd = i;
+                        break;
+                    }
+                }
+            }
+            if (tocStart >= 0) {
+                if (tocEnd < 0) tocEnd = lines.length;
+                // Calculate character offsets
+                int startOffset = 0;
+                for (int i = 0; i < tocStart; i++) {
+                    startOffset += lines[i].length() + lineEnding.length();
+                }
+                int endOffset = 0;
+                for (int i = 0; i < tocEnd; i++) {
+                    endOffset += lines[i].length() + lineEnding.length();
+                }
+                // Replace the TOC section
+                String before = content.substring(0, startOffset);
+                String after = content.substring(endOffset);
+                String newContent = before + toc.toString() + after;
+                editorPane.setText(newContent);
+                editorPane.setCaretPosition(startOffset);
+            }
+        } else {
+            // Insert after the first H1 heading
+            int insertAfterLine = -1;
+            for (int i = 0; i < lines.length; i++) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("^#\\s+(.+)").matcher(lines[i]);
+                if (m.matches()) {
+                    insertAfterLine = i;
+                    break;
+                }
+            }
+            if (insertAfterLine >= 0) {
+                int insertOffset = 0;
+                for (int i = 0; i <= insertAfterLine; i++) {
+                    insertOffset += lines[i].length() + lineEnding.length();
+                }
+                String before = content.substring(0, insertOffset);
+                String after = content.substring(insertOffset);
+                String newContent = before + lineEnding + toc.toString() + after;
+                editorPane.setText(newContent);
+                editorPane.setCaretPosition(insertOffset);
+            } else {
+                // No H1 found — insert at the top
+                String newContent = toc.toString() + lineEnding + content;
+                editorPane.setText(newContent);
+                editorPane.setCaretPosition(0);
             }
         }
     }
@@ -3630,6 +3786,41 @@ public class EditorWindow {
             editorPane.setCaretPosition(idx);
             editorPane.moveCaretPosition(idx + searchText.length());
             editorPane.requestFocusInWindow();
+        }
+    }
+
+    /**
+     * Navigates to a heading in the source that corresponds to the given anchor fragment.
+     * The anchor is a slug (e.g., "file-menu-items") generated from the heading text.
+     * This method searches for a markdown heading line whose slug matches the anchor,
+     * performing a case-insensitive comparison.
+     */
+    private void navigateToAnchor(String anchor) {
+        if (anchor == null || anchor.trim().isEmpty()) return;
+        String content = editorPane.getText();
+        String[] lines = content.split("\n", -1);
+        int offset = 0;
+        for (String line : lines) {
+            // Check if this line is a markdown heading (# ... through ###### ...)
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(#{1,6})\\s+(.+)").matcher(line);
+            if (m.matches()) {
+                String headingText = m.group(2).trim();
+                // Generate slug the same way HeadingAnchorExtension does:
+                // lowercase, replace spaces/special chars with hyphens, remove non-alphanumeric except hyphens
+                String slug = headingText.toLowerCase()
+                        .replaceAll("[^\\p{L}\\p{N}\\s-]", "")
+                        .trim()
+                        .replaceAll("\\s+", "-");
+                if (slug.equalsIgnoreCase(anchor)) {
+                    editorPane.setCaretPosition(offset);
+                    editorPane.moveCaretPosition(offset + line.length());
+                    editorPane.requestFocusInWindow();
+                    // Also scroll the preview to the corresponding anchor
+                    previewPanel.scrollToAnchor(anchor);
+                    return;
+                }
+            }
+            offset += line.length() + 1; // +1 for the newline
         }
     }
 
