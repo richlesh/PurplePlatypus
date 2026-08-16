@@ -772,12 +772,12 @@ public class EditorWindow {
                 // Three horizontal lines with a wrap arrow on the last
                 g2.drawLine(x + 3, y + 5, x + 17, y + 5);
                 g2.drawLine(x + 3, y + 10, x + 17, y + 10);
-                g2.drawLine(x + 3, y + 15, x + 13, y + 15);
+                g2.drawLine(x + 3, y + 15, x + 17, y + 15);
                 // Wrap arrow curving back
                 g2.drawArc(x + 13, y + 10, 8, 10, 270, 180);
                 // Arrow head
-                g2.drawLine(x + 13, y + 15, x + 13, y + 12);
-                g2.drawLine(x + 13, y + 15, x + 16, y + 15);
+                g2.drawLine(x + 13, y + 20, x + 15, y + 18);
+                g2.drawLine(x + 13, y + 20, x + 15, y + 22);
                 g2.dispose();
             }
             @Override public int getIconWidth() { return 20; }
@@ -938,8 +938,8 @@ public class EditorWindow {
                 // Draw arrowhead at the end of the arc (top-right area)
                 int ax = cx + (int)(r * Math.cos(Math.toRadians(60)));
                 int ay = cy - (int)(r * Math.sin(Math.toRadians(60)));
-                g2.drawLine(ax, ay, ax + 3, ay);
-                g2.drawLine(ax, ay, ax, ay + 3);
+                g2.drawLine(ax + 2, ay + 1, ax - 3, ay + 2);
+                g2.drawLine(ax + 2, ay + 1, ax + 0, ay - 3);
                 g2.dispose();
             }
             @Override public int getIconWidth() { return 20; }
