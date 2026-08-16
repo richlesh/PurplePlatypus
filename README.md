@@ -1,4 +1,4 @@
-![app_icon_256](app/src/main/resources/app_icon_256.png)
+![](app/src/main/resources/app_icon_256.png)
 
 # PurplePlatypus 1.8.0
 
@@ -11,7 +11,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
 - **Live spell checker** — Real-time spell and grammar checking powered by LanguageTool with support for 31 languages; right-click suggestions and user dictionary; language packs download on demand from Maven Central
 - **Localization** — Full UI localization in English, Spanish, French, German, Italian, Japanese, and Simplified Chinese; select language in Preferences; RTL content support (Arabic, Hebrew) in preview and AI chat
-- **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, DeepSeek, Alibaba, Cerebras, Groq, Meta, Mistral, Moonshot AI, Perplexity, xAI, or local Ollama models
+- **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, Amazon Bedrock, IBM watsonx, Microsoft Azure, DeepSeek, Alibaba, Cerebras, Groq, Meta, Mistral, Moonshot AI, Perplexity, xAI, or local Ollama models; also supports a Generic OpenAI API endpoint for any OpenAI-compatible service
 - **Generic LLM vendor** — YAML-configurable API endpoint for any LLM service (corporate APIs, custom proxies, etc.) with OAuth/IAM token exchange, configurable request/response format, and single-shot or multi-turn conversation modes
 - **Multi-window** — Open multiple editor windows with File > New
 - **Window management** — Window menu with Minimize, Zoom, Previous/Next window navigation, Cascade All, and Tile All
@@ -19,6 +19,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
 - **Toolbar** — Status bar showing the full file path with document statistics, toggle buttons for word wrap, invisible characters, spell check, synchronized scrolling, preview, reload, AI panel and light/dark UI modes.
+- **Dark mode** — Toggle between light and dark themes; dark mode applies to the editor, preview, AI chat, toolbar, and dialogs
 - **Line numbers** — A line number gutter on the left side of the editor that stays in sync as you scroll and type
 - **File operations** — Create new files, open existing `.md`/`.markdown`/`.txt`/`.textbundle`/`.textpack` files, and save your work
 - **Recent files** — File > Recents menu shows recently opened documents; selecting one brings its window to front if already open
@@ -34,9 +35,9 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Image drag-and-drop** — Drag GIF, JPEG, or PNG files onto the editor to insert markdown image links with relative paths; the caret tracks the pointer for precise placement
 - **Lightbox viewer** - View images in a lightbox with zoom and pan features via right-click on image
 - **Links and Images** — Insert or edit markdown links and images via dialogs
-- **Tables** — Insert or edit GFM pipe-style markdown tables via a visual dialog.  Pandoc grid tables also supported.
+- **Tables** — Insert or edit GFM pipe-style markdown tables via a visual dialog with dynamic row/column add/remove, clipboard operations, and per-column alignment.  Pandoc grid tables also supported.
 - **Lists** — Convert lines to ordered, unordered, or task lists
-- **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, and Block Math
+- **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, Block Math, and Mermaid Graph
 - **Print** — Page Setup and Print (⌘/Ctrl+P) using the native system print dialog
 - **Export** — Export to HTML, PDF, Word Document (DOCX), TextBundle, TextPack, RTF, or Plain Text formats
 - **Import** — Import from HTML, Plain Text, RTF, or Word Document files, converting content to Markdown
@@ -47,12 +48,14 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Escape sequences in Find/Replace** — "Interpret Escapes" option processes `\t`, `\n`, `\r`, `\\`, and `\uXXXX` in find and replace fields
 - **Search/Replace recents** — Save frequently used search and replace expressions with +/- buttons; recall them from a dropdown menu
 - **Find in Preview** — Search for selected editor text in the rendered preview (⇧⌘F); right-click selected preview text to find it in the source
+- **Internal link navigation** — Click internal anchor links (e.g. `[Section](#section)`) in the preview to jump to the corresponding heading in both the editor and preview
 - **Go to Line** — Jump to a specific line number in the source (⇧⌘J)
 - **Line ending conversion** — Detect and convert between Unix (`\n`) and Windows (`\r\n`) line endings via the Edit menu; line ending format is preserved on save
 - **Cleanup Pandoc Tables** — Convert Pandoc grid-style tables to standard GFM pipe-style tables
 - **Format Table** — Auto-format the GFM table at the cursor, padding columns to uniform width respecting header alignment (left, center, right)
 - **Zap Gremlins** — Configurable substitution of Unicode characters (smart quotes, em-dashes, non-breaking spaces, etc.) with ASCII equivalents; user-editable rules saved to preferences
 - **HTML Encode** — Convert non-ASCII characters to HTML entities (named where available per HTML5, otherwise numeric code points)
+- **Table of Contents** — Create or update a localized Table of Contents section with internal links to headings; user-selectable depth (H2–H6) with nested lists for heading hierarchy
 - **Selection-aware editing** — Cleanup Pandoc Tables, Zap Gremlins, and HTML Encode operate on the selection if text is selected, or the full document otherwise
 - **Show invisible characters** — Toggle button in the toolbar to reveal spaces (dots), tabs (arrows), and line endings (paragraph marks)
 - **Document statistics** — Live display of line count, word count, and character count in the toolbar, updated as you type
@@ -68,6 +71,8 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Preview fallback** — On platforms where JavaFX WebView is unavailable (e.g. Windows ARM64), the preview gracefully falls back to a Swing-based HTML renderer with reduced functionality
 - **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors; toolbar button highlight color
 - **Window state persistence** — Window size, divider positions, and panel visibility are remembered between sessions
+- **License key** — Optional license key to support continued development; enter via File > License Key on macOS or the application menu on other platforms
+- **Emoji support** — Non-BMP emoji characters are rendered using Twemoji SVG images in both the preview and AI chat panes
 
 ## AI Assistant
 
@@ -161,143 +166,192 @@ A high-level overview of PurplePlatypus's main classes and their relationships:
 classDiagram
     class Main {
         +main(String[] args) void
+        +openFileInWindow(File file) void
     }
 
-    class EditorFrame {
-        -EditorPane editorPane
-        -PreviewPane previewPane
+    class EditorWindow {
+        -EditorPanel editorPanel
+        -PreviewPanel previewPanel
         -AIChatPanel aiChatPanel
-        -Toolbar toolbar
-        +openFile(File file) void
-        +saveFile() void
+        -Preferences preferences
+        -File currentFile
+        -boolean dirty
+        +loadFileContent(File file, String content) void
+        +confirmClose() boolean
+        +showPreferencesDialog() void
+        +showAiSettingsDialog() void
+        +showLicenseDialog() void
+        +showAboutDialog() void
     }
 
-    class EditorPane {
+    class EditorPanel {
         -RSyntaxTextArea textArea
-        -DocumentStatistics statistics
-        +getText() String
-        +setText(String text) void
-        +insertImageLink(Path imagePath) void
+        -RTextScrollPane scrollPane
+        +getTextArea() RSyntaxTextArea
+        +getScrollPane() RTextScrollPane
+        +applyPreferences(Preferences prefs) void
     }
 
-    class PreviewPane {
+    class PreviewPanel {
         -WebView webView
         -JEditorPane fallbackPane
-        +render(String markdown) void
+        +updatePreview(String md, File file, Preferences prefs) void
+        +getStyledHtml(String html, File file, Preferences prefs, boolean export) String
+        +scrollToRatio(double ratio) void
+        +scrollToAnchor(String anchor) void
+        +findInPreview(String text) boolean
+        +forceFullReload() void
     }
 
-    class MarkdownRenderer {
-        -Parser parser
-        -HtmlRenderer renderer
-        +render(String markdown) String
+    class Preferences {
+        -List~String~ recentFiles
+        -List~String~ searchRecents
+        -List~String[]~ gremlins
+        +load() Preferences
+        +save() void
+        +addRecentFile(String path) void
+        +getEditorFontFamily() String
+        +getSpellCheckLanguage() String
+    }
+
+    class Theme {
+        +LIGHT Theme
+        +DARK Theme
+        +editorBackground Color
+        +toolbarBackground Color
+    }
+
+    class FindDialog {
+        -JTextArea textArea
+        -boolean matchCase
+        -boolean regex
+        +findNext() void
+        +findAll() void
+        +focusSearchField() void
+    }
+
+    class ReplaceDialog {
+        +replace() void
+        +replaceAll() void
+    }
+
+    class DocxExporter {
+        +export(Node docNode, File outputFile) void
+        +insertMath(XWPFParagraph para, String latex, boolean display) boolean
     }
 
     class AIChatPanel {
         -LLMClient llmClient
-        +sendMessage(String prompt) void
-        +applySuggestion() void
+        -DocumentRetriever retriever
+        +builder() Builder
+        +setLlmClient(LLMClient client) void
+        +setDarkMode(boolean dark) void
+        +updateFont() void
     }
 
     class LLMClient {
-        -String vendor
-        -String model
+        <<interface>>
+        +chat(List~Map~ messages, String systemPrompt) String
+    }
+
+    class OpenAIClient {
+        -String baseUrl
         -String apiKey
-        +complete(String prompt) String
-        +completeChat(List~Message~ messages) String
+        -String model
+        +chat(List~Map~ messages, String systemPrompt) String
     }
 
-    class GenericLLMVendor {
-        -YamlConfiguration config
-        +buildEndpoint(String path) String
-        +fetchToken() String
+    class AnthropicClient {
+        -String apiKey
+        -String model
+        +chat(List~Map~ messages, String systemPrompt) String
     }
 
-    class Toolbar {
-        -StatusBar statusBar
-        +togglePreview() void
-        +toggleAIPanel() void
-        +toggleWordWrap() void
+    class GenericClient {
+        -GenericVendorConfig config
+        +chat(List~Map~ messages, String systemPrompt) String
+        +getConfig() GenericVendorConfig
     }
 
-    class StatusBar {
-        -String filePath
-        +updateStatistics(int lines, int words, int chars) void
+    class LLMClientFactory {
+        +create(AIChatPreferences prefs) LLMClient
     }
 
-    class DocumentStatistics {
-        -int lines
-        -int words
-        -int characters
-        +update(String text) void
+    class VendorRegistry {
+        +getVendors() List~VendorInfo~
+        +getVendor(String name) VendorInfo
+        +getVendorNames() String[]
     }
 
-    class FileOperations {
-        +open(File file) void
-        +save(File file) void
-        +saveAs() void
+    class GenericVendorConfig {
+        -String guid
+        +load() void
+        +resetGuid() void
+        +callPrompt(String token, String model, String prompt, ...) String
+        +isValid() boolean
+        +applyTrustStore() void
     }
 
-    class TextBundleHandler {
-        +open(Path bundle) void
-        +export(Path bundle) void
-    }
-
-    class TextPackHandler {
-        +open(Path pack) void
-        +export(Path pack) void
-    }
-
-    class ExportHandler {
-        +exportHtml() void
-        +exportPdf() void
-        +exportRtf() void
-        +exportTextBundle() void
-        +exportTextPack() void
-        +exportPlainText() void
-    }
-
-    class FindReplaceDialog {
-        -boolean matchCase
-        -boolean regex
-        +findNext() void
-        +replaceAll() void
-    }
-
-    class RecentFilesManager {
-        -List~File~ recentFiles
-        +add(File file) void
-    }
-
-    class PreferencesManager {
-        +getFont() Font
-        +getLlmSettings() LLMSettings
+    class AIChatPreferences {
+        +getLlmVendor() String
+        +getLlmModel() String
+        +getLlmApiKey() String
+        +getLlmEndpoint() String
+        +load() AIChatPreferences
         +save() void
     }
 
-    class WindowManager {
-        +cascadeAll() void
-        +tileAll() void
-        +nextWindow() void
+    class DiffApplier {
+        +apply(String original, String diff) String
     }
 
-    Main --> EditorFrame
-    EditorFrame *-- EditorPane
-    EditorFrame *-- PreviewPane
-    EditorFrame *-- AIChatPanel
-    EditorFrame *-- Toolbar
-    EditorFrame --> FindReplaceDialog
-    EditorFrame --> FileOperations
-    EditorFrame --> RecentFilesManager
-    EditorFrame --> PreferencesManager
-    EditorFrame --> WindowManager
-    EditorPane *-- DocumentStatistics
-    EditorPane *-- RSyntaxTextArea
-    PreviewPane --> MarkdownRenderer
+    class DocumentRetriever {
+        +initialize(AIChatPreferences prefs) void
+        +retrieve(String query) List~String~
+        +isInitialized() boolean
+    }
+
+    class SpellCheckController {
+        -SpellCheckService service
+        -RSyntaxTextArea textArea
+        +setEnabled(boolean enabled) void
+        +isEnabled() boolean
+        +setLanguage(String langCode) void
+    }
+
+    class SpellCheckService {
+        +check(String text) List~SpellError~
+        +setLanguage(String langCode) void
+        +addToDictionary(String word) void
+        +isReady() boolean
+    }
+
+    class FigureNodeRenderer {
+        <<NodeRenderer>>
+    }
+
+    Main --> EditorWindow : creates
+    EditorWindow *-- EditorPanel
+    EditorWindow *-- PreviewPanel
+    EditorWindow *-- AIChatPanel
+    EditorWindow --> Preferences
+    EditorWindow --> Theme
+    EditorWindow --> FindDialog
+    EditorWindow --> DocxExporter
+    EditorWindow --> SpellCheckController
+    EditorWindow --> FigureNodeRenderer
+    ReplaceDialog --|> FindDialog
     AIChatPanel --> LLMClient
-    LLMClient --> GenericLLMVendor
-    FileOperations --> TextBundleHandler
-    FileOperations --> TextPackHandler
-    FileOperations --> ExportHandler
+    AIChatPanel --> DiffApplier
+    AIChatPanel --> DocumentRetriever
+    AIChatPanel --> AIChatPreferences
+    LLMClientFactory --> LLMClient : creates
+    LLMClientFactory --> VendorRegistry
+    OpenAIClient ..|> LLMClient
+    AnthropicClient ..|> LLMClient
+    GenericClient ..|> LLMClient
+    GenericClient --> GenericVendorConfig
+    SpellCheckController --> SpellCheckService
 ```
 
 ---
