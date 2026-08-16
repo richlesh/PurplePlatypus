@@ -675,6 +675,54 @@ public class EditorWindow {
         });
         menuBar.add(windowMenu);
 
+        // Help menu
+        JMenu helpMenu = new JMenu(Messages.get("menu.help"));
+
+        JMenuItem helpItem = new JMenuItem(Messages.get("menu.help.help"));
+        helpItem.addActionListener(ev -> {
+            try { java.awt.Desktop.getDesktop().browse(java.net.URI.create("https://glowingcat.com/UserGuides/PurplePlatypus/")); }
+            catch (Exception ex) { /* ignore */ }
+        });
+        helpMenu.add(helpItem);
+
+        JMenuItem checkForUpdatesItem = new JMenuItem(Messages.get("menu.help.checkForUpdates"));
+        checkForUpdatesItem.addActionListener(ev -> checkForUpdates());
+        helpMenu.add(checkForUpdatesItem);
+
+        helpMenu.addSeparator();
+
+        JMenuItem contactSupportItem = new JMenuItem(Messages.get("menu.help.contactSupport"));
+        contactSupportItem.addActionListener(ev -> {
+            try { java.awt.Desktop.getDesktop().browse(java.net.URI.create("https://form.jotform.com/261267663007053")); }
+            catch (Exception ex) { /* ignore */ }
+        });
+        helpMenu.add(contactSupportItem);
+
+        JMenuItem submitBugItem = new JMenuItem(Messages.get("menu.help.submitBug"));
+        submitBugItem.addActionListener(ev -> {
+            try { java.awt.Desktop.getDesktop().browse(java.net.URI.create("https://github.com/richlesh/PurplePlatypus/issues")); }
+            catch (Exception ex) { /* ignore */ }
+        });
+        helpMenu.add(submitBugItem);
+
+        JMenuItem submitFeatureItem = new JMenuItem(Messages.get("menu.help.submitFeature"));
+        submitFeatureItem.addActionListener(ev -> {
+            try { java.awt.Desktop.getDesktop().browse(java.net.URI.create("https://github.com/richlesh/PurplePlatypus/issues")); }
+            catch (Exception ex) { /* ignore */ }
+        });
+        helpMenu.add(submitFeatureItem);
+
+        helpMenu.addSeparator();
+
+        JMenuItem purchaseLicenseItem = new JMenuItem(Messages.get("menu.help.purchaseLicense"));
+        purchaseLicenseItem.addActionListener(ev -> {
+            try { java.awt.Desktop.getDesktop().browse(java.net.URI.create("https://glowingcatsoftware.onfastspring.com/")); }
+            catch (Exception ex) { /* ignore */ }
+        });
+        helpMenu.add(purchaseLicenseItem);
+
+        menuBar.add(helpMenu);
+
         frame.setJMenuBar(menuBar);
 
         // Enable/disable formatting items based on selection
@@ -3914,6 +3962,97 @@ public class EditorWindow {
 
     public void showLicenseDialog() {
         LicenseDialog.show(frame, preferences);
+    }
+
+    private void checkForUpdates() {
+        new Thread(() -> {
+            try {
+                java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                        .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+                        .build();
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://api.github.com/repos/richlesh/PurplePlatypus/releases/latest"))
+                        .header("Accept", "application/vnd.github+json")
+                        .GET()
+                        .build();
+                java.net.http.HttpResponse<String> response = client.send(request,
+                        java.net.http.HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    String body = response.body();
+                    // Extract tag_name from JSON response
+                    String tagName = extractJsonString(body, "tag_name");
+                    if (tagName != null) {
+                        String remoteVersion = tagName.startsWith("v") ? tagName.substring(1) : tagName;
+                        String currentVersion = AppVersion.get();
+                        if (isNewerVersion(remoteVersion, currentVersion)) {
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                try { java.awt.Desktop.getDesktop().browse(
+                                        java.net.URI.create("https://github.com/richlesh/PurplePlatypus/releases")); }
+                                catch (Exception ex) { /* ignore */ }
+                            });
+                        } else {
+                            javax.swing.SwingUtilities.invokeLater(() ->
+                                JOptionPane.showMessageDialog(frame,
+                                    Messages.get("msg.updateLatest"),
+                                    Messages.get("msg.updateLatestTitle"),
+                                    JOptionPane.INFORMATION_MESSAGE));
+                        }
+                    } else {
+                        showUpdateError();
+                    }
+                } else {
+                    showUpdateError();
+                }
+            } catch (Exception ex) {
+                showUpdateError();
+            }
+        }).start();
+    }
+
+    private void showUpdateError() {
+        javax.swing.SwingUtilities.invokeLater(() ->
+            JOptionPane.showMessageDialog(frame,
+                Messages.get("msg.updateError"),
+                Messages.get("msg.updateErrorTitle"),
+                JOptionPane.WARNING_MESSAGE));
+    }
+
+    /**
+     * Compares two version strings (e.g. "1.8.0" vs "1.9.0").
+     * Returns true if remote is newer than current.
+     */
+    private static boolean isNewerVersion(String remote, String current) {
+        String[] remoteParts = remote.split("\\.");
+        String[] currentParts = current.split("\\.");
+        int length = Math.max(remoteParts.length, currentParts.length);
+        for (int i = 0; i < length; i++) {
+            int r = i < remoteParts.length ? parseVersionPart(remoteParts[i]) : 0;
+            int c = i < currentParts.length ? parseVersionPart(currentParts[i]) : 0;
+            if (r > c) return true;
+            if (r < c) return false;
+        }
+        return false;
+    }
+
+    private static int parseVersionPart(String part) {
+        try { return Integer.parseInt(part.replaceAll("[^0-9]", "")); }
+        catch (NumberFormatException e) { return 0; }
+    }
+
+    /**
+     * Simple JSON string extraction — finds "key":"value" and returns value.
+     */
+    private static String extractJsonString(String json, String key) {
+        String search = "\"" + key + "\"";
+        int idx = json.indexOf(search);
+        if (idx < 0) return null;
+        idx = json.indexOf(":", idx + search.length());
+        if (idx < 0) return null;
+        idx = json.indexOf("\"", idx + 1);
+        if (idx < 0) return null;
+        int end = json.indexOf("\"", idx + 1);
+        if (end < 0) return null;
+        return json.substring(idx + 1, end);
     }
 
     // --- Static helpers ---

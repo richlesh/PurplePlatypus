@@ -405,7 +405,7 @@ public class PreviewPanel extends JPanel {
         int codeFontSize = preferences != null ? preferences.getPreviewCodeFontSize() : 13;
 
         String baseTag = "";
-        if (currentFile != null && currentFile.getParentFile() != null) {
+        if (!forExport && currentFile != null && currentFile.getParentFile() != null) {
             try {
                 baseTag = "<base href=\"" + currentFile.getParentFile().toURI().toURL() + "\">";
             } catch (Exception ex) {
