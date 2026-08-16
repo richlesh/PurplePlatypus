@@ -468,7 +468,7 @@ public class EditorWindow {
         markdownMenu.add(tableItem);
 
         JMenuItem footnoteItem = new JMenuItem(Messages.get("menu.markdown.footnote"));
-        footnoteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
+        footnoteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         footnoteItem.addActionListener(e -> insertFootnote());
         markdownMenu.add(footnoteItem);
         markdownMenu.addSeparator();
