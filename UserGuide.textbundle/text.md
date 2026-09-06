@@ -1,3 +1,9 @@
+<div style="float: left;margin-right:10pt;">
+
+![](assets/app_icon_256.png){width=256}
+
+</div>
+
 # PurplePlatypus User Guide
 
 **Version 1.9.0**
@@ -5,6 +11,8 @@
 PurplePlatypus is a lightweight desktop Markdown editor with a live preview pane, an AI writing assistant, and live spell checking. It runs on macOS, Windows, and Linux.
 
 ---
+
+<div style="clear: left;">
 
 ## Table of Contents
 
@@ -28,6 +36,8 @@ PurplePlatypus is a lightweight desktop Markdown editor with a live preview pane
 - [Troubleshooting](#troubleshooting)
 - [License Key](#license-key)
 - [License](#license)
+
+</div>
 
 ---
 
@@ -121,7 +131,7 @@ PurplePlatypus tracks unsaved changes (indicated by a modified window title). If
 
 ### Recent Files
 
-The **File > Recents** menu shows your recently opened documents (up to 20). Selecting a recent file opens it, or brings its window to front if it's already open. You can clear the recents list from this menu.
+The File menu -> Recents submenu shows your recently opened documents (up to 20). Selecting a recent file opens it, or brings its window to front if it's already open. You can clear the recents list from this menu.
 
 ### External Change Detection
 
@@ -145,7 +155,7 @@ PurplePlatypus supports full multi-level undo and redo.
 
 ### Line Ending Conversion
 
-Use **Edit > Convert to Windows/Unix Line Endings** to switch between `\r\n` and `\n` formats. The menu item label changes depending on the current format.
+Use Edit menu -> Convert to Windows/Unix Line Endings to switch between `\r\n` and `\n` formats. The menu item label changes depending on the current format.
 
 ### Convert Pandoc Table
 
@@ -168,7 +178,7 @@ Opens a dialog to configure Unicode character substitutions. Common replacements
 - Non-breaking spaces → regular spaces
 - Other Unicode characters → ASCII equivalents
 
-Your rules are saved to preferences and remembered between sessions. If text is selected, only the selection is processed.
+Your rules are saved per user and remembered between sessions. If text is selected, only the selection is processed.
 
 ---
 
@@ -182,7 +192,7 @@ Drag GIF, JPEG, or PNG files directly onto the editor to insert a Markdown image
 
 ### Find
 
-Open with **Search > Find** (⌘F / Ctrl+F). 
+Open with Search menu -> Find (⌘F / Ctrl+F). 
 
 Options:
 
@@ -203,13 +213,13 @@ Actions:
 
 <div style="text-align: center;">
 
-![Find Dialog](assets/FindDialog.png)
+![Find Dialog](assets/FindDialog.png){width=50%}
 
 </div>
 
 ### Replace
 
-Open with **Search > Replace** (⌘R / Ctrl+R). Provides all same options as find plus these new actions:
+Open with Search menu -> Replace (⌘R / Ctrl+R). Provides all same options as find plus these new actions:
 
 - **Replace** — Replace the current match
 - **Replace and Find** — Replace and advance to the next match
@@ -221,17 +231,18 @@ Use the "+" button to save frequently used search or replace phrases Use the "-"
 
 <div style="text-align: center;">
 
-![Replace Dialog](assets/ReplaceDialog.png)
+![Replace Dialog](assets/ReplaceDialog.png){width=50%}
 
 </div>
 
 ### Find in Preview
 
-Select text in the editor, then use **Search > Find in Preview** (⇧⌘F / Ctrl+Shift+F) to highlight that text in the rendered preview. You can also right-click selected text in the preview to find it in the source.
+Select text in the editor, then use Search menu -> Find in Preview (⇧⌘F / Ctrl+Shift+F) to highlight that text in the rendered preview. You can also right-click selected text in the preview to find it in the source.
+
 
 ### Go to Line
 
-Use **Search > Go to Line** (⇧⌘J / Ctrl+Shift+J) to jump to a specific line number.
+Use Search menu -> Go to Line (⇧⌘J / Ctrl+Shift+J) to jump to a specific line number.
 
 ---
 
@@ -321,7 +332,7 @@ The table dialog provides a spreadsheet-like interface for creating and editing 
 
 <div style="text-align: center;">
 
-![Table Dialog](assets/TableDialog.png)
+![Table Dialog](assets/TableDialog.png){width=75%}
 
 </div>
 
@@ -412,7 +423,7 @@ Configure the AI assistant using the **AI Settings** menu item (found in the Edi
 
 <div style="text-align: center;">
 
-![AI Settings Dialog](assets/AISettingsDialog.png)
+![AI Settings Dialog](assets/AISettingsDialog.png){width=50%}
 
 </div>
 
@@ -457,7 +468,7 @@ The Generic vendor supports:
 
 | Variable | Description |
 |----------|-------------|
-| `${AUTH_TOKEN}` | API key from Preferences (or exchanged token) |
+| `${AUTH_TOKEN}` | API key from Settings (or exchanged token) |
 | `${MODEL}` | Selected model name |
 | `${PROMPT}` | Current user message (JSON-escaped) |
 | `${MESSAGES}` | Full conversation history as JSON array |
@@ -521,7 +532,7 @@ Available languages:
 | it | Italian | | |
 | ja | Japanese | | |
 
-Change the spell-check language in **Settings > Spell Check Language**.
+Change the spell-check language in PurplePlatypus menu -> Settings -> Spell Check Language.
 
 ### User Dictionary
 
@@ -537,10 +548,10 @@ Import files into the editor by converting them to Markdown:
 
 | Format | Menu Item |
 |--------|-----------|
-| HTML | File > Import > HTML |
-| Plain Text | File > Import > Plain Text |
-| RTF | File > Import > RTF |
-| Word Document (.docx) | File > Import > Word Document |
+| HTML | File menu -> Import -> HTML |
+| Plain Text | File menu -> Import -> Plain Text |
+| RTF | File menu -> Import -> RTF |
+| Word Document (.docx) | File menu -> Import -> Word Document |
 
 ### Export
 
@@ -583,7 +594,7 @@ Printing uses the native system print dialog. In the PDF output, links include t
 
 ### Multi-Window
 
-PurplePlatypus supports multiple editor windows. Each **File > New** (⌘N) opens a new window. The application exits when the last window is closed.
+PurplePlatypus supports multiple editor windows. Each File menu -> New (⌘N) opens a new window. The application exits when the last window is closed.
 
 ### Window Menu Items
 
@@ -603,8 +614,8 @@ The Window menu also lists all open windows; select one to bring it to the front
 ## Settings
 
 Open Settings from:
-- **macOS:** PurplePlatypus menu > Settings
-- **Windows/Linux:** PurplePlatypus menu > Settings
+- **macOS:** PurplePlatypus menu -> Settings
+- **Windows/Linux:** PurplePlatypus menu -> Settings
 
 ### Fonts
 
@@ -632,7 +643,7 @@ Open Settings from:
 
 <div style="text-align: center;">
 
-![Settings Dialog](assets/SettingsDialog.png)
+![Settings Dialog](assets/SettingsDialog.png){width=50%}
 
 </div>
 
@@ -732,7 +743,7 @@ PurplePlatypus automatically saves and restores:
 
 | File | Location | Purpose |
 |------|----------|---------|
-| App preferences | `~/.purpleplatypus-settings.json` | Editor settings, fonts, appearance, window state, recent files |
+| App settings | `~/.purpleplatypus-settings.json` | Editor settings, fonts, appearance, window state, recent files |
 | AI settings | `~/.glowingcat-ai-settings.json` | LLM vendor, model, API key, AI fonts, chat colors |
 | Generic vendor config | `~/.glowingcat-generic.yml` | Custom LLM API configuration |
 | User dictionary | `~/.purpleplatypus/user-dictionary.txt` | Custom words added to spell checker |
@@ -754,13 +765,13 @@ PurplePlatypus automatically saves and restores:
 
 **macOS:**
 - Menu bar is displayed in the system menu bar
-- About, Settings, and Quit are in the application menu
+- About, Settings, and Quit are in the PurplePlatypus menu
 - Native file dialogs
 - Command (⌘) key shortcuts
 
 **Windows:**
 - Native Windows look and feel
-- Application menu contains About, Settings, AI Settings, License Key, and Quit
+- PurplePlatypus menu contains About, Settings, AI Settings, License Key, and Quit
 
 **Linux:**
 - GTK look and feel
@@ -786,7 +797,7 @@ PurplePlatypus's user interface is localized in 7 languages:
 | ja | Japanese (日本語) |
 | zh | Simplified Chinese (中文) |
 
-Change the UI language in **Preferences > Language**. A restart is required for the change to take effect.
+Change the UI language in PurplePlatypus menu -> Settings... -> Language. A restart is required for the change to take effect.
 
 ---
 
@@ -814,11 +825,11 @@ If the preview pane is blank or not updating:
 2. Check that the Preview toggle is enabled
 3. On Windows ARM64, the preview uses a simplified renderer — some features like MathJax and Mermaid won't be available
 
-### Resetting Preferences
+### Resetting Settings
 
-To reset all preferences to defaults, delete the settings files:
+To reset all settings to defaults, delete the settings files:
 
-- `~/.purpleplatypus-settings.json` (app preferences)
+- `~/.purpleplatypus-settings.json` (app settings)
 - `~/.glowingcat-ai-settings.json` (AI settings)
 
 ---
@@ -835,14 +846,14 @@ PurplePlatypus is free and open source software, but a license key helps support
 ### Entering Your License Key
 
 1. Open the **License Key** dialog:
-   - **macOS:** File menu > License Key
-   - **Windows/Linux:** Application menu > License Key
+   - **macOS:** File menu -> License Key
+   - **Windows/Linux:** PurplePlatypus menu -> License Key
 2. Paste the email that you used to purchase the license key and the 16 character license key into the fields of the dialog.
 3. If the email and license key are valid, the  **Save** button will activate.  Click it to save your license key in your settings file.
 
 <div style="text-align: center;">
 
-![LicenseKeyDialog](assets/LicenseKeyDialog.png)
+![LicenseKeyDialog](assets/LicenseKeyDialog.png){width=50%}
 
 </div>
 
@@ -862,7 +873,6 @@ If PurplePlatypus is useful to you, considering a license purchase is a meaningf
 
 ---
 
-
 ## License
 
-PurplePlatypus is © 2025–2026 Glowing Cat Software, released under the GNU General Public License v3.0.
+PurplePlatypus is © 2026 Glowing Cat Software, released under the GNU General Public License v3.0.

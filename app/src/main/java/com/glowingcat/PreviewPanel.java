@@ -399,6 +399,9 @@ public class PreviewPanel extends JPanel {
      * When forExport is true or markdown is null, includes all libraries.
      */
     public String getStyledHtml(String bodyHtml, File currentFile, Preferences preferences, boolean forExport, String markdown) {
+        // Replace keyboard/symbol glyphs (⌘ ⇧ ⌥ ⌃ etc.) with inline SVG so they survive
+        // JavaFX WebView's print/PDF pipeline, which does not perform on-screen font fallback.
+        bodyHtml = com.glowingcat.aichat.SymbolReplacer.replaceSymbols(bodyHtml);
         String fontFamily = preferences != null ? preferences.getPreviewFontFamily() : "SansSerif";
         int fontSize = preferences != null ? preferences.getPreviewFontSize() : 14;
         String codeFontFamily = preferences != null ? preferences.getPreviewCodeFontFamily() : "Monospaced";
