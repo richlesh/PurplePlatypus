@@ -1,6 +1,6 @@
 ![](app/src/main/resources/app_icon_256.png)
 
-# PurplePlatypus 1.9.0
+# PurplePlatypus 1.10.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
@@ -15,6 +15,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Generic LLM vendor** — YAML-configurable API endpoint for any LLM service (corporate APIs, custom proxies, etc.) with OAuth/IAM token exchange, configurable request/response format, and single-shot or multi-turn conversation modes
 - **Multi-window** — Open multiple editor windows with File > New
 - **Window management** — Window menu with Minimize, Zoom, Previous/Next window navigation, Cascade All, and Tile All
+- **Help menu** — Help menu with Check for Updates to see whether a newer version is available
 - **Cross-platform** — Runs on macOS (ARM64), Windows (x64, ARM64), and Linux (x64, ARM64)
 - **Native look and feel** — Uses the platform's native UI (Aqua on macOS, Windows 11 on Windows, GTK on Linux)
 - **macOS integration** — Menu bar in the system menu bar, About and Preferences in the application menu, native file dialogs, Command key shortcuts
@@ -63,6 +64,9 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Large file performance** — Preview updates and document statistics are debounced for large files; syntax highlighting is disabled above 1 MB; AI context is truncated above 20K characters
 
 - **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, insert (underline), and YAML front matter
+- **GitHub-style alerts** — Callout blockquotes `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, and `[!CAUTION]` render as colored callout boxes in the preview, exports, and AI chat
+- **Emoji shortcodes** — GitHub-style `:shortcode:` syntax (e.g. `:tada:`, `:rocket:`) renders as emoji, backed by the full gemoji dataset (~1,870 emoji) plus GitHub-custom shortcodes such as `:shipit:` and `:octocat:`
+- **Subscript & superscript syntax** — Inline `~subscript~` and `^superscript^` render as `<sub>`/`<sup>` (single tildes; `~~strikethrough~~` is preserved, and code spans are left literal)
 - **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
 - **Syntax highlighting** — Code blocks in the preview and AI chat are syntax-highlighted via highlight.js with automatic language detection and light/dark theme support
 - **Live Spellcheck** - Live spell and grammar check with customizable dictionaries and language support
@@ -73,6 +77,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Window state persistence** — Window size, divider positions, and panel visibility are remembered between sessions
 - **License key** — Optional license key to support continued development; enter via File > License Key on macOS or the application menu on other platforms
 - **Emoji support** — Non-BMP emoji characters are rendered using Twemoji SVG images in both the preview and AI chat panes
+- **Keyboard symbols** — Keyboard/modifier glyphs (⌘ ⇧ ⌥ ⌃, arrows, Return, Escape, Windows/Super, Caps Lock, Enter, Eject, and more) are rendered as inline SVG images built from system-font outlines, so they display and print correctly (including in PDF export) even in fonts that lack them
 
 ## AI Assistant
 

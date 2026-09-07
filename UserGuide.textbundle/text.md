@@ -6,7 +6,7 @@
 
 # PurplePlatypus User Guide
 
-**Version 1.9.0**
+**Version 1.10.0**
 
 PurplePlatypus is a lightweight desktop Markdown editor with a live preview pane, an AI writing assistant, and live spell checking. It runs on macOS, Windows, and Linux.
 
