@@ -453,6 +453,8 @@ public class PreviewPanel extends JPanel {
         sb.append("<style>").append(loadPreviewCss(dark)).append("</style>");
         // Emoji image styles
         sb.append("<style>").append(com.glowingcat.aichat.EmojiReplacer.emojiCss()).append("</style>");
+        // Keyboard symbol image styles (dark-mode inversion)
+        sb.append("<style>").append(com.glowingcat.aichat.SymbolReplacer.symbolCss()).append("</style>");
 
         if (needsHighlightJs) {
             if (forExport) {
