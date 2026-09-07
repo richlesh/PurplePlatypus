@@ -27,11 +27,13 @@ Welcome to a comprehensive demonstration of **Markdown** features supported by P
 
 - **Bold text** using double asterisks
 - *Italic text* using single asterisks
-- ***Bold and italic*** combined
-- ~~Strikethrough text~~ using tildes
+- ***Bold and italic*** combined using three asterisks
+- ~~Strikethrough text~~ using double tildes ([GFM Extension](#15-github-flavored-markdown-extensions))
 - ++Underlined text++ using double plus
 - `Inline code` using backticks
 - Regular text with a line break
+- ~sub~script using single tildes ([GFM Extension](#15-github-flavored-markdown-extensions))
+- ^super^script using single carats ([GFM Extension](#15-github-flavored-markdown-extensions))
 
 ---
 
@@ -54,7 +56,8 @@ Welcome to a comprehensive demonstration of **Markdown** features supported by P
    2. Sub-step B
 3. Third step
 
-### Task List
+### Task List ([GFM Extension](#15-github-flavored-markdown-extensions))
+
 
 - [x] Write the introduction
 - [x] Add examples
@@ -103,7 +106,7 @@ def greet(name):
 
 ---
 
-## 7. Tables
+## 7. Tables ([GFM Extension](#15-github-flavored-markdown-extensions))
 
 | Feature        | Supported | Notes                       |
 |----------------|:---------:|-----------------------------|
@@ -140,11 +143,7 @@ Cells can also contain **formatting**, `code`, and [links](https://glowingcat.co
 
 </div>
 
-<div style="text-align: center;">
-
-Image Style Attributes
-
-</div>
+### Image Style Attributes
 
 ![width=25%](mascot.png){width=25%}
 
@@ -153,7 +152,7 @@ Image Style Attributes
 
 ---
 
-## 9. Math Notation (LaTeX)
+## 9. Math Notation (LaTeX using MathJax.js)
 
 You can write inline math using single dollar signs, like $E = mc^2$ or the golden ratio $\varphi = \frac{1 + \sqrt{5}}{2}$.
 
@@ -187,7 +186,7 @@ Greek letters and subscripts can be mixed inline too, such as $\alpha_1, \beta_2
 
 ---
 
-## 10. Footnotes
+## 10. Footnotes ([GFM Extension](#15-github-flavored-markdown-extensions))
 
 This is a line with a footnote[^1]
 
@@ -195,7 +194,7 @@ This is a line with a footnote[^1]
 
 ---
 
-## 11. Mermaid Charts and Diagrams
+## 11. Mermaid Charts and Diagrams (Using mermaid.js)
 
 Support for Mermaid Charts and Diagrams using a simple Markdown format.
 
@@ -317,3 +316,90 @@ Pages — and pastes nicely into emails and other rich-text fields.
 > notation, task-list checkboxes, footnotes, and syntax-highlighted code
 > blocks — may be simplified or dropped during export. For documents that rely
 > on those features, HTML or PDF will preserve them more faithfully.
+
+## 15. GitHub Flavored Markdown Extensions
+
+PurplePlatypus supports a range of GitHub Flavored Markdown (GFM) extensions
+beyond standard CommonMark. Here they are in action.
+
+### Tables
+
+Pipe tables with per-column alignment (left, center, right):
+
+| Feature      | Supported | Notes                     |
+| :----------- | :-------: | ------------------------: |
+| Tables       |    ✅     |            Pipe & aligned |
+| Task lists   |    ✅     |         Checkable items   |
+| Footnotes    |    ✅     |     Reference & definition |
+
+### Strikethrough
+
+Use double tildes to ~~strike through~~ text.
+
+### Subscript and Superscript
+
+Single tildes make subscript and carets make superscript:
+
+- Water is H~2~O
+- Einstein said E=mc^2^
+- The area is 15 m^2^ and the volume is 30 cm^3^
+
+(Note: `~~double tildes~~` remain strikethrough, and code like `` `H~2~O` ``
+is left untouched.)
+
+### Task Lists
+
+- [x] Add subscript and superscript syntax
+- [x] Add emoji shortcodes
+- [x] Add alert callouts
+- [ ] Conquer the world
+
+### Emoji Shortcodes (via https://api.github.com/emojis)
+
+Type shortcodes between colons and they render as emoji:
+
+Ship it :tada: :rocket: — great work :thumbsup: :fire: :100:
+
+Common ones include :smile: :heart: :bulb: :warning: :bug: :check: :eyes: 
+:coffee: :star: and :zap:.
+
+GitHub-custom shortcodes (:shipit:, :octocat:, :trollface:, :neckbeard:, :atom:, :electron:, :bowtie:, :feelsgood:, :hurtrealbad:, :godmode:, :copilot:, etc.)
+
+### Alerts / Callouts
+
+GitHub-style admonitions using blockquotes with a `[!TYPE]` marker:
+
+> [!NOTE]
+> Highlights information that users should take into account, even when
+> skimming.
+
+> [!TIP]
+> Optional information to help a user be more successful.
+
+> [!IMPORTANT]
+> Crucial information necessary for users to succeed.
+
+> [!WARNING]
+> Critical content demanding immediate user attention due to potential risks.
+
+> [!CAUTION]
+> Negative potential consequences of an action.
+
+A plain blockquote without a marker stays a normal quote:
+
+> This is just an ordinary blockquote, not an alert.
+
+### Autolinks
+
+Bare URLs become clickable automatically: https://github.com and
+https://commonmark.org
+
+### Footnotes
+
+You can add footnotes to your text.[^demo-note] They collect at the bottom of
+the document with a link back to the reference.
+
+[^demo-note]: This is the footnote definition. It can contain **formatting**
+and links too.
+
+

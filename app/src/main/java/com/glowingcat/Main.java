@@ -46,6 +46,9 @@ public class Main {
         // Apply custom trust store settings before any HTTPS connections
         GenericVendorConfig.applyTrustStore();
 
+        // Load the full gemoji shortcode set (:tada: -> emoji) from the bundled dataset.
+        EmojiShortcodes.load();
+
         System.setProperty("apple.laf.useScreenMenuBar", "true");
         System.setProperty("apple.awt.application.name", "PurplePlatypus");
 

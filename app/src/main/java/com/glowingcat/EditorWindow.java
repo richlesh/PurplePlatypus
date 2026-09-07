@@ -3337,8 +3337,14 @@ public class EditorWindow {
                 .extensions(extensions)
                 .nodeRendererFactory(new FigureNodeRenderer.Factory())
                 .build();
+        // Apply GFM extras (emoji shortcodes, ~sub~ / ^sup^) before parsing.
+        markdown = com.glowingcat.aichat.MarkdownExtras.preprocessMarkdown(markdown);
+
         org.commonmark.node.Node document = parser.parse(markdown);
         String html = renderer.render(document);
+
+        // Convert GitHub-style alert blockquotes (> [!NOTE] etc.) into styled callout divs.
+        html = com.glowingcat.aichat.MarkdownExtras.postProcessHtml(html);
 
         // Mark links where the display text matches the href URL
         html = PreviewPanel.markUrlLinks(html);

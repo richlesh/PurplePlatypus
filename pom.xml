@@ -17,7 +17,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <commonmark.version>0.24.0</commonmark.version>
-        <javafx.version>21.0.7</javafx.version>
+        <javafx.version>21.0.11</javafx.version>
         <javafx.scope>provided</javafx.scope>
     </properties>
 
@@ -39,6 +39,45 @@
                 <javafx.scope>provided</javafx.scope>
                 <javafx.platform>linux</javafx.platform>
             </properties>
+        </profile>
+        <!--
+            Opt-in refresh of the bundled emoji datasets. Deliberately NOT part of the normal
+            build so builds stay offline-capable and reproducible. Run manually to update the
+            vendored data:
+
+                mvn -Pupdate-emoji generate-resources
+              (or directly:  ./scripts/update-emoji.sh)
+
+            Regenerates both:
+              app/src/main/resources/emoji.json.gz     (full gemoji Unicode dataset, gzipped)
+              app/src/main/resources/github-emoji.json (image-only GitHub-custom shortcodes)
+        -->
+        <profile>
+            <id>update-emoji</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.1.1</version>
+                        <executions>
+                            <execution>
+                                <id>refresh-emoji</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>${maven.multiModuleProjectDirectory}/scripts/update-emoji.sh</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 

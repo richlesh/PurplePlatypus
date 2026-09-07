@@ -262,8 +262,15 @@ public class PreviewPanel extends JPanel {
         // \[...\] → $$...$$ (display math) — may span lines
         markdown = markdown.replaceAll("(?s)\\\\\\[(.+?)\\\\\\]", "\\$\\$$1\\$\\$");
 
+        // Apply GFM extras that aren't CommonMark extensions: emoji shortcodes (:tada:) and
+        // ~subscript~ / ^superscript^ syntax, before parsing.
+        markdown = com.glowingcat.aichat.MarkdownExtras.preprocessMarkdown(markdown);
+
         Node document = parser.parse(markdown);
         String html = renderer.render(document);
+
+        // Convert GitHub-style alert blockquotes (> [!NOTE] etc.) into styled callout divs.
+        html = com.glowingcat.aichat.MarkdownExtras.postProcessHtml(html);
 
         // Mark links where the display text matches the href URL so that
         // @media print CSS can skip appending the URL after them

@@ -177,3 +177,29 @@ mjx-container svg {
         word-break: break-all;
     }
 }
+
+/* GitHub-style alerts / callouts (> [!NOTE] etc.) */
+.markdown-alert {
+    border-left: 4px solid #888;
+    padding: 8px 16px;
+    margin: 16px 0;
+    border-radius: 4px;
+}
+.markdown-alert > p {
+    margin: 4px 0;
+}
+.markdown-alert-title {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+.markdown-alert-note        { border-left-color: #0969da; }
+.markdown-alert-note .markdown-alert-title        { color: #0969da; }
+.markdown-alert-tip         { border-left-color: #1a7f37; }
+.markdown-alert-tip .markdown-alert-title         { color: #1a7f37; }
+.markdown-alert-important   { border-left-color: #8250df; }
+.markdown-alert-important .markdown-alert-title   { color: #8250df; }
+.markdown-alert-warning     { border-left-color: #9a6700; }
+.markdown-alert-warning .markdown-alert-title     { color: #9a6700; }
+.markdown-alert-caution     { border-left-color: #cf222e; }
+.markdown-alert-caution .markdown-alert-title     { color: #cf222e; }

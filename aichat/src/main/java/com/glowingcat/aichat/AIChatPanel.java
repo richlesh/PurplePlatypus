@@ -960,8 +960,12 @@ public class AIChatPanel extends JPanel {
         // Convert LaTeX-style math delimiters to dollar-sign delimiters before parsing
         String converted = markdown.replaceAll("\\\\\\((.+?)\\\\\\)", "\\$$1\\$");
         converted = converted.replaceAll("(?s)\\\\\\[(.+?)\\\\\\]", "\\$\\$$1\\$\\$");
+        // Apply GFM extras (emoji shortcodes, ~sub~ / ^sup^) before parsing.
+        converted = MarkdownExtras.preprocessMarkdown(converted);
         Node document = mdParser.parse(converted);
         String html = mdRenderer.render(document);
+        // Convert GitHub-style alert blockquotes (> [!NOTE] etc.) into styled callout divs.
+        html = MarkdownExtras.postProcessHtml(html);
         // Replace non-BMP characters (emoji) with Twemoji SVG images
         return EmojiReplacer.replaceEmoji(html);
     }
