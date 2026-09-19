@@ -499,15 +499,15 @@ public class EditorWindow {
         blockQuoteItem.addActionListener(e -> prefixLines("> "));
 
         JMenuItem inlineCodeItem = new JMenuItem(Messages.get("menu.markdown.inlineCode"));
-        inlineCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask));
+        inlineCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         inlineCodeItem.addActionListener(e -> wrapSelection("`", "`"));
 
         JMenuItem blockCodeItem = new JMenuItem(Messages.get("menu.markdown.blockCode"));
-        blockCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
+        blockCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         blockCodeItem.addActionListener(e -> wrapBlock("```\n", "\n```"));
 
         JMenuItem inlineMathItem = new JMenuItem(Messages.get("menu.markdown.inlineMath"));
-        inlineMathItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
+        inlineMathItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         inlineMathItem.addActionListener(e -> wrapSelection("$", "$"));
 
         JMenuItem blockMathItem = new JMenuItem(Messages.get("menu.markdown.blockMath"));
