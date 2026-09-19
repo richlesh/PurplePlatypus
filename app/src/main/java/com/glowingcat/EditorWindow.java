@@ -515,6 +515,26 @@ public class EditorWindow {
         blockMathItem.addActionListener(e -> wrapBlock("$$\n", "\n$$"));
 
         markdownMenu.add(blockQuoteItem);
+
+        // Callouts submenu (GitHub-style alert blockquotes)
+        JMenu calloutsMenu = new JMenu(Messages.get("menu.markdown.callouts"));
+        JMenuItem calloutNoteItem = new JMenuItem(Messages.get("menu.markdown.callouts.note"));
+        calloutNoteItem.addActionListener(e -> insertCallout("NOTE"));
+        JMenuItem calloutTipItem = new JMenuItem(Messages.get("menu.markdown.callouts.tip"));
+        calloutTipItem.addActionListener(e -> insertCallout("TIP"));
+        JMenuItem calloutImportantItem = new JMenuItem(Messages.get("menu.markdown.callouts.important"));
+        calloutImportantItem.addActionListener(e -> insertCallout("IMPORTANT"));
+        JMenuItem calloutWarningItem = new JMenuItem(Messages.get("menu.markdown.callouts.warning"));
+        calloutWarningItem.addActionListener(e -> insertCallout("WARNING"));
+        JMenuItem calloutCautionItem = new JMenuItem(Messages.get("menu.markdown.callouts.caution"));
+        calloutCautionItem.addActionListener(e -> insertCallout("CAUTION"));
+        calloutsMenu.add(calloutNoteItem);
+        calloutsMenu.add(calloutTipItem);
+        calloutsMenu.add(calloutImportantItem);
+        calloutsMenu.add(calloutWarningItem);
+        calloutsMenu.add(calloutCautionItem);
+        markdownMenu.add(calloutsMenu);
+
         markdownMenu.add(inlineCodeItem);
         markdownMenu.add(blockCodeItem);
         markdownMenu.add(inlineMathItem);
@@ -3527,6 +3547,53 @@ public class EditorWindow {
     }
 
     /**
+     * Inserts a GitHub-style alert/callout blockquote for the given type
+     * (e.g. NOTE, TIP, IMPORTANT, WARNING, CAUTION). If text is selected, the
+     * selected line(s) become the callout body; otherwise an empty body line is
+     * inserted and the caret is positioned ready for typing.
+     *
+     * @param type the uppercase callout type without brackets (e.g. "NOTE")
+     */
+    private void insertCallout(String type) {
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        String fullText = editorPane.getText();
+
+        int lineStart = fullText.lastIndexOf('\n', selStart - 1) + 1;
+        int lineEnd = fullText.indexOf('\n', selEnd);
+        if (lineEnd < 0) lineEnd = fullText.length();
+
+        String selectedBlock = fullText.substring(lineStart, lineEnd);
+        boolean hasContent = !selectedBlock.trim().isEmpty();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("> [!").append(type).append("]\n");
+
+        int caretOffset;
+        if (hasContent) {
+            String[] lines = selectedBlock.split("\n", -1);
+            for (String line : lines) {
+                sb.append("> ").append(line).append("\n");
+            }
+            // Trim trailing newline if the original block had none
+            if (!selectedBlock.endsWith("\n") && sb.charAt(sb.length() - 1) == '\n') {
+                sb.setLength(sb.length() - 1);
+            }
+            caretOffset = sb.length();
+        } else {
+            sb.append("> ");
+            caretOffset = sb.length();
+        }
+
+        String result = sb.toString();
+        editorPane.setSelectionStart(lineStart);
+        editorPane.setSelectionEnd(lineEnd);
+        editorPane.replaceSelection(result);
+        // Position the caret at the end of the body so the user can start typing.
+        editorPane.setCaretPosition(lineStart + caretOffset);
+    }
+
+    /**
      * Wraps the selected text (or current line) in block delimiters on their own lines.
      * E.g., wrapping with "```\n" and "\n```" for fenced code blocks.
      */
@@ -3650,6 +3717,7 @@ public class EditorWindow {
         String altText = selectedText != null ? selectedText : "";
         String imgPath = "";
         String imgWidth = "";
+        String imgHeight = "";
         boolean center = false;
         int replaceStart = selStart, replaceEnd = selEnd;
 
@@ -3678,6 +3746,8 @@ public class EditorWindow {
                             for (String attr : attrs.split("\\s+")) {
                                 if (attr.startsWith("width=")) {
                                     imgWidth = attr.substring(6);
+                                } else if (attr.startsWith("height=")) {
+                                    imgHeight = attr.substring(7);
                                 }
                             }
                             attrEnd = searchFrom + braceClose + 1;
@@ -3720,13 +3790,21 @@ public class EditorWindow {
             idx = bb + 1;
         }
 
-        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, imgWidth, center, currentFile);
+        ImageDialog dialog = new ImageDialog(frame, altText, imgPath, imgWidth, imgHeight, center, currentFile);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
             String imgMarkdown = "![" + dialog.getAltText() + "](" + dialog.getImagePath() + ")";
             String width = dialog.getImageWidth();
+            String height = dialog.getImageHeight();
+            java.util.List<String> attrs = new java.util.ArrayList<>();
             if (!width.isEmpty()) {
-                imgMarkdown += "{width=" + width + "}";
+                attrs.add("width=" + width);
+            }
+            if (!height.isEmpty()) {
+                attrs.add("height=" + height);
+            }
+            if (!attrs.isEmpty()) {
+                imgMarkdown += "{" + String.join(" ", attrs) + "}";
             }
             boolean dialogCenter = dialog.isCenter();
 

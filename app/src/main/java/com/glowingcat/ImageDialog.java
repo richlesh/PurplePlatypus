@@ -23,9 +23,12 @@ import java.nio.file.Path;
  */
 public class ImageDialog extends JDialog {
 
+    private static final String PLACEHOLDER = "e.g. 50% or 300";
+
     private final JTextField altTextField;
     private final JTextField pathField;
     private final JTextField widthField;
+    private final JTextField heightField;
     private final JCheckBox centerCheckBox;
     private final JFrame ownerFrame;
     private final File documentFile;
@@ -40,7 +43,7 @@ public class ImageDialog extends JDialog {
      * @param documentFile the current document file (used to compute relative paths), may be null
      */
     public ImageDialog(JFrame owner, String selectedText, File documentFile) {
-        this(owner, selectedText, "", "", false, documentFile);
+        this(owner, selectedText, "", "", "", false, documentFile);
     }
 
     /**
@@ -52,7 +55,7 @@ public class ImageDialog extends JDialog {
      * @param documentFile the current document file (used to compute relative paths), may be null
      */
     public ImageDialog(JFrame owner, String altText, String existingPath, File documentFile) {
-        this(owner, altText, existingPath, "", false, documentFile);
+        this(owner, altText, existingPath, "", "", false, documentFile);
     }
 
     /**
@@ -65,7 +68,7 @@ public class ImageDialog extends JDialog {
      * @param documentFile  the current document file (used to compute relative paths), may be null
      */
     public ImageDialog(JFrame owner, String altText, String existingPath, String existingWidth, File documentFile) {
-        this(owner, altText, existingPath, existingWidth, false, documentFile);
+        this(owner, altText, existingPath, existingWidth, "", false, documentFile);
     }
 
     /**
@@ -79,6 +82,21 @@ public class ImageDialog extends JDialog {
      * @param documentFile   the current document file (used to compute relative paths), may be null
      */
     public ImageDialog(JFrame owner, String altText, String existingPath, String existingWidth, boolean existingCenter, File documentFile) {
+        this(owner, altText, existingPath, existingWidth, "", existingCenter, documentFile);
+    }
+
+    /**
+     * Creates the Image dialog with pre-filled image path, width, height, and center state.
+     *
+     * @param owner          the parent frame
+     * @param altText        the alt text to pre-fill, may be null
+     * @param existingPath   the existing image path to pre-fill, may be null or empty
+     * @param existingWidth  the existing width value to pre-fill, may be null or empty
+     * @param existingHeight the existing height value to pre-fill, may be null or empty
+     * @param existingCenter whether the image is centered
+     * @param documentFile   the current document file (used to compute relative paths), may be null
+     */
+    public ImageDialog(JFrame owner, String altText, String existingPath, String existingWidth, String existingHeight, boolean existingCenter, File documentFile) {
         super(owner, Messages.get("dialog.image.title"), true);
         this.ownerFrame = owner;
         this.documentFile = documentFile;
@@ -143,33 +161,28 @@ public class ImageDialog extends JDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
         widthField = new JTextField(10);
-        if (existingWidth != null && !existingWidth.isEmpty()) {
-            widthField.setText(existingWidth);
-        } else {
-            widthField.setForeground(Color.GRAY);
-            widthField.setText("e.g. 50% or 300");
-            widthField.addFocusListener(new java.awt.event.FocusAdapter() {
-                @Override
-                public void focusGained(java.awt.event.FocusEvent e) {
-                    if (widthField.getForeground() == Color.GRAY) {
-                        widthField.setText("");
-                        widthField.setForeground(UIManager.getColor("TextField.foreground"));
-                    }
-                }
-                @Override
-                public void focusLost(java.awt.event.FocusEvent e) {
-                    if (widthField.getText().isEmpty()) {
-                        widthField.setForeground(Color.GRAY);
-                        widthField.setText("e.g. 50% or 300");
-                    }
-                }
-            });
-        }
+        installDimensionField(widthField, existingWidth);
         contentPanel.add(widthField, gbc);
+
+        // Height field
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 0;
+        contentPanel.add(new JLabel(Messages.get("dialog.image.height")), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        heightField = new JTextField(10);
+        installDimensionField(heightField, existingHeight);
+        contentPanel.add(heightField, gbc);
 
         // Center checkbox
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         gbc.gridwidth = 3;
         gbc.fill = GridBagConstraints.NONE;
         gbc.weightx = 0;
@@ -258,10 +271,52 @@ public class ImageDialog extends JDialog {
 
     /** Returns the width value entered by the user, or empty string if blank or placeholder. */
     public String getImageWidth() {
-        if (widthField.getForeground() == Color.GRAY) {
+        return dimensionValue(widthField);
+    }
+
+    /** Returns the height value entered by the user, or empty string if blank or placeholder. */
+    public String getImageHeight() {
+        return dimensionValue(heightField);
+    }
+
+    /**
+     * Configures a dimension text field (width or height) with either the given
+     * existing value or a gray placeholder that clears on focus.
+     *
+     * @param field         the text field to configure
+     * @param existingValue the pre-fill value, may be null or empty
+     */
+    private void installDimensionField(JTextField field, String existingValue) {
+        if (existingValue != null && !existingValue.isEmpty()) {
+            field.setText(existingValue);
+        } else {
+            field.setForeground(Color.GRAY);
+            field.setText(PLACEHOLDER);
+            field.addFocusListener(new java.awt.event.FocusAdapter() {
+                @Override
+                public void focusGained(java.awt.event.FocusEvent e) {
+                    if (field.getForeground() == Color.GRAY) {
+                        field.setText("");
+                        field.setForeground(UIManager.getColor("TextField.foreground"));
+                    }
+                }
+                @Override
+                public void focusLost(java.awt.event.FocusEvent e) {
+                    if (field.getText().isEmpty()) {
+                        field.setForeground(Color.GRAY);
+                        field.setText(PLACEHOLDER);
+                    }
+                }
+            });
+        }
+    }
+
+    /** Returns the trimmed value of a dimension field, or empty if it holds the placeholder. */
+    private String dimensionValue(JTextField field) {
+        if (field.getForeground() == Color.GRAY) {
             return "";
         }
-        return widthField.getText().trim();
+        return field.getText().trim();
     }
 
     /** Returns whether the Center checkbox is selected. */
