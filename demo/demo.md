@@ -87,6 +87,14 @@ You can also link to other markdown documents ([GFM Extension](#15-github-flavor
 
 <a id="my-target"></a>https://glowingcat.com "Example Website"
 
+Missing local .html links fallback to try as a .md link for testing without need to convert all documents to HTML...
+
+- [Emojii Demo](emojii_demo.html)
+- [Languages Demo](languages_demo.html)
+- [Mermaid Demo](mermaid_demo.html)
+- [Stress Demo](stress_1M.html)
+- [Table Demo](table_demo.html#lanthanides-and-actinides)
+
 ---
 
 ## 5. Blockquotes
