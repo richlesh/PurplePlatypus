@@ -28,7 +28,7 @@ jobs:
             textbundle_icon: app/src/main/resources/textbundle_icon.icns
             pkg_type: dmg
             label: macos-arm64
-          - os: windows-latest
+          - os: windows-2022
             arch: x64
             icon: app/src/main/resources/app_icon.ico
             doc_icon: app/src/main/resources/doc_icon.ico
