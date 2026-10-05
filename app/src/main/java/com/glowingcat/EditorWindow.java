@@ -1851,14 +1851,16 @@ public class EditorWindow {
                     }
                 }
                 case LOCAL_FILE -> {
-                    File f = LinkValidator.resolveLocalFile(baseDir, link.path);
+                    File f = LinkValidator.resolveLocalFileWithHtmlFallback(baseDir, link.path);
                     if (f == null || !f.exists()) {
                         broken.add(new BrokenLink(link.line, link.offset,
                                 Messages.get("validateLinks.kind.file"), link.text, link.target,
                                 Messages.get("validateLinks.reason.fileMissing")));
                     } else if (link.fragment != null && !link.fragment.isEmpty()
-                            && LinkValidator.isMarkdownFile(link.path)) {
-                        // Cross-file #ref: verify the heading exists in the target file.
+                            && LinkValidator.isMarkdownFile(f.getName())) {
+                        // Cross-file #ref against a Markdown target (direct .md link
+                        // or an .html link resolved to a sibling .md): verify the
+                        // heading exists in that file.
                         java.util.Set<String> targetSlugs = LinkValidator.headingSlugsOf(f);
                         if (!LinkValidator.anchorResolves(link.fragment, targetSlugs)) {
                             broken.add(new BrokenLink(link.line, link.offset,
@@ -4367,19 +4369,34 @@ public class EditorWindow {
             // Use the raw path if decoding fails.
         }
 
-        // Resolve relative to the current file's directory; fall back to absolute.
-        File target = new File(path);
-        if (!target.isAbsolute() && currentFile != null && currentFile.getParentFile() != null) {
-            target = new File(currentFile.getParentFile(), path);
-        }
-        final File resolved = target;
-        if (!resolved.exists()) {
+        // Resolve relative to the current file's directory, applying an
+        // .html -> .md fallback: a link to a missing .html opens the sibling .md
+        // when one exists.
+        File baseDir = (currentFile != null) ? currentFile.getParentFile() : null;
+        final File resolved = LinkValidator.resolveLocalFileWithHtmlFallback(baseDir, path);
+        if (resolved == null || !resolved.exists()) {
+            String shown = (resolved != null) ? resolved.getPath() : path;
             JOptionPane.showMessageDialog(frame,
-                Messages.get("msg.linkFileNotFound", resolved.getPath()),
+                Messages.get("msg.linkFileNotFound", shown),
                 Messages.get("menu.file.open"), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        // If the resolved file is an .html/.htm that genuinely exists (no .md
+        // fallback applied), open it in the system browser as before.
+        if (LinkValidator.isHtmlFile(resolved.getName())) {
+            try {
+                java.awt.Desktop.getDesktop().browse(resolved.toURI());
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame,
+                    Messages.get("msg.linkFileNotFound", resolved.getPath()),
+                    Messages.get("menu.file.open"), JOptionPane.WARNING_MESSAGE);
+            }
+            return;
+        }
+
+        // Markdown (either a direct .md link or the .html -> .md fallback): open
+        // in the editor and optionally jump to the #reference heading.
         EditorWindow opened = openFileInWindow(resolved);
         if (opened != null && ref != null && !ref.isEmpty()) {
             final String anchor = ref;

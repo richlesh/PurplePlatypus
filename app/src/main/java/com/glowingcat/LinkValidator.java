@@ -206,6 +206,45 @@ public final class LinkValidator {
         return f;
     }
 
+    /** Returns true if the given path looks like an HTML file by extension. */
+    public static boolean isHtmlFile(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase();
+        return lower.endsWith(".html") || lower.endsWith(".htm");
+    }
+
+    /**
+     * Rewrites an {@code .html}/{@code .htm} path to the corresponding
+     * {@code .md} path (same base name and directory). Returns the input
+     * unchanged if it is not an HTML path.
+     */
+    public static String htmlToMarkdownPath(String path) {
+        if (!isHtmlFile(path)) return path;
+        int dot = path.lastIndexOf('.');
+        return path.substring(0, dot) + ".md";
+    }
+
+    /**
+     * Resolves a local-file link, applying an {@code .html → .md} fallback: if
+     * the link points at an {@code .html}/{@code .htm} file that does not exist
+     * but a sibling {@code .md} file does, the Markdown file is returned instead.
+     *
+     * @param baseDir the document's directory (may be null)
+     * @param path    the link's path portion (no fragment)
+     * @return the file to use (existing when possible), or null if the path is empty.
+     *         The returned file is not guaranteed to exist if neither candidate was found.
+     */
+    public static File resolveLocalFileWithHtmlFallback(File baseDir, String path) {
+        File direct = resolveLocalFile(baseDir, path);
+        if (direct == null) return null;
+        if (direct.exists()) return direct;
+        if (isHtmlFile(path)) {
+            File md = resolveLocalFile(baseDir, htmlToMarkdownPath(path));
+            if (md != null && md.exists()) return md;
+        }
+        return direct; // non-existent; caller reports the original path as missing
+    }
+
     /**
      * Checks whether a same-document anchor resolves to a heading in the given slug set.
      */

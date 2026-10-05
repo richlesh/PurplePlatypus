@@ -104,4 +104,47 @@ public class LinkValidatorTest {
         assertFalse(LinkValidator.isMarkdownFile("a.txt"));
         assertFalse(LinkValidator.isMarkdownFile("a.png"));
     }
+
+    @Test
+    public void htmlExtensionDetectionAndRewrite() {
+        assertTrue(LinkValidator.isHtmlFile("page.html"));
+        assertTrue(LinkValidator.isHtmlFile("PAGE.HTM"));
+        assertFalse(LinkValidator.isHtmlFile("page.md"));
+        assertEquals("page.md", LinkValidator.htmlToMarkdownPath("page.html"));
+        assertEquals("docs/page.md", LinkValidator.htmlToMarkdownPath("docs/page.htm"));
+        assertEquals("page.md", LinkValidator.htmlToMarkdownPath("page.md")); // unchanged
+    }
+
+    @Test
+    public void htmlFallbackResolvesToSiblingMarkdown() throws Exception {
+        File tmp = Files.createTempDirectory("linkvalhtml").toFile();
+        File md = new File(tmp, "page.md");
+        Files.writeString(md.toPath(), "# Heading\n");
+        // No page.html exists, but page.md does -> fallback returns the .md file.
+        File resolved = LinkValidator.resolveLocalFileWithHtmlFallback(tmp, "page.html");
+        assertNotNull(resolved);
+        assertTrue(resolved.exists());
+        assertEquals("page.md", resolved.getName());
+    }
+
+    @Test
+    public void htmlFallbackPrefersExistingHtml() throws Exception {
+        File tmp = Files.createTempDirectory("linkvalhtml2").toFile();
+        File html = new File(tmp, "page.html");
+        Files.writeString(html.toPath(), "<html></html>");
+        // page.html exists -> returned as-is (no fallback), even if a .md also exists.
+        File resolved = LinkValidator.resolveLocalFileWithHtmlFallback(tmp, "page.html");
+        assertNotNull(resolved);
+        assertTrue(resolved.exists());
+        assertEquals("page.html", resolved.getName());
+    }
+
+    @Test
+    public void htmlFallbackReturnsNonexistentOriginalWhenNeitherExists() throws Exception {
+        File tmp = Files.createTempDirectory("linkvalhtml3").toFile();
+        File resolved = LinkValidator.resolveLocalFileWithHtmlFallback(tmp, "missing.html");
+        assertNotNull(resolved);
+        assertFalse(resolved.exists());
+        assertEquals("missing.html", resolved.getName());
+    }
 }

@@ -207,8 +207,8 @@ public class PreviewPanel extends JPanel {
                     if (anchorNavigationCallback != null) {
                         anchorNavigationCallback.accept(desc.substring(1));
                     }
-                } else if (desc != null && desc.matches("(?i)^[^:]*\\.(md|markdown)(#.*)?$")) {
-                    // GitHub-style relative Markdown file link (optional #ref)
+                } else if (desc != null && desc.matches("(?i)^[^:]*\\.(md|markdown|html?)(#.*)?$")) {
+                    // GitHub-style relative Markdown (or .html with .md fallback) link
                     if (mdLinkNavigationCallback != null) {
                         mdLinkNavigationCallback.accept(desc);
                     }
@@ -545,7 +545,7 @@ public class PreviewPanel extends JPanel {
             sb.append("  } else if(raw && raw.startsWith('#')) {");
             sb.append("    e.preventDefault();");
             sb.append("    if(window.java) window.java.navigateToAnchor(raw.substring(1));");
-            sb.append("  } else if(raw && /^[^:]*\\.(md|markdown)(#.*)?$/i.test(raw)) {");
+            sb.append("  } else if(raw && /^[^:]*\\.(md|markdown|html?)(#.*)?$/i.test(raw)) {");
             sb.append("    e.preventDefault();");
             sb.append("    if(window.java) window.java.openMarkdownLink(raw);");
             sb.append("  }");
