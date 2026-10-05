@@ -576,7 +576,7 @@ jobs:
 
       - name: Sign installer (Windows)
         if: runner.os == 'Windows'
-        uses: azure/artifact-signing-action@v2
+        uses: azure/artifact-signing-action@v1.2.0
         with:
           endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
           signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT_NAME }}
