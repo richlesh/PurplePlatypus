@@ -30,6 +30,9 @@ public class TableDialog extends JDialog {
     private final List<String> rowHeaderValues = new ArrayList<>();
     private final List<Alignment> columnAlignments = new ArrayList<>();
     private JList<String> rowHeaderList;
+    /** Header text for the row-header column (the top-left corner cell). */
+    private String cornerText = "";
+    private JLabel cornerLabel;
     private boolean confirmed = false;
 
     private static final int DEFAULT_ROWS = 4;
@@ -83,6 +86,11 @@ public class TableDialog extends JDialog {
                                 cell = cell.substring(2, cell.length() - 2);
                             }
                             rowHeaderValues.add(cell);
+                        }
+                        // Preserve the original top-left header cell (the label for
+                        // the row-header column) so it is not lost.
+                        if (colHeaders.length > 0 && colHeaders[0] != null) {
+                            cornerText = colHeaders[0].trim();
                         }
                         String[] trimmedHeaders = new String[dataCols];
                         System.arraycopy(colHeaders, 1, trimmedHeaders, 0, dataCols);
@@ -295,6 +303,24 @@ public class TableDialog extends JDialog {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setRowHeaderView(rowHeaderList);
         scrollPane.setPreferredSize(new Dimension(600, 220));
+
+        // Editable top-left corner cell: the header label for the row-header column.
+        cornerLabel = new JLabel(cornerText);
+        cornerLabel.setOpaque(true);
+        cornerLabel.setBackground(new Color(240, 240, 240));
+        cornerLabel.setFont(cornerLabel.getFont().deriveFont(Font.BOLD));
+        cornerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        cornerLabel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, Color.LIGHT_GRAY));
+        cornerLabel.setToolTipText(Messages.get("dialog.table.cornerHeader"));
+        cornerLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    editCornerHeader();
+                }
+            }
+        });
+        scrollPane.setCorner(JScrollPane.UPPER_LEFT_CORNER, cornerLabel);
 
         // Control buttons (vertical, right side)
         JButton addRowBtn = new JButton(Messages.get("dialog.table.addRow"));
@@ -561,6 +587,17 @@ public class TableDialog extends JDialog {
         }
     }
 
+    /** Edits the row-header column's header text (the top-left corner cell). */
+    private void editCornerHeader() {
+        String newVal = JOptionPane.showInputDialog(this,
+                Messages.get("dialog.table.cornerHeader"), cornerText);
+        if (newVal != null) {
+            cornerText = newVal;
+            cornerLabel.setText(cornerText);
+            cornerLabel.repaint();
+        }
+    }
+
     /**
      * Shows a popup menu to select column alignment.
      */
@@ -628,7 +665,7 @@ public class TableDialog extends JDialog {
                 }
             }
         }
-        return nonEmptyCount > 0 && boldCount >= nonEmptyCount / 2;
+        return boldCount > 0 && boldCount * 2 >= nonEmptyCount;
     }
 
     /**
@@ -647,7 +684,7 @@ public class TableDialog extends JDialog {
                 }
             }
         }
-        return nonEmptyCount > 0 && boldCount >= nonEmptyCount / 2;
+        return boldCount > 0 && boldCount * 2 >= nonEmptyCount;
     }
 
     /**
@@ -736,7 +773,7 @@ public class TableDialog extends JDialog {
 
         if (useColHeaders) {
             if (useRowHeaders) {
-                widths[0] = Math.max(widths[0], 3); // row header column header is empty
+                widths[0] = Math.max(widths[0], cornerText.length()); // row header column header
                 for (int c = 0; c < cols; c++)
                     widths[c + 1] = Math.max(widths[c + 1], tableModel.getColumnName(c).length());
             } else {
@@ -770,7 +807,7 @@ public class TableDialog extends JDialog {
         sb.append("|");
         if (useColHeaders) {
             if (useRowHeaders) {
-                sb.append(" ").append(pad("", widths[0])).append(" |");
+                sb.append(" ").append(pad(cornerText, widths[0])).append(" |");
                 for (int c = 0; c < cols; c++)
                     sb.append(" ").append(pad(tableModel.getColumnName(c), widths[c + 1])).append(" |");
             } else {

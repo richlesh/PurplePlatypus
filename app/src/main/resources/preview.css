@@ -72,15 +72,19 @@ table {
     color: #333333;
     border-collapse: collapse;
     margin: 12px auto;
-    display: inline-block;
+    display: table;
+    width: 100%;
     max-width: 100%;
     overflow-x: auto;
-    white-space: nowrap;
+    table-layout: auto;
 }
 
 th, td {
     border: 1px solid #cbcbcb;
     padding: 6px 12px;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 td[align=left], th[align=left] { text-align: left; }

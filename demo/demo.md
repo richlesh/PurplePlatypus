@@ -76,6 +76,15 @@ You can also use reference-style links like [this one](#my-target) to arbitrary 
 
 ![Placeholder Image](mascot.png)
 
+You can also link to other markdown documents ([GFM Extension](#15-github-flavored-markdown-extensions))...
+
+- [Emojii Demo](emojii_demo.md)
+- [Languages Demo](languages_demo.md)
+- [Mermaid Demo](mermaid_demo.md)
+- [Stress Demo](stress_1M.md)
+- [Table Demo](table_demo.md#lanthanides-and-actinides)
+
+
 <a id="my-target"></a>https://glowingcat.com "Example Website"
 
 ---
@@ -321,6 +330,16 @@ Pages — and pastes nicely into emails and other rich-text fields.
 
 PurplePlatypus supports a range of GitHub Flavored Markdown (GFM) extensions
 beyond standard CommonMark. Here they are in action.
+
+### Links
+
+Github allows links to point to other markdown documents.  Github will convert the files to HTML on the fly when linked.
+
+- [Emojii Demo](emojii_demo.md)
+- [Languages Demo](languages_demo.md)
+- [Mermaid Demo](mermaid_demo.md)
+- [Stress Demo](stress_1M.md)
+- [Table Demo](table_demo.md)
 
 ### Tables
 

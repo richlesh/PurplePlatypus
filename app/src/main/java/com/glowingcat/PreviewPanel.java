@@ -52,6 +52,9 @@ public class PreviewPanel extends JPanel {
     private double pendingScrollRatio = -1;
     private java.util.function.DoubleSupplier scrollRatioSupplier;
 
+    // Anchor id to scroll to once the next WebView page load completes.
+    private String pendingAnchor = null;
+
     // Whether the WebView has completed its initial full page load
     private boolean webViewInitialLoadDone = false;
     // The last head/style content used, to detect when a full reload is needed
@@ -154,6 +157,15 @@ public class PreviewPanel extends JPanel {
                                 webEngine.executeScript(
                                     "window.scrollTo(0, (document.body.scrollHeight - window.innerHeight) * " + ratio + ");");
                             }
+
+                            // Scroll to a pending anchor requested before this load finished
+                            // (e.g. opening another .md file via a link with a #reference).
+                            if (pendingAnchor != null) {
+                                String a = pendingAnchor.replace("'", "\\'");
+                                pendingAnchor = null;
+                                webEngine.executeScript(
+                                    "var el = document.getElementById('" + a + "'); if(el) el.scrollIntoView();");
+                            }
                         }
                     });
                 } catch (Throwable t) {
@@ -194,6 +206,11 @@ public class PreviewPanel extends JPanel {
                     // Internal anchor link — navigate to the heading in the source
                     if (anchorNavigationCallback != null) {
                         anchorNavigationCallback.accept(desc.substring(1));
+                    }
+                } else if (desc != null && desc.matches("(?i)^[^:]*\\.(md|markdown)(#.*)?$")) {
+                    // GitHub-style relative Markdown file link (optional #ref)
+                    if (mdLinkNavigationCallback != null) {
+                        mdLinkNavigationCallback.accept(desc);
                     }
                 } else {
                     try {
@@ -520,12 +537,17 @@ public class PreviewPanel extends JPanel {
             sb.append("});");
             sb.append("document.addEventListener('click', function(e) {");
             sb.append("  var a = e.target.closest('a');");
-            sb.append("  if(a && a.href && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {");
+            sb.append("  if(!a) return;");
+            sb.append("  var raw = a.getAttribute('href');");
+            sb.append("  if(a.href && (a.href.startsWith('http://') || a.href.startsWith('https://'))) {");
             sb.append("    e.preventDefault();");
             sb.append("    if(window.java) window.java.openLink(a.href);");
-            sb.append("  } else if(a && a.getAttribute('href') && a.getAttribute('href').startsWith('#')) {");
+            sb.append("  } else if(raw && raw.startsWith('#')) {");
             sb.append("    e.preventDefault();");
-            sb.append("    if(window.java) window.java.navigateToAnchor(a.getAttribute('href').substring(1));");
+            sb.append("    if(window.java) window.java.navigateToAnchor(raw.substring(1));");
+            sb.append("  } else if(raw && /^[^:]*\\.(md|markdown)(#.*)?$/i.test(raw)) {");
+            sb.append("    e.preventDefault();");
+            sb.append("    if(window.java) window.java.openMarkdownLink(raw);");
             sb.append("  }");
             sb.append("});");
             sb.append("document.addEventListener('contextmenu', function(e) {");
@@ -543,6 +565,22 @@ public class PreviewPanel extends JPanel {
 
         sb.append("</head><body dir=\"auto\"").append(dark ? " class=\"dark-mode\"" : "").append(">").append(bodyHtml).append("</body></html>");
         return sb.toString();
+    }
+
+    /**
+     * Requests keyboard focus for the preview component so that menu
+     * accelerators (e.g. "Go Back") remain available after an internal link
+     * jump. Focuses the WebView host panel when using JavaFX, or the fallback
+     * renderer otherwise.
+     */
+    public void requestPreviewFocus() {
+        SwingUtilities.invokeLater(() -> {
+            if (useWebView && jfxPanel != null) {
+                jfxPanel.requestFocusInWindow();
+            } else if (editorPane != null) {
+                editorPane.requestFocusInWindow();
+            }
+        });
     }
 
     /**
@@ -579,6 +617,28 @@ public class PreviewPanel extends JPanel {
             // Fallback: try to find the anchor element and scroll to it
             // JEditorPane supports scrollToReference for named anchors
             editorPane.scrollToReference(anchor);
+        }
+    }
+
+    /**
+     * Scrolls the preview to the given anchor id, deferring until the current
+     * page load has completed if the WebView is still rendering (e.g. right
+     * after opening a different Markdown file via a link with a #reference).
+     */
+    public void scrollToAnchorWhenReady(String anchor) {
+        if (anchor == null || anchor.isEmpty()) return;
+        if (useWebView && webEngine != null) {
+            if (webViewInitialLoadDone) {
+                // Content is already rendered — scroll immediately.
+                scrollToAnchor(anchor);
+            } else {
+                // Defer: the load-worker SUCCEEDED handler will honor this.
+                pendingAnchor = anchor;
+            }
+        } else if (scrollPane != null && editorPane != null) {
+            // Fallback renders synchronously; scroll on the next EDT tick.
+            final String a = anchor;
+            SwingUtilities.invokeLater(() -> editorPane.scrollToReference(a));
         }
     }
 
@@ -663,6 +723,17 @@ public class PreviewPanel extends JPanel {
     private java.util.function.Consumer<String> anchorNavigationCallback;
 
     /**
+     * Sets a callback for GitHub-style relative Markdown file links (e.g.
+     * {@code other.md} or {@code docs/other.md#section}). The callback receives
+     * the raw href (path with optional #fragment).
+     */
+    public void setMdLinkNavigationCallback(java.util.function.Consumer<String> callback) {
+        this.mdLinkNavigationCallback = callback;
+    }
+
+    private java.util.function.Consumer<String> mdLinkNavigationCallback;
+
+    /**
      * Bridge object exposed to JavaScript as window.java for scroll event callbacks
      * and external link opening.
      */
@@ -700,6 +771,16 @@ public class PreviewPanel extends JPanel {
         public void navigateToAnchor(String anchor) {
             if (anchorNavigationCallback != null && anchor != null && !anchor.isEmpty()) {
                 SwingUtilities.invokeLater(() -> anchorNavigationCallback.accept(anchor));
+            }
+        }
+
+        /**
+         * Called from JavaScript when the user clicks a relative Markdown file
+         * link (GitHub-style, e.g. {@code other.md} or {@code other.md#section}).
+         */
+        public void openMarkdownLink(String href) {
+            if (mdLinkNavigationCallback != null && href != null && !href.isEmpty()) {
+                SwingUtilities.invokeLater(() -> mdLinkNavigationCallback.accept(href));
             }
         }
     }

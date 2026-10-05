@@ -80,6 +80,14 @@ public class FindDialog extends JDialog {
     protected int selectionEnd = -1;
 
     /**
+     * The editor selection range (start/end) that our own find last applied, used
+     * to distinguish a programmatically-selected match from a genuine new user
+     * selection when the dialog regains focus. {@code -1} means "none".
+     */
+    protected int lastMatchStart = -1;
+    protected int lastMatchEnd = -1;
+
+    /**
      * Creates a Find dialog with the default title "Find".
      *
      * @param owner       the parent frame
@@ -127,7 +135,11 @@ public class FindDialog extends JDialog {
             @Override public void actionPerformed(java.awt.event.ActionEvent e) { setVisible(false); }
         });
 
-        // Re-capture selection bounds when dialog gains focus with "Find in selection" checked
+        // Re-capture selection bounds when the dialog gains focus with "Find in
+        // selection" checked. Re-capture only when the editor's current selection
+        // is a GENUINE user selection — not the match our own find just selected.
+        // This keeps the remembered region stable across repeated finds, while
+        // still adopting a new region when the user selects different text.
         addWindowFocusListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowGainedFocus(java.awt.event.WindowEvent e) {
@@ -135,8 +147,14 @@ public class FindDialog extends JDialog {
                     int start = textArea.getSelectionStart();
                     int end = textArea.getSelectionEnd();
                     if (start != end) {
-                        selectionStart = start;
-                        selectionEnd = end;
+                        boolean isOurLastMatch = start == lastMatchStart && end == lastMatchEnd;
+                        if (!isOurLastMatch) {
+                            // User made a new selection — scope searches to it.
+                            selectionStart = start;
+                            selectionEnd = end;
+                            lastMatchStart = -1;
+                            lastMatchEnd = -1;
+                        }
                     }
                 }
             }
@@ -192,6 +210,9 @@ public class FindDialog extends JDialog {
                 if (start != end) {
                     selectionStart = start;
                     selectionEnd = end;
+                    // This is an explicit user-chosen region, not a found match.
+                    lastMatchStart = -1;
+                    lastMatchEnd = -1;
                 } else {
                     findInSelectionBox.setSelected(false);
                     JOptionPane.showMessageDialog(this,
@@ -201,6 +222,8 @@ public class FindDialog extends JDialog {
             } else {
                 selectionStart = -1;
                 selectionEnd = -1;
+                lastMatchStart = -1;
+                lastMatchEnd = -1;
             }
         });
 
@@ -512,6 +535,8 @@ public class FindDialog extends JDialog {
             if (matchStart >= 0) {
                 textArea.setSelectionStart(matchStart + regionStart);
                 textArea.setSelectionEnd(matchEnd + regionStart);
+                lastMatchStart = matchStart + regionStart;
+                lastMatchEnd = matchEnd + regionStart;
                 textArea.requestFocusInWindow();
             } else {
                 JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),
@@ -552,6 +577,8 @@ public class FindDialog extends JDialog {
                 int end = start + searchText.length();
                 textArea.setSelectionStart(start);
                 textArea.setSelectionEnd(end);
+                lastMatchStart = start;
+                lastMatchEnd = end;
                 textArea.requestFocusInWindow();
             } else {
                 JOptionPane.showMessageDialog(this, Messages.get("dialog.find.notFound"),

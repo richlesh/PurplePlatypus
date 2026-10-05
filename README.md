@@ -1,6 +1,6 @@
 ![](app/src/main/resources/app_icon_256.png)
 
-# PurplePlatypus 1.11.0
+# PurplePlatypus 1.12.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
@@ -36,7 +36,8 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Image drag-and-drop** — Drag GIF, JPEG, or PNG files onto the editor to insert markdown image links with relative paths; the caret tracks the pointer for precise placement
 - **Lightbox viewer** - View images in a lightbox with zoom and pan features via right-click on image
 - **Links and Images** — Insert or edit markdown links and images via dialogs
-- **Tables** — Insert or edit GFM pipe-style markdown tables via a visual dialog with dynamic row/column add/remove, clipboard operations, and per-column alignment.  Pandoc grid tables also supported.
+- **Links to other documents** — GitHub-style relative Markdown links such as `[text](other.md)` or `[text](docs/other.md#section)` open the target file in the preview and jump to the referenced heading
+- **Tables** — Insert or edit GFM pipe-style markdown tables via a visual dialog with dynamic row/column add/remove, clipboard operations, per-column alignment, and an editable row-header column (top-left corner cell).  Pandoc grid tables also supported.  Table cells word-wrap in the preview and exports.
 - **Lists** — Convert lines to ordered, unordered, or task lists
 - **Block formatting** — Block Quote, Inline Code, Block Code, Inline Math, Block Math, and Mermaid Graph
 - **Print** — Page Setup and Print (⌘/Ctrl+P) using the native system print dialog
@@ -49,13 +50,16 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Escape sequences in Find/Replace** — "Interpret Escapes" option processes `\t`, `\n`, `\r`, `\\`, and `\uXXXX` in find and replace fields
 - **Search/Replace recents** — Save frequently used search and replace expressions with +/- buttons; recall them from a dropdown menu
 - **Find in Preview** — Search for selected editor text in the rendered preview (⇧⌘F); right-click selected preview text to find it in the source
-- **Internal link navigation** — Click internal anchor links (e.g. `[Section](#section)`) in the preview to jump to the corresponding heading in both the editor and preview
+- **Internal link navigation** — Click internal anchor links (e.g. `[Section](#section)`) in the preview to jump to the corresponding heading in both the editor and preview; following a link disconnects synchronized scrolling and moves both panes to the target
+- **Go Back** — Return to the location you were viewing before following an internal link (Search menu, ⌘/Ctrl+K); supports chained jumps
 - **Go to Line** — Jump to a specific line number in the source (⇧⌘J)
 - **Line ending conversion** — Detect and convert between Unix (`\n`) and Windows (`\r\n`) line endings via the Edit menu; line ending format is preserved on save
 - **Cleanup Pandoc Tables** — Convert Pandoc grid-style tables to standard GFM pipe-style tables
 - **Format Table** — Auto-format the GFM table at the cursor, padding columns to uniform width respecting header alignment (left, center, right)
+- **Validate Links** — Check every link in the document and list the ones that don't resolve: missing heading anchors, missing local/relative files (including cross-file `#reference` anchors), and unreachable web URLs; results appear in a dialog where you can click to jump to each problem link
+- **Wrap Lines / Unwrap Lines** — Reflow the selected text to a chosen maximum line length, or join wrapped lines back together (with an option to preserve paragraph and heading breaks)
 - **Zap Gremlins** — Configurable substitution of Unicode characters (smart quotes, em-dashes, non-breaking spaces, etc.) with ASCII equivalents; user-editable rules saved to preferences
-- **HTML Encode** — Convert non-ASCII characters to HTML entities (named where available per HTML5, otherwise numeric code points)
+- **HTML Encode** — Convert non-ASCII characters and the HTML-special characters `< > & "` to HTML entities (named where available per HTML5, otherwise numeric code points)
 - **Table of Contents** — Create or update a localized Table of Contents section with internal links to headings; user-selectable depth (H2–H6) with nested lists for heading hierarchy
 - **Selection-aware editing** — Cleanup Pandoc Tables, Zap Gremlins, and HTML Encode operate on the selection if text is selected, or the full document otherwise
 - **Show invisible characters** — Toggle button in the toolbar to reveal spaces (dots), tabs (arrows), and line endings (paragraph marks)

@@ -74,14 +74,18 @@ table {
     color: #cccccc;
     border-collapse: collapse;
     margin: 12px auto;
-    display: inline-block;
+    display: table;
+    width: 100%;
     max-width: 100%;
     overflow-x: auto;
-    white-space: nowrap;
+    table-layout: auto;
 }
 
 th, td {
     border: 1px solid #343434;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
     padding: 6px 12px;
 }
 

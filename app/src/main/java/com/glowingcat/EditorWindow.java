@@ -92,6 +92,14 @@ public class EditorWindow {
     private JMenuItem convertLineEndingsItem;
     private JMenuItem saveItem;
     private JMenuItem saveAsItem;
+    /**
+     * Stack of preview scroll ratios (0..1) to return to via "Go Back" after
+     * following an internal link in the preview.
+     */
+    private final java.util.Deque<Double> navigationBackStack = new java.util.ArrayDeque<>();
+    /** Most recent preview scroll ratio reported by the preview pane. */
+    private double lastPreviewScrollRatio = 0.0;
+    private JMenuItem goBackItem;
     private JLabel statsLabel;
 
     /** Shared preferences instance across all windows. */
@@ -336,12 +344,31 @@ public class EditorWindow {
         pasteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V, shortcutMask));
         pasteItem.addActionListener(e -> editorPane.paste());
 
+        JMenuItem wrapLinesItem = new JMenuItem(Messages.get("menu.edit.wrapLines"));
+        wrapLinesItem.addActionListener(e -> wrapLines());
+
+        JMenuItem unwrapLinesItem = new JMenuItem(Messages.get("menu.edit.unwrapLines"));
+        unwrapLinesItem.addActionListener(e -> unwrapLines());
+        wrapLinesItem.setEnabled(false);
+        unwrapLinesItem.setEnabled(false);
+
         editMenu.add(undoItem);
         editMenu.add(redoItem);
         editMenu.addSeparator();
         editMenu.add(cutItem);
         editMenu.add(copyItem);
         editMenu.add(pasteItem);
+        editMenu.addSeparator();
+        editMenu.add(wrapLinesItem);
+        editMenu.add(unwrapLinesItem);
+
+        JMenuItem htmlEncodeItem = new JMenuItem(Messages.get("menu.edit.htmlEncode"));
+        htmlEncodeItem.addActionListener(e -> htmlEncodeNonAscii());
+        editMenu.add(htmlEncodeItem);
+
+        JMenuItem zapGremlinsItem = new JMenuItem(Messages.get("menu.edit.zapGremlins"));
+        zapGremlinsItem.addActionListener(e -> zapGremlins());
+        editMenu.add(zapGremlinsItem);
         editMenu.addSeparator();
         convertLineEndingsItem = new JMenuItem(Messages.get("menu.edit.convertLineEndings"));
         convertLineEndingsItem.addActionListener(e -> convertLineEndings());
@@ -351,26 +378,26 @@ public class EditorWindow {
         cleanupTablesItem.addActionListener(e -> cleanupPandocTables());
         editMenu.add(cleanupTablesItem);
 
-        JMenuItem formatTableItem = new JMenuItem(Messages.get("menu.edit.formatTable"));
-        formatTableItem.addActionListener(e -> formatTable());
-        editMenu.add(formatTableItem);
-
-        JMenuItem htmlEncodeItem = new JMenuItem(Messages.get("menu.edit.htmlEncode"));
-        htmlEncodeItem.addActionListener(e -> htmlEncodeNonAscii());
-        editMenu.add(htmlEncodeItem);
-
-        JMenuItem zapGremlinsItem = new JMenuItem(Messages.get("menu.edit.zapGremlins"));
-        zapGremlinsItem.addActionListener(e -> zapGremlins());
-        editMenu.add(zapGremlinsItem);
+        editMenu.addSeparator();
 
         JMenuItem tocItem = new JMenuItem(Messages.get("menu.edit.createToc"));
         tocItem.addActionListener(e -> createOrUpdateToc());
         editMenu.add(tocItem);
 
+        JMenuItem formatTableItem = new JMenuItem(Messages.get("menu.edit.formatTable"));
+        formatTableItem.addActionListener(e -> formatTable());
+        editMenu.add(formatTableItem);
+
+        JMenuItem validateLinksItem = new JMenuItem(Messages.get("menu.edit.validateLinks"));
+        validateLinksItem.addActionListener(e -> validateLinks());
+        editMenu.add(validateLinksItem);
+
         // Update menu item text based on selection when Edit menu opens
         editMenu.addMenuListener(new javax.swing.event.MenuListener() {
             @Override public void menuSelected(javax.swing.event.MenuEvent e) {
                 boolean hasSel = editorPane.getSelectionStart() != editorPane.getSelectionEnd();
+                wrapLinesItem.setEnabled(hasSel);
+                unwrapLinesItem.setEnabled(hasSel);
                 cleanupTablesItem.setText(hasSel ? Messages.get("menu.edit.convertPandocTable.selection") : Messages.get("menu.edit.convertPandocTable"));
                 zapGremlinsItem.setText(hasSel ? Messages.get("menu.edit.zapGremlins.selection") : Messages.get("menu.edit.zapGremlins"));
                 htmlEncodeItem.setText(hasSel ? Messages.get("menu.edit.htmlEncode.selection") : Messages.get("menu.edit.htmlEncode"));
@@ -411,6 +438,11 @@ public class EditorWindow {
         gotoLineItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_J, shortcutMask | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
         gotoLineItem.addActionListener(e -> gotoLine());
         searchMenu.add(gotoLineItem);
+        goBackItem = new JMenuItem(Messages.get("menu.search.goBack"));
+        goBackItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_K, shortcutMask));
+        goBackItem.addActionListener(e -> goBack());
+        goBackItem.setEnabled(false);
+        searchMenu.add(goBackItem);
         menuBar.add(searchMenu);
 
         // Markdown menu
@@ -1297,6 +1329,9 @@ public class EditorWindow {
 
         // Synchronized scrolling: preview scroll drives editor scroll
         previewPanel.setScrollListener(ratio -> {
+            // Always track the preview's position so "Go Back" can return here
+            // even when synchronized scrolling is disabled.
+            lastPreviewScrollRatio = ratio;
             if (!syncScrollEnabled || syncScrolling) return;
             syncScrolling = true;
             int max = editorVScroll.getMaximum() - editorVScroll.getVisibleAmount();
@@ -1311,6 +1346,9 @@ public class EditorWindow {
 
         // Internal anchor link navigation callback from preview
         previewPanel.setAnchorNavigationCallback(anchor -> navigateToAnchor(anchor));
+
+        // GitHub-style relative .md file link navigation callback from preview
+        previewPanel.setMdLinkNavigationCallback(href -> openMarkdownLink(href));
 
         // Editor right-click context menu
         JPopupMenu editorContextMenu = new JPopupMenu();
@@ -1762,6 +1800,230 @@ public class EditorWindow {
             JOptionPane.showMessageDialog(frame, Messages.get("msg.noPandocTables"),
                 Messages.get("msg.noPandocTablesTitle"), JOptionPane.INFORMATION_MESSAGE);
         }
+    }
+
+    /**
+     * Represents a link that failed validation, for display in the results dialog.
+     */
+    private static final class BrokenLink {
+        final int line;
+        final int offset;
+        final String kind;    // localized type label
+        final String text;    // visible link text
+        final String target;  // raw href
+        final String reason;  // localized reason
+        BrokenLink(int line, int offset, String kind, String text, String target, String reason) {
+            this.line = line; this.offset = offset; this.kind = kind;
+            this.text = text; this.target = target; this.reason = reason;
+        }
+    }
+
+    /**
+     * Validates every link in the document and shows a dialog listing the ones
+     * that do not resolve. Internal anchors and local files are checked
+     * immediately; web URLs are checked on a background thread (with a
+     * cancellable progress dialog) so the UI stays responsive.
+     */
+    private void validateLinks() {
+        final String content = editorPane.getText();
+        final java.util.List<LinkValidator.MarkdownLink> links = LinkValidator.extractLinks(content);
+        if (links.isEmpty()) {
+            JOptionPane.showMessageDialog(frame,
+                    Messages.get("msg.validateLinks.none"),
+                    Messages.get("menu.edit.validateLinks"), JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        final java.util.Set<String> headingSlugs = LinkValidator.collectHeadingSlugs(content);
+        final File baseDir = (currentFile != null) ? currentFile.getParentFile() : null;
+
+        // First pass: synchronous checks (anchors + local files), and collect web links.
+        final java.util.List<BrokenLink> broken = new java.util.ArrayList<>();
+        final java.util.List<LinkValidator.MarkdownLink> webLinks = new java.util.ArrayList<>();
+
+        for (LinkValidator.MarkdownLink link : links) {
+            switch (link.type) {
+                case ANCHOR -> {
+                    if (!LinkValidator.anchorResolves(link.fragment, headingSlugs)) {
+                        broken.add(new BrokenLink(link.line, link.offset,
+                                Messages.get("validateLinks.kind.anchor"), link.text, link.target,
+                                Messages.get("validateLinks.reason.anchorMissing")));
+                    }
+                }
+                case LOCAL_FILE -> {
+                    File f = LinkValidator.resolveLocalFile(baseDir, link.path);
+                    if (f == null || !f.exists()) {
+                        broken.add(new BrokenLink(link.line, link.offset,
+                                Messages.get("validateLinks.kind.file"), link.text, link.target,
+                                Messages.get("validateLinks.reason.fileMissing")));
+                    } else if (link.fragment != null && !link.fragment.isEmpty()
+                            && LinkValidator.isMarkdownFile(link.path)) {
+                        // Cross-file #ref: verify the heading exists in the target file.
+                        java.util.Set<String> targetSlugs = LinkValidator.headingSlugsOf(f);
+                        if (!LinkValidator.anchorResolves(link.fragment, targetSlugs)) {
+                            broken.add(new BrokenLink(link.line, link.offset,
+                                    Messages.get("validateLinks.kind.file"), link.text, link.target,
+                                    Messages.get("validateLinks.reason.anchorMissing")));
+                        }
+                    }
+                }
+                case WEB -> webLinks.add(link);
+                case OTHER -> { /* schemes we don't validate */ }
+            }
+        }
+
+        if (webLinks.isEmpty()) {
+            showValidateLinksResults(broken, links.size());
+            return;
+        }
+
+        // Second pass: validate web links off the EDT with a progress dialog.
+        final JDialog progress = new JDialog(frame,
+                Messages.get("validateLinks.checkingTitle"), true);
+        final JProgressBar bar = new JProgressBar(0, webLinks.size());
+        bar.setStringPainted(true);
+        final JLabel status = new JLabel(" ");
+        final JButton cancelBtn = new JButton(Messages.get("dialog.table.cancel"));
+        JPanel panel = new JPanel(new BorderLayout(8, 8));
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.add(status, BorderLayout.NORTH);
+        panel.add(bar, BorderLayout.CENTER);
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btnRow.add(cancelBtn);
+        panel.add(btnRow, BorderLayout.SOUTH);
+        progress.setContentPane(panel);
+        progress.setSize(420, 140);
+        progress.setLocationRelativeTo(frame);
+
+        final SwingWorker<java.util.List<BrokenLink>, Integer> worker =
+                new SwingWorker<>() {
+            @Override
+            protected java.util.List<BrokenLink> doInBackground() {
+                int done = 0;
+                for (LinkValidator.MarkdownLink link : webLinks) {
+                    if (isCancelled()) break;
+                    publish(done);
+                    boolean ok = LinkValidator.isWebLinkReachable(link.target, 8000);
+                    if (!ok && !isCancelled()) {
+                        broken.add(new BrokenLink(link.line, link.offset,
+                                Messages.get("validateLinks.kind.web"), link.text, link.target,
+                                Messages.get("validateLinks.reason.unreachable")));
+                    }
+                    done++;
+                    publish(done);
+                }
+                return broken;
+            }
+
+            @Override
+            protected void process(java.util.List<Integer> chunks) {
+                int latest = chunks.get(chunks.size() - 1);
+                bar.setValue(latest);
+                status.setText(Messages.get("validateLinks.checkingProgress", latest, webLinks.size()));
+            }
+
+            @Override
+            protected void done() {
+                progress.dispose();
+                if (isCancelled()) return;
+                // Sort broken links by document position for stable display.
+                broken.sort(java.util.Comparator.comparingInt(b -> b.offset));
+                showValidateLinksResults(broken, links.size());
+            }
+        };
+
+        cancelBtn.addActionListener(e -> worker.cancel(true));
+        worker.execute();
+        progress.setVisible(true); // modal; returns when disposed in done()/cancel
+    }
+
+    /**
+     * Shows the Validate Links results dialog listing the broken links, or a
+     * success message when there are none.
+     *
+     * @param broken     the unresolved links
+     * @param totalLinks total number of links scanned
+     */
+    private void showValidateLinksResults(java.util.List<BrokenLink> broken, int totalLinks) {
+        if (broken.isEmpty()) {
+            JOptionPane.showMessageDialog(frame,
+                    Messages.get("msg.validateLinks.allOk", totalLinks),
+                    Messages.get("menu.edit.validateLinks"), JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        JDialog dialog = new JDialog(frame,
+                Messages.get("validateLinks.resultsTitle", broken.size(), totalLinks), false);
+
+        String[] columns = {
+                Messages.get("validateLinks.col.line"),
+                Messages.get("validateLinks.col.type"),
+                Messages.get("validateLinks.col.text"),
+                Messages.get("validateLinks.col.target"),
+                Messages.get("validateLinks.col.problem")
+        };
+        Object[][] rows = new Object[broken.size()][5];
+        for (int i = 0; i < broken.size(); i++) {
+            BrokenLink b = broken.get(i);
+            rows[i][0] = b.line;
+            rows[i][1] = b.kind;
+            rows[i][2] = b.text;
+            rows[i][3] = b.target;
+            rows[i][4] = b.reason;
+        }
+        javax.swing.table.DefaultTableModel model =
+                new javax.swing.table.DefaultTableModel(rows, columns) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+            @Override public Class<?> getColumnClass(int c) {
+                return c == 0 ? Integer.class : String.class;
+            }
+        };
+        JTable table = new JTable(model);
+        table.setAutoCreateRowSorter(true);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.getColumnModel().getColumn(0).setPreferredWidth(50);
+        table.getColumnModel().getColumn(1).setPreferredWidth(90);
+        table.getColumnModel().getColumn(2).setPreferredWidth(160);
+        table.getColumnModel().getColumn(3).setPreferredWidth(240);
+        table.getColumnModel().getColumn(4).setPreferredWidth(180);
+
+        // Double-click a row to jump to the link in the editor.
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) jumpToSelectedBrokenLink(table, broken);
+            }
+        });
+
+        JButton goToBtn = new JButton(Messages.get("validateLinks.goTo"));
+        goToBtn.addActionListener(e -> jumpToSelectedBrokenLink(table, broken));
+        JButton closeBtn = new JButton(Messages.get("dialog.table.cancel"));
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttons.add(goToBtn);
+        buttons.add(closeBtn);
+
+        JPanel main = new JPanel(new BorderLayout(8, 8));
+        main.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        main.add(new JScrollPane(table), BorderLayout.CENTER);
+        main.add(buttons, BorderLayout.SOUTH);
+        dialog.setContentPane(main);
+        dialog.setSize(760, 360);
+        dialog.setLocationRelativeTo(frame);
+        dialog.setVisible(true);
+    }
+
+    /** Moves the editor caret to the link under the selected results row. */
+    private void jumpToSelectedBrokenLink(JTable table, java.util.List<BrokenLink> broken) {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) return;
+        int modelRow = table.convertRowIndexToModel(viewRow);
+        if (modelRow < 0 || modelRow >= broken.size()) return;
+        int offset = broken.get(modelRow).offset;
+        offset = Math.max(0, Math.min(offset, editorPane.getDocument().getLength()));
+        editorPane.setCaretPosition(offset);
+        editorPane.requestFocusInWindow();
+        scrollEditorToCaret();
     }
 
     /**
@@ -2247,8 +2509,9 @@ public class EditorWindow {
     }
 
     /**
-     * Encodes non-ASCII characters in the document as HTML entities.
-     * Uses named entities where available (HTML5 standard), otherwise numeric code points.
+     * Encodes HTML-special ASCII characters ({@code & < > "}) and non-ASCII
+     * characters as HTML entities. Uses named entities where available
+     * (HTML5 standard), otherwise numeric code points.
      */
     private void htmlEncodeNonAscii() {
         int selStart = editorPane.getSelectionStart();
@@ -2261,7 +2524,19 @@ public class EditorWindow {
 
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
-            if (c > 127) {
+            if (c == '&') {
+                result.append("&amp;");
+                count++;
+            } else if (c == '<') {
+                result.append("&lt;");
+                count++;
+            } else if (c == '>') {
+                result.append("&gt;");
+                count++;
+            } else if (c == '"') {
+                result.append("&quot;");
+                count++;
+            } else if (c > 127) {
                 String entity = HTML_ENTITIES.get(c);
                 if (entity != null) {
                     result.append(entity);
@@ -2290,7 +2565,7 @@ public class EditorWindow {
                 count + " character" + (count != 1 ? "s" : "") + " encoded.",
                 "HTML Encode", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(frame, Messages.get("msg.noGremlinsFound"),
+            JOptionPane.showMessageDialog(frame, Messages.get("msg.noHtmlEntitiesEncoded"),
                 "HTML Encode", JOptionPane.INFORMATION_MESSAGE);
         }
     }
@@ -3875,6 +4150,144 @@ public class EditorWindow {
         }
     }
 
+    // --- Line wrapping ---
+
+    /**
+     * Prompts for a maximum line length and wraps the selected text so that each
+     * resulting line is shorter than that length. Words longer than the limit are
+     * kept on their own line. Existing paragraph breaks (blank lines) are preserved.
+     */
+    private void wrapLines() {
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        if (selStart == selEnd) return;
+
+        String input = JOptionPane.showInputDialog(frame,
+            Messages.get("msg.wrapLines.prompt"), Messages.get("msg.wrapLines.title"),
+            JOptionPane.PLAIN_MESSAGE);
+        if (input == null) return;
+        input = input.trim();
+        int maxLen;
+        try {
+            maxLen = Integer.parseInt(input);
+        } catch (NumberFormatException ex) {
+            maxLen = 80;
+        }
+        if (maxLen < 1) maxLen = 80;
+
+        String selected = editorPane.getSelectedText();
+        // Detect dominant line ending in the selection to preserve style.
+        String nl = selected.contains("\r\n") ? "\r\n" : "\n";
+
+        // Preserve paragraph structure: split on blank lines, wrap each paragraph.
+        String normalized = selected.replace("\r\n", "\n").replace("\r", "\n");
+        String[] paragraphs = normalized.split("\n\\s*\n", -1);
+        StringBuilder out = new StringBuilder();
+        for (int p = 0; p < paragraphs.length; p++) {
+            if (p > 0) out.append(nl).append(nl);
+            out.append(wrapParagraph(paragraphs[p], maxLen, nl));
+        }
+
+        editorPane.replaceSelection(out.toString());
+    }
+
+    private static String wrapParagraph(String paragraph, int maxLen, String nl) {
+        String[] words = paragraph.trim().split("\\s+");
+        StringBuilder result = new StringBuilder();
+        StringBuilder line = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            if (line.length() == 0) {
+                line.append(word);
+            } else if (line.length() + 1 + word.length() < maxLen) {
+                line.append(' ').append(word);
+            } else {
+                if (result.length() > 0) result.append(nl);
+                result.append(line);
+                line.setLength(0);
+                line.append(word);
+            }
+        }
+        if (line.length() > 0) {
+            if (result.length() > 0) result.append(nl);
+            result.append(line);
+        }
+        return result.toString();
+    }
+
+    /**
+     * Removes CR and LF characters from the selected text, joining lines into a
+     * single line. A space is inserted where lines are joined unless a space is
+     * already adjacent on either side of the removed newline.
+     * <p>
+     * A dialog offers a "preserve paragraphs/headings" option. When enabled, any
+     * run of two or more line breaks (a blank line) is treated as a paragraph
+     * boundary and collapsed to a single blank line (double newline) instead of
+     * being joined, so paragraphs and headings stay separated.
+     */
+    private void unwrapLines() {
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        if (selStart == selEnd) return;
+
+        javax.swing.JCheckBox preserveBox =
+            new javax.swing.JCheckBox(Messages.get("dialog.unwrapLines.preserve"), true);
+        int choice = JOptionPane.showConfirmDialog(frame, preserveBox,
+            Messages.get("dialog.unwrapLines.title"),
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) return;
+        boolean preserveParagraphs = preserveBox.isSelected();
+
+        String selected = editorPane.getSelectedText();
+        // Detect dominant line ending in the selection to preserve style for
+        // paragraph separators.
+        String nl = selected.contains("\r\n") ? "\r\n" : "\n";
+        String paragraphBreak = nl + nl;
+
+        StringBuilder out = new StringBuilder(selected.length());
+        for (int i = 0; i < selected.length(); i++) {
+            char c = selected.charAt(i);
+            if (c == '\r' || c == '\n') {
+                // Consume a run of consecutive CR/LF characters, counting how many
+                // logical line breaks it represents (a "\r\n" pair counts as one).
+                int breakCount = 0;
+                while (i < selected.length()
+                        && (selected.charAt(i) == '\r' || selected.charAt(i) == '\n')) {
+                    if (selected.charAt(i) == '\r' && i + 1 < selected.length()
+                            && selected.charAt(i + 1) == '\n') {
+                        i++; // skip the paired LF so "\r\n" counts once
+                    }
+                    breakCount++;
+                    i++;
+                }
+                i--; // compensate for the outer loop increment
+
+                if (preserveParagraphs && breakCount >= 2) {
+                    // Blank line(s) separate paragraphs/headings: keep them as a
+                    // single paragraph break. Trim any trailing space we may have
+                    // added from a previous join.
+                    while (out.length() > 0 && out.charAt(out.length() - 1) == ' ') {
+                        out.setLength(out.length() - 1);
+                    }
+                    out.append(paragraphBreak);
+                } else {
+                    // Join lines: insert a space unless one is already adjacent.
+                    boolean spaceBefore = out.length() > 0 && out.charAt(out.length() - 1) == ' ';
+                    boolean afterParagraphBreak = out.length() >= nl.length()
+                        && out.substring(out.length() - nl.length()).equals(nl);
+                    boolean spaceAfter = i + 1 < selected.length() && selected.charAt(i + 1) == ' ';
+                    if (!spaceBefore && !spaceAfter && !afterParagraphBreak) {
+                        out.append(' ');
+                    }
+                }
+            } else {
+                out.append(c);
+            }
+        }
+
+        editorPane.replaceSelection(out.toString());
+    }
+
     // --- Dialogs ---
 
     private void gotoLine() {
@@ -3922,13 +4335,116 @@ public class EditorWindow {
     }
 
     /**
+     * Opens a GitHub-style relative Markdown link, e.g. {@code other.md} or
+     * {@code docs/other.md#section}. The path is resolved relative to the current
+     * file's directory. If an optional {@code #ref} fragment is present, the
+     * opened document is scrolled to the matching heading.
+     *
+     * @param linkTarget the raw href from the preview (path with optional #fragment)
+     */
+    private void openMarkdownLink(String linkTarget) {
+        if (linkTarget == null || linkTarget.trim().isEmpty()) return;
+
+        // Split off an optional #fragment reference.
+        String path = linkTarget;
+        String ref = null;
+        int hash = linkTarget.indexOf('#');
+        if (hash >= 0) {
+            path = linkTarget.substring(0, hash);
+            ref = linkTarget.substring(hash + 1);
+        }
+        path = path.trim();
+        if (path.isEmpty()) {
+            // Pure fragment (e.g. "#section") — treat as internal anchor.
+            if (ref != null && !ref.isEmpty()) navigateToAnchor(ref);
+            return;
+        }
+
+        // Decode percent-encoding (spaces etc.) that may appear in hrefs.
+        try {
+            path = java.net.URLDecoder.decode(path, StandardCharsets.UTF_8);
+        } catch (Exception ignore) {
+            // Use the raw path if decoding fails.
+        }
+
+        // Resolve relative to the current file's directory; fall back to absolute.
+        File target = new File(path);
+        if (!target.isAbsolute() && currentFile != null && currentFile.getParentFile() != null) {
+            target = new File(currentFile.getParentFile(), path);
+        }
+        final File resolved = target;
+        if (!resolved.exists()) {
+            JOptionPane.showMessageDialog(frame,
+                Messages.get("msg.linkFileNotFound", resolved.getPath()),
+                Messages.get("menu.file.open"), JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        EditorWindow opened = openFileInWindow(resolved);
+        if (opened != null && ref != null && !ref.isEmpty()) {
+            final String anchor = ref;
+            // Move the editor caret now; the preview scroll is deferred inside
+            // navigateToAnchorAfterOpen until the preview finishes rendering.
+            SwingUtilities.invokeLater(() -> opened.navigateToAnchorAfterOpen(anchor));
+        }
+    }
+
+    /**
      * Navigates to a heading in the source that corresponds to the given anchor fragment.
      * The anchor is a slug (e.g., "file-menu-items") generated from the heading text.
      * This method searches for a markdown heading line whose slug matches the anchor,
      * performing a case-insensitive comparison.
      */
     private void navigateToAnchor(String anchor) {
-        if (anchor == null || anchor.trim().isEmpty()) return;
+        int[] match = findAnchorOffset(anchor);
+        if (match == null) return;
+        int offset = match[0];
+        int lineLength = match[1];
+        // Remember our current preview position so the user can "Go Back".
+        pushNavigationLocation(lastPreviewScrollRatio);
+        // Disconnect synchronized scrolling so the two panes can be
+        // positioned independently at the jump target.
+        disconnectSyncScroll();
+        editorPane.setCaretPosition(offset);
+        editorPane.moveCaretPosition(offset + lineLength);
+        // Move both panes: scroll editor to the caret and the preview
+        // to the corresponding anchor.
+        scrollEditorToCaret();
+        previewPanel.scrollToAnchor(anchor);
+        // Keep focus on the preview (where the link was clicked) so menu
+        // accelerators such as "Go Back" (Cmd/Ctrl+K) remain active.
+        previewPanel.requestPreviewFocus();
+    }
+
+    /**
+     * Navigates to an anchor in a document that was just opened (e.g. via a
+     * GitHub-style {@code other.md#section} link). Moves the editor caret to the
+     * heading immediately and defers the preview scroll until the preview has
+     * finished rendering the newly loaded content.
+     */
+    private void navigateToAnchorAfterOpen(String anchor) {
+        int[] match = findAnchorOffset(anchor);
+        if (match == null) return;
+        int offset = match[0];
+        int lineLength = match[1];
+        disconnectSyncScroll();
+        editorPane.setCaretPosition(offset);
+        editorPane.moveCaretPosition(offset + lineLength);
+        scrollEditorToCaret();
+        // The preview may still be loading the just-opened file; scroll when ready.
+        previewPanel.scrollToAnchorWhenReady(anchor);
+        // Keep focus on the preview so menu accelerators (e.g. Go Back) stay active.
+        previewPanel.requestPreviewFocus();
+    }
+
+    /**
+     * Finds the source heading matching the given anchor slug.
+     *
+     * @return a two-element array {@code [offset, lineLength]} for the heading
+     *         line, or {@code null} if no heading matches.
+     */
+    private int[] findAnchorOffset(String anchor) {
+        if (anchor == null || anchor.trim().isEmpty()) return null;
         String content = editorPane.getText();
         String[] lines = content.split("\n", -1);
         int offset = 0;
@@ -3944,15 +4460,75 @@ public class EditorWindow {
                         .trim()
                         .replaceAll("\\s+", "-");
                 if (slug.equalsIgnoreCase(anchor)) {
-                    editorPane.setCaretPosition(offset);
-                    editorPane.moveCaretPosition(offset + line.length());
-                    editorPane.requestFocusInWindow();
-                    // Also scroll the preview to the corresponding anchor
-                    previewPanel.scrollToAnchor(anchor);
-                    return;
+                    return new int[]{offset, line.length()};
                 }
             }
             offset += line.length() + 1; // +1 for the newline
+        }
+        return null;
+    }
+
+    /** Pushes a preview scroll ratio onto the "Go Back" stack and updates menu state. */
+    private void pushNavigationLocation(double previewRatio) {
+        navigationBackStack.push(previewRatio);
+        updateGoBackState();
+    }
+
+    /**
+     * Returns both panes to the position saved before the last internal link
+     * jump: scrolls the preview back to the stored ratio and syncs the editor
+     * to the same relative position.
+     */
+    private void goBack() {
+        if (navigationBackStack.isEmpty()) return;
+        double ratio = navigationBackStack.pop();
+        ratio = Math.max(0.0, Math.min(1.0, ratio));
+        // Disconnect synchronized scrolling and move both panes to the saved spot.
+        disconnectSyncScroll();
+        previewPanel.scrollToRatio(ratio);
+        JScrollBar editorVScroll = editorPanel.getScrollPane().getVerticalScrollBar();
+        int max = editorVScroll.getMaximum() - editorVScroll.getVisibleAmount();
+        if (max > 0) {
+            editorVScroll.setValue((int) (max * ratio));
+        }
+        updateGoBackState();
+    }
+
+    /**
+     * Turns off synchronized scrolling (if enabled) so link navigation and
+     * Go Back can position the editor and preview independently. Mirrors the
+     * toolbar toggle's "off" visual state.
+     */
+    private void disconnectSyncScroll() {
+        if (!syncScrollEnabled) return;
+        syncScrollEnabled = false;
+        if (syncScrollToggle != null) {
+            syncScrollToggle.setSelected(false);
+            syncScrollToggle.setBackground(null);
+            syncScrollToggle.setContentAreaFilled(false);
+        }
+    }
+
+    /** Ensures the editor viewport scrolls to show the current caret position. */
+    private void scrollEditorToCaret() {
+        try {
+            java.awt.geom.Rectangle2D r = editorPane.modelToView2D(editorPane.getCaretPosition());
+            if (r != null) {
+                // Place the target line near the top of the viewport.
+                java.awt.Rectangle view = new java.awt.Rectangle(
+                        (int) r.getX(), (int) r.getY(), (int) r.getWidth(),
+                        editorPanel.getScrollPane().getViewport().getHeight());
+                editorPane.scrollRectToVisible(view);
+            }
+        } catch (javax.swing.text.BadLocationException ex) {
+            // Ignore — best-effort scroll.
+        }
+    }
+
+    /** Enables/disables the Go Back menu item based on the back-stack. */
+    private void updateGoBackState() {
+        if (goBackItem != null) {
+            goBackItem.setEnabled(!navigationBackStack.isEmpty());
         }
     }
 
@@ -4141,7 +4717,7 @@ public class EditorWindow {
 
     // --- Static helpers ---
 
-    public static void openFileInWindow(File file) {
+    public static EditorWindow openFileInWindow(File file) {
         try {
             File actualFile = file;
             boolean isTextPack = false;
@@ -4152,7 +4728,7 @@ public class EditorWindow {
                     // Try text.markdown as fallback
                     actualFile = new File(file, "text.markdown");
                 }
-                if (!actualFile.exists()) return;
+                if (!actualFile.exists()) return null;
             } else if (file.isFile() && file.getName().toLowerCase().endsWith(".textpack")) {
                 // Unzip TextPack to temp directory
                 java.nio.file.Path tempDir = Files.createTempDirectory("textpack_");
@@ -4173,7 +4749,7 @@ public class EditorWindow {
                 }
                 actualFile = tempDir.resolve("text.md").toFile();
                 if (!actualFile.exists()) actualFile = tempDir.resolve("text.markdown").toFile();
-                if (!actualFile.exists()) return;
+                if (!actualFile.exists()) return null;
                 isTextPack = true;
             }
             String content = new String(Files.readAllBytes(actualFile.toPath()), StandardCharsets.UTF_8);
@@ -4187,7 +4763,7 @@ public class EditorWindow {
                         instance.textPackSource = true;
                         instance.saveItem.setEnabled(false);
                     }
-                    return;
+                    return instance;
                 }
             }
             EditorWindow newWindow = new EditorWindow();
@@ -4196,9 +4772,11 @@ public class EditorWindow {
                 newWindow.textPackSource = true;
                 newWindow.saveItem.setEnabled(false);
             }
+            return newWindow;
         } catch (IOException ex) {
             // Silently fail
         }
+        return null;
     }
 
     public static EditorWindow getActiveInstance() {
