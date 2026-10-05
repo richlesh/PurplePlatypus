@@ -560,22 +560,22 @@ jobs:
           # Staple
           xcrun stapler staple PurplePlatypus-${APP_VERSION}.dmg
 
-      - name: Azure login (Windows)
-        if: runner.os == 'Windows'
+      - name: Azure login (Windows x64)
+        if: runner.os == 'Windows' && matrix.arch == 'x64'
         uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Set up .NET 8 for signing (Windows)
-        if: runner.os == 'Windows'
+      - name: Set up .NET 8 for signing (Windows x64)
+        if: runner.os == 'Windows' && matrix.arch == 'x64'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: Sign installer (Windows)
-        if: runner.os == 'Windows'
+      - name: Sign installer (Windows x64)
+        if: runner.os == 'Windows' && matrix.arch == 'x64'
         uses: azure/artifact-signing-action@v1.2.0
         with:
           endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
