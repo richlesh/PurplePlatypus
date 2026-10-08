@@ -1356,12 +1356,18 @@ public class EditorWindow {
         ctxCut.addActionListener(e -> editorPane.cut());
         JMenuItem ctxCopy = new JMenuItem(Messages.get("context.copy"));
         ctxCopy.addActionListener(e -> editorPane.copy());
+        JMenuItem ctxCopyAsHtml = new JMenuItem(Messages.get("context.copyAsHtml"));
+        ctxCopyAsHtml.addActionListener(e -> copySelectionAsHtml());
+        JMenuItem ctxCopyTextOnly = new JMenuItem(Messages.get("context.copyTextOnly"));
+        ctxCopyTextOnly.addActionListener(e -> copySelectionTextOnly());
         JMenuItem ctxPaste = new JMenuItem(Messages.get("context.paste"));
         ctxPaste.addActionListener(e -> editorPane.paste());
         JMenuItem ctxFindInPreview = new JMenuItem(Messages.get("context.findInPreview"));
         ctxFindInPreview.addActionListener(e -> findInPreview());
         editorContextMenu.add(ctxCut);
         editorContextMenu.add(ctxCopy);
+        editorContextMenu.add(ctxCopyAsHtml);
+        editorContextMenu.add(ctxCopyTextOnly);
         editorContextMenu.add(ctxPaste);
         editorContextMenu.addSeparator();
         editorContextMenu.add(ctxFindInPreview);
@@ -3600,7 +3606,15 @@ public class EditorWindow {
      */
     private String getRenderedHtml() {
         String markdown = editorPane.getText();
+        return markdownToHtml(markdown);
+    }
 
+    /**
+     * Converts an arbitrary markdown string to an HTML fragment using the same
+     * CommonMark extension pipeline and post-processing as the preview/export.
+     * Returns the HTML body only (no styling wrapper).
+     */
+    private String markdownToHtml(String markdown) {
         // Encode spaces in image/link URLs (same as PreviewPanel)
         java.util.regex.Pattern mdLinkPattern = java.util.regex.Pattern.compile(
                 "(!?\\[[^\\]]*\\]\\()([^)]+)(\\))");
@@ -3655,6 +3669,35 @@ public class EditorWindow {
         // No resolution needed - paths are already correct relative to the file.
 
         return html;
+    }
+
+    /**
+     * Converts the currently selected markdown text to HTML and places it on the
+     * system clipboard. If no text is selected, this is a no-op.
+     */
+    private void copySelectionAsHtml() {
+        String selected = editorPane.getSelectedText();
+        if (selected == null || selected.isEmpty()) {
+            return;
+        }
+        String html = markdownToHtml(selected);
+        java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(html);
+        java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+    }
+
+    /**
+     * Converts the currently selected markdown text to plain text (stripping
+     * markdown formatting) and places it on the system clipboard. If no text is
+     * selected, this is a no-op.
+     */
+    private void copySelectionTextOnly() {
+        String selected = editorPane.getSelectedText();
+        if (selected == null || selected.isEmpty()) {
+            return;
+        }
+        String plain = markdownToPlainText(selected);
+        java.awt.datatransfer.StringSelection sel = new java.awt.datatransfer.StringSelection(plain);
+        java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
     }
 
     // --- Dirty tracking ---
