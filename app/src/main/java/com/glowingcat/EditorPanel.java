@@ -4,6 +4,7 @@
 package com.glowingcat;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
@@ -24,6 +25,15 @@ public class EditorPanel extends JPanel {
 
         textArea = new RSyntaxTextArea();
         textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_MARKDOWN);
+
+        // RSyntaxTextArea 3.5.3's stock MarkdownTokenMaker emits an overlapping
+        // duplicate token for the character after a non-heading '#', which the
+        // painter draws twice (e.g. "#1" renders as "#11"). Install a corrected
+        // token maker directly on the document to paint each character once.
+        if (textArea.getDocument() instanceof RSyntaxDocument doc) {
+            doc.setSyntaxStyle(new FixedMarkdownTokenMaker());
+        }
+
         textArea.setFont(new Font(preferences.getEditorFontFamily(), Font.PLAIN, preferences.getEditorFontSize()));
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
