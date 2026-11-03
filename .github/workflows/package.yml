@@ -453,6 +453,12 @@ jobs:
               fi
             fi
           else
+            # Windows: build in two steps. A single-step `--type msi` straight
+            # from --input does not reliably embed the launcher .exe icon, so the
+            # app shows a blank/default icon in Explorer, the Start menu and the
+            # shortcut. Building an app-image first (with --icon) embeds the icon
+            # into PurplePlatypus.exe; the installer step then packages that image
+            # and also sets the Add/Remove-Programs icon via --icon.
             jpackage \
               --input lib \
               --main-jar ${{ env.JARFILE }} \
@@ -463,13 +469,25 @@ jobs:
               --copyright "(C) 2026 Glowing Cat" \
               --description "A lightweight desktop Markdown editor with live preview" \
               --icon "${{ matrix.icon }}" \
+              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,java.logging,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.zipfs \
+              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
+              --java-options "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
+              --type app-image
+
+            # Package the installer from the app-image.
+            jpackage \
+              --app-image PurplePlatypus \
+              --resource-dir packaging/windows \
+              --name PurplePlatypus \
+              --app-version "${{ env.APP_VERSION }}" \
+              --vendor "Glowing Cat" \
+              --copyright "(C) 2026 Glowing Cat" \
+              --description "A lightweight desktop Markdown editor with live preview" \
+              --icon "${{ matrix.icon }}" \
               --file-associations fa-md.properties \
               --file-associations fa-markdown.properties \
               --file-associations fa-textbundle.properties \
               --file-associations fa-textpack.properties \
-              --add-modules javafx.controls,javafx.web,javafx.swing,java.net.http,java.logging,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.zipfs \
-              --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
-              --java-options "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
               --win-menu \
               --win-shortcut \
               --type ${{ matrix.pkg_type }}
