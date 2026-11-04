@@ -474,10 +474,17 @@ jobs:
               --java-options "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
               --type app-image
 
-            # Package the installer from the app-image.
+            # Package the installer from the app-image. --win-per-user-install
+            # makes jpackage author a fully per-user MSI: the stock WiX template
+            # sets InstallScope=perUser AND the generated registry/directory
+            # components use the per-user (HKCU) roots, so installing without
+            # admin succeeds. (A main.wxs override that only forced perUser in
+            # the Package element left jpackage's generated registry component
+            # pointed at HKLM, which failed with "need access to key …
+            # \Software\Glowing Cat\… ProductCode" under a per-user install.)
             jpackage \
               --app-image PurplePlatypus \
-              --resource-dir packaging/windows \
+              --win-per-user-install \
               --name PurplePlatypus \
               --app-version "${{ env.APP_VERSION }}" \
               --vendor "Glowing Cat" \
