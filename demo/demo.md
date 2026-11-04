@@ -327,7 +327,8 @@ Rich Text Format (RTF) exports your document as styled text that opens
 cleanly in word processors like Microsoft Word, LibreOffice, and Apple
 Pages — and pastes nicely into emails and other rich-text fields.
 
-> **Note:** RTF is a simpler format than HTML or PDF, so **not all Markdown
+> [!NOTE]
+> RTF is a simpler format than HTML or PDF, so **not all Markdown
 > features are supported**. Core styling like headings, bold, italic, lists,
 > and basic tables carries over well, but advanced elements — such as math
 > notation, task-list checkboxes, footnotes, and syntax-highlighted code
