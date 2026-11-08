@@ -132,6 +132,9 @@ public class Preferences {
     /** Spell check language code (e.g., "en", "fr", "de"). */
     private String spellCheckLanguage = "en";
 
+    /** Whether extended style checks (LanguageTool PICKY level) are enabled. */
+    private boolean styleChecks = false;
+
     /** UI language/locale code (e.g., "en", "es", "fr", "de", "it", "ja", "zh"). Empty = system default. */
     private String uiLanguage = "";
 
@@ -240,6 +243,8 @@ public class Preferences {
     public void setDarkMode(boolean darkMode) { this.darkMode = darkMode; }
     public String getSpellCheckLanguage() { return spellCheckLanguage != null ? spellCheckLanguage : "en"; }
     public void setSpellCheckLanguage(String spellCheckLanguage) { this.spellCheckLanguage = spellCheckLanguage; }
+    public boolean isStyleChecks() { return styleChecks; }
+    public void setStyleChecks(boolean styleChecks) { this.styleChecks = styleChecks; }
     public String getUiLanguage() { return uiLanguage != null ? uiLanguage : ""; }
     public void setUiLanguage(String uiLanguage) { this.uiLanguage = uiLanguage; }
 

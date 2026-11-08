@@ -46,6 +46,31 @@ public class EditorWindow {
     /** Tracks all open EditorWindow instances. */
     static final List<EditorWindow> openInstances = new ArrayList<>();
 
+    /**
+     * Timestamp of the last accelerator-driven menu action, used to suppress the
+     * duplicate ActionEvent that the macOS screen menu bar delivers for menu-item
+     * accelerators that include the Option/Alt modifier (e.g. the Export items).
+     * Without this guard such actions fire twice, presenting file dialogs twice.
+     */
+    private long lastAcceleratorActionTime = 0L;
+
+    /**
+     * Wraps a menu action so that a second invocation arriving within a short
+     * window (the duplicate event burst) is ignored. This neutralizes the macOS
+     * screen-menu-bar double-fire of Option/Alt accelerators while leaving normal
+     * menu clicks unaffected (real clicks are never this close together).
+     */
+    private java.awt.event.ActionListener debounced(Runnable action) {
+        return e -> {
+            long now = System.currentTimeMillis();
+            if (now - lastAcceleratorActionTime < 300) {
+                return;
+            }
+            lastAcceleratorActionTime = now;
+            action.run();
+        };
+    }
+
     private final JFrame frame;
     private final EditorPanel editorPanel;
     private final PreviewPanel previewPanel;
@@ -287,25 +312,25 @@ public class EditorWindow {
         JMenu exportMenu = new JMenu(Messages.get("menu.file.export"));
         JMenuItem exportHtmlItem = new JMenuItem(Messages.get("menu.file.export.html"));
         exportHtmlItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportHtmlItem.addActionListener(e -> exportHtml());
+        exportHtmlItem.addActionListener(debounced(this::exportHtml));
         JMenuItem exportPdfItem = new JMenuItem(Messages.get("menu.file.export.pdf"));
         exportPdfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_P, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportPdfItem.addActionListener(e -> exportPdf());
+        exportPdfItem.addActionListener(debounced(this::exportPdf));
         JMenuItem exportTextItem = new JMenuItem(Messages.get("menu.file.export.plainText"));
         exportTextItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportTextItem.addActionListener(e -> exportPlainText());
+        exportTextItem.addActionListener(debounced(this::exportPlainText));
         JMenuItem exportRtfItem = new JMenuItem(Messages.get("menu.file.export.rtf"));
         exportRtfItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportRtfItem.addActionListener(e -> exportRtf());
+        exportRtfItem.addActionListener(debounced(this::exportRtf));
         JMenuItem exportTextBundleItem = new JMenuItem(Messages.get("menu.file.export.textBundle"));
         exportTextBundleItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_B, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportTextBundleItem.addActionListener(e -> exportTextBundle());
+        exportTextBundleItem.addActionListener(debounced(this::exportTextBundle));
         JMenuItem exportTextPackItem = new JMenuItem(Messages.get("menu.file.export.textPack"));
         exportTextPackItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Z, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportTextPackItem.addActionListener(e -> exportTextPack());
+        exportTextPackItem.addActionListener(debounced(this::exportTextPack));
         JMenuItem exportDocxItem = new JMenuItem(Messages.get("menu.file.export.word"));
         exportDocxItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        exportDocxItem.addActionListener(e -> exportDocx());
+        exportDocxItem.addActionListener(debounced(this::exportDocx));
         exportMenu.add(exportHtmlItem);
         exportMenu.add(exportPdfItem);
         exportMenu.add(exportTextBundleItem);
@@ -391,6 +416,11 @@ public class EditorWindow {
         JMenuItem validateLinksItem = new JMenuItem(Messages.get("menu.edit.validateLinks"));
         validateLinksItem.addActionListener(e -> validateLinks());
         editMenu.add(validateLinksItem);
+
+        editMenu.addSeparator();
+        JMenuItem improveWritingItem = new JMenuItem(Messages.get("menu.edit.improveWriting"));
+        improveWritingItem.addActionListener(e -> improveWriting());
+        editMenu.add(improveWritingItem);
 
         // Update menu item text based on selection when Edit menu opens
         editMenu.addMenuListener(new javax.swing.event.MenuListener() {
@@ -507,7 +537,7 @@ public class EditorWindow {
 
         JMenuItem footnoteItem = new JMenuItem(Messages.get("menu.markdown.footnote"));
         footnoteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
-        footnoteItem.addActionListener(e -> insertFootnote());
+        footnoteItem.addActionListener(debounced(this::insertFootnote));
         markdownMenu.add(footnoteItem);
         markdownMenu.addSeparator();
 
@@ -532,19 +562,19 @@ public class EditorWindow {
 
         JMenuItem inlineCodeItem = new JMenuItem(Messages.get("menu.markdown.inlineCode"));
         inlineCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        inlineCodeItem.addActionListener(e -> wrapSelection("`", "`"));
+        inlineCodeItem.addActionListener(debounced(() -> wrapSelection("`", "`")));
 
         JMenuItem blockCodeItem = new JMenuItem(Messages.get("menu.markdown.blockCode"));
         blockCodeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_QUOTE, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
-        blockCodeItem.addActionListener(e -> wrapBlock("```\n", "\n```"));
+        blockCodeItem.addActionListener(debounced(() -> wrapBlock("```\n", "\n```")));
 
         JMenuItem inlineMathItem = new JMenuItem(Messages.get("menu.markdown.inlineMath"));
         inlineMathItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
-        inlineMathItem.addActionListener(e -> wrapSelection("$", "$"));
+        inlineMathItem.addActionListener(debounced(() -> wrapSelection("$", "$")));
 
         JMenuItem blockMathItem = new JMenuItem(Messages.get("menu.markdown.blockMath"));
         blockMathItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M, shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK | java.awt.event.InputEvent.SHIFT_DOWN_MASK));
-        blockMathItem.addActionListener(e -> wrapBlock("$$\n", "\n$$"));
+        blockMathItem.addActionListener(debounced(() -> wrapBlock("$$\n", "\n$$")));
 
         markdownMenu.add(blockQuoteItem);
 
@@ -1376,6 +1406,7 @@ public class EditorWindow {
         // Spell checking — initialize controller and enable by default
         Path spellCheckConfigDir = Paths.get(System.getProperty("user.home"), ".purpleplatypus");
         spellCheckController = new SpellCheckController(editorPane, spellCheckConfigDir, preferences.getSpellCheckLanguage());
+        spellCheckController.setStyleChecksEnabled(preferences.isStyleChecks());
         spellCheckController.setOnLanguageReady(() -> {
             String langName = LanguageDownloader.getDisplayName(spellCheckController.getLanguage());
             JOptionPane.showMessageDialog(frame,
@@ -4627,8 +4658,37 @@ public class EditorWindow {
         AboutDialog.show(frame, preferences);
     }
 
-    public void showPreferencesDialog() {
-        PreferencesDialog dialog = new PreferencesDialog(frame, preferences);
+    /**
+     * Sends the current selection (or the whole document) to the AI assistant
+     * with a request to improve the writing. Reveals the AI panel and reuses the
+     * existing chat/diff-apply pipeline, so the suggested rewrite arrives with the
+     * normal Allow/Reject change buttons.
+     */
+    private void improveWriting() {
+        if (aiChatPanel == null) return;
+
+        // Reveal the AI panel if it is currently hidden.
+        if (!aiVisible) {
+            aiToggle.setSelected(true);
+            toggleAI();
+        }
+
+        int selStart = editorPane.getSelectionStart();
+        int selEnd = editorPane.getSelectionEnd();
+        boolean hasSel = selStart != selEnd;
+
+        String prompt;
+        if (hasSel) {
+            String selected = editorPane.getSelectedText();
+            prompt = Messages.get("ai.improveWriting.selection", selected);
+        } else {
+            prompt = Messages.get("ai.improveWriting.document");
+        }
+
+        aiChatPanel.submitPrompt(prompt);
+    }
+
+    public void showPreferencesDialog() {        PreferencesDialog dialog = new PreferencesDialog(frame, preferences);
         dialog.setVisible(true);
         if (dialog.isConfirmed()) {
             String oldUiLang = preferences.getUiLanguage();
@@ -4650,6 +4710,10 @@ public class EditorWindow {
                 String newLang = preferences.getSpellCheckLanguage();
                 if (!newLang.equals(spellCheckController.getLanguage())) {
                     spellCheckController.setLanguage(newLang);
+                }
+                // Update extended style checks (PICKY level) if changed
+                if (spellCheckController.isStyleChecksEnabled() != preferences.isStyleChecks()) {
+                    spellCheckController.setStyleChecksEnabled(preferences.isStyleChecks());
                 }
             }
             // Update toolbar toggle button highlight colors

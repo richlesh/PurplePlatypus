@@ -4,9 +4,12 @@
 package com.glowingcat.spellcheck;
 
 import org.languagetool.JLanguageTool;
+import org.languagetool.JLanguageTool.Level;
+import org.languagetool.JLanguageTool.ParagraphHandling;
 import org.languagetool.Language;
 import org.languagetool.Languages;
 import org.languagetool.language.AmericanEnglish;
+import org.languagetool.markup.AnnotatedTextBuilder;
 import org.languagetool.rules.RuleMatch;
 
 import java.io.IOException;
@@ -54,6 +57,13 @@ public class SpellCheckService {
     private volatile JLanguageTool langTool;
     private volatile String currentLanguage;
     private volatile boolean initializing = false;
+    /**
+     * When true, the check uses LanguageTool's PICKY level, which additionally
+     * enables style, redundancy, wordiness, and other "picky"-tagged rules that
+     * are off at the DEFAULT level. When false (default), only the standard
+     * spelling/grammar rules run.
+     */
+    private volatile boolean styleChecksEnabled = false;
 
     /**
      * Creates the spell-check service with the default language (English).
@@ -103,6 +113,22 @@ public class SpellCheckService {
     }
 
     /**
+     * Enables or disables extended style checks (LanguageTool PICKY level).
+     * When enabled, additional style, redundancy, and wordiness rules fire on
+     * the next check. Takes effect immediately — no reinitialization needed.
+     *
+     * @param enabled true to enable extended style/picky checks
+     */
+    public void setStyleChecksEnabled(boolean enabled) {
+        this.styleChecksEnabled = enabled;
+    }
+
+    /** Returns whether extended style checks (PICKY level) are enabled. */
+    public boolean isStyleChecksEnabled() {
+        return styleChecksEnabled;
+    }
+
+    /**
      * Checks the given text for spelling and grammar errors.
      *
      * @param text the text to check
@@ -114,7 +140,13 @@ public class SpellCheckService {
             return Collections.emptyList();
         }
         try {
-            List<RuleMatch> matches = lt.check(text);
+            Level level = styleChecksEnabled ? Level.PICKY : Level.DEFAULT;
+            List<RuleMatch> matches = lt.check(
+                    new AnnotatedTextBuilder().addText(text).build(),
+                    true,
+                    ParagraphHandling.NORMAL,
+                    null,
+                    level);
             List<SpellError> errors = new ArrayList<>();
             for (RuleMatch match : matches) {
                 String word = text.substring(match.getFromPos(), match.getToPos());

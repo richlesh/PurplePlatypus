@@ -10,6 +10,8 @@ import java.awt.event.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,7 @@ public class AIChatPanel extends JPanel {
     private final JTextArea inputArea;
     private final JButton sendBtn;
     private final DocumentEditor editor;
+	private final String contentType;
     private final AIChatPreferences aiPreferences;
     private ChatColors chatColors;
     private final List<Map<String, String>> messages = new ArrayList<>();
@@ -100,14 +103,16 @@ public class AIChatPanel extends JPanel {
      */
     public static class Builder {
         private DocumentEditor editor;
+		private String contentType;
         private AIChatPreferences preferences;
         private ChatColors chatColors;
         private LLMClient llmClient;
         private Runnable onPromptNag;
         private DocumentRetriever documentRetriever;
         private final List<ContextProvider> contextProviders = new ArrayList<>();
+        private final List<String> systemPromptDocIndexPaths = new ArrayList<>();
 
-        private Builder() {}
+        private Builder() { contentType = "text"; }
 
         /** Set the document editor (required). */
         public Builder editor(DocumentEditor editor) {
@@ -115,6 +120,12 @@ public class AIChatPanel extends JPanel {
             return this;
         }
 
+		/** Set the type of the context in the editor. */
+		public Builder contentType(String type) {
+			this.contentType = type;
+			return this;
+		}
+		
         /** Set the AI chat preferences (required). */
         public Builder preferences(AIChatPreferences preferences) {
             this.preferences = preferences;
@@ -151,6 +162,20 @@ public class AIChatPanel extends JPanel {
         }
 
         /**
+         * Register one or more index files whose listed HTML documents are stripped
+         * of HTML tags and appended to the system prompt (sent with every chat prompt).
+         * This is an alternative to RAG indexing for reference material that should
+         * always be available to the model.
+         *
+         * @param indexPaths classpath resource paths to index files
+         *                   (e.g. "/documentation/doc-index.txt")
+         */
+        public Builder systemPromptDocs(String... indexPaths) {
+            for (String p : indexPaths) this.systemPromptDocIndexPaths.add(p);
+            return this;
+        }
+
+        /**
          * Add an additional context provider. Each provider supplies a labeled
          * block of text that is appended to every user message sent to the LLM.
          * Can be called multiple times to register multiple providers.
@@ -174,12 +199,13 @@ public class AIChatPanel extends JPanel {
     private AIChatPanel(Builder builder) {
         super(new BorderLayout());
         this.editor = builder.editor;
+		this.contentType = builder.contentType;
         this.aiPreferences = builder.preferences;
         this.chatColors = builder.chatColors;
         this.llmClient = builder.llmClient;
         this.promptNagCallback = builder.onPromptNag;
         this.contextProviders = List.copyOf(builder.contextProviders);
-        this.systemPrompt = buildSystemPrompt();
+        this.systemPrompt = buildSystemPrompt(builder.systemPromptDocIndexPaths);
         this.humanIconDataUri = loadIconAsDataUri("/human.png");
         this.aiIconDataUri = loadIconAsDataUri("/AI.png");
         var humanUrl = AIChatPanel.class.getResource("/human.png");
@@ -407,6 +433,26 @@ public class AIChatPanel extends JPanel {
             JLabel thinkingLabel = new JLabel(AIChatMessages.get("aichat.thinking"));
             thinkingLabel.setFont(chatFont.deriveFont(Font.ITALIC));
             thinkingRow.add(thinkingLabel, BorderLayout.CENTER);
+
+            // Cancel button to abort the request
+            JButton cancelBtn = new JButton("\u2715");
+            cancelBtn.setToolTipText(AIChatMessages.get("aichat.cancel"));
+            cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.BOLD, 28f));
+            cancelBtn.setForeground(new Color(0xCC0000));
+            cancelBtn.setBorderPainted(false);
+            cancelBtn.setContentAreaFilled(false);
+            cancelBtn.setMargin(new Insets(0, 2, 0, 0));
+            cancelBtn.setFocusPainted(false);
+            cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            cancelBtn.addActionListener(e -> cancelCurrentRequest());
+
+            // Place thinking label and cancel button together on the left
+            JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+            centerPanel.setOpaque(false);
+            centerPanel.add(thinkingLabel);
+            centerPanel.add(cancelBtn);
+            thinkingRow.add(centerPanel, BorderLayout.CENTER);
+
             fallbackChatPanel.add(thinkingRow);
 
             // Animate pulsing with a timer
@@ -496,11 +542,50 @@ public class AIChatPanel extends JPanel {
                         md = msg.markdown;
                     }
                     if (md != null) {
-                        StringSelection sel = new StringSelection(md);
-                        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+                        setClipboard(md);
                     }
                 }
             });
+        }
+
+        /**
+         * Called when the user clicks the copy icon on a fenced code block.
+         * The text is supplied directly from the page so arbitrary blocks can
+         * be copied without a message index.
+         */
+        public void copyText(String text) {
+            if (text == null) return;
+            SwingUtilities.invokeLater(() -> setClipboard(text));
+        }
+
+        /**
+         * Writes text to the system clipboard defensively. The system
+         * clipboard can be briefly owned by another process (notably on
+         * macOS), in which case setContents throws IllegalStateException.
+         * If that exception escaped a method invoked by the JavaFX WebView
+         * bridge it could crash the WebKit native layer, so all failures are
+         * swallowed here (with one short retry).
+         */
+        private void setClipboard(String text) {
+            StringSelection sel = new StringSelection(text);
+            for (int attempt = 0; attempt < 2; attempt++) {
+                try {
+                    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+                    return;
+                } catch (IllegalStateException ex) {
+                    // Clipboard temporarily unavailable; pause briefly and retry once.
+                    try {
+                        Thread.sleep(60);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                } catch (Exception ex) {
+                    // Any other clipboard failure must never propagate into the
+                    // native WebView call stack.
+                    return;
+                }
+            }
         }
 
         /** Called when a link is clicked. */
@@ -513,11 +598,41 @@ public class AIChatPanel extends JPanel {
                 }
             });
         }
+
+        /** Called when user clicks the cancel button during thinking. */
+        public void cancelRequest() {
+            SwingUtilities.invokeLater(() -> cancelCurrentRequest());
+        }
+    }
+
+    /**
+     * Programmatically submits a prompt through the same pipeline as a user
+     * typing in the input box and pressing Send. This reuses the full
+     * send/response/diff-apply flow, including the Allow/Reject change buttons.
+     * <p>
+     * Safe to call from any thread; the work is marshalled onto the EDT.
+     *
+     * @param prompt the prompt text to send; ignored if null or blank
+     */
+    public void submitPrompt(String prompt) {
+        if (prompt == null || prompt.isBlank()) return;
+        SwingUtilities.invokeLater(() -> {
+            inputArea.setText(prompt);
+            sendMessage();
+        });
     }
 
     /** Set or replace the LLM client at runtime (e.g., after preferences change). */
     public void setLlmClient(LLMClient client) {
         this.llmClient = client;
+    }
+
+    /**
+     * Notify the panel that AI preferences have changed. Discards the cached
+     * LLM client so the next prompt is sent using the updated vendor/model/API key.
+     */
+    public void refreshPreferences() {
+        this.llmClient = null;
     }
 
     /** Set or replace the prompt nag callback at runtime. */
@@ -580,6 +695,21 @@ public class AIChatPanel extends JPanel {
         }, "RAG-Indexer").start();
 
         dialog.setVisible(true); // blocks until disposed
+
+        // If Ollama embedding failed, advise user to pull the embedding model
+        if (retriever.didEmbeddingFail() && "Ollama".equals(aiPreferences.getLlmVendor())) {
+            JOptionPane.showMessageDialog(
+                SwingUtilities.getWindowAncestor(this),
+                AIChatMessages.get("aichat.ollamaEmbeddingHint"),
+                AIChatMessages.get("aichat.ollamaEmbeddingHintTitle"),
+                JOptionPane.INFORMATION_MESSAGE);
+        } else if (retriever.didEmbeddingFail()) {
+            JOptionPane.showMessageDialog(
+                SwingUtilities.getWindowAncestor(this),
+                AIChatMessages.get("aichat.embeddingFallbackHint", aiPreferences.getLlmVendor()),
+                AIChatMessages.get("aichat.embeddingFallbackHintTitle"),
+                JOptionPane.WARNING_MESSAGE);
+        }
     }
 
     private void sendMessage() {
@@ -600,7 +730,8 @@ public class AIChatPanel extends JPanel {
             promptNagCallback.run();
         }
 
-        String context = "Current document:\n```\n" + editor.getContextText() + "\n```";
+        String nowStr = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZZZZZ (zzzz)"));
+        String context = "Current date/time: " + nowStr + "\n\nCurrent document: " + editor.getFilepath() + "\n```"+contentType+"\n" + editor.getContextText() + "\n```";
         for (ContextProvider cp : contextProviders) {
             String extra = cp.supplier().get();
             if (extra != null && !extra.isEmpty()) {
@@ -630,8 +761,25 @@ public class AIChatPanel extends JPanel {
         if (messages.isEmpty()) {
             messages.add(Map.of("role", "system", "content", systemPrompt));
         }
+
+        // In developer mode, write the composed system prompt to a file for inspection
+        if (isDeveloperMode()) {
+            writeDevFile(".glowingcat-ai-system-prompt.md", systemPrompt);
+        }
+
+        // Store only the bare user text in durable history. The ephemeral per-turn
+        // context (current document, console output, and RAG-retrieved chunks) is NOT
+        // persisted — it would otherwise accumulate across every turn, re-sending stale
+        // document snapshots and retrieved chunks on each subsequent request.
+        messages.add(Map.of("role", "user", "content", text));
+
+        // Build the transient message list sent for THIS turn only: a copy of history
+        // whose final user message is augmented with the ephemeral context. History
+        // (messages) keeps just the clean user text.
         String fullUserMessage = context + "\n\nUser request: " + text;
-        messages.add(Map.of("role", "user", "content", fullUserMessage));
+        List<Map<String, String>> turnMessages = new ArrayList<>(messages);
+        turnMessages.set(turnMessages.size() - 1,
+            Map.of("role", "user", "content", fullUserMessage));
 
         // In developer mode, write the composed prompt to a file for inspection
         if (isDeveloperMode()) {
@@ -648,9 +796,10 @@ public class AIChatPanel extends JPanel {
         renderChat();
 
         final LLMClient client = llmClient;
+        final List<Map<String, String>> outboundMessages = turnMessages;
         currentThread = new Thread(() -> {
             try {
-                String response = client.chat(messages, systemPrompt);
+                String response = client.chat(outboundMessages, systemPrompt);
                 messages.add(Map.of("role", "assistant", "content", response));
                 // In developer mode, write the AI response to a file for inspection
                 if (isDeveloperMode()) {
@@ -675,6 +824,25 @@ public class AIChatPanel extends JPanel {
             }
         });
         currentThread.start();
+    }
+
+    /** Cancel the in-flight LLM request, reset the thinking indicator, and re-enable input. */
+    private void cancelCurrentRequest() {
+        Thread t = currentThread;
+        if (t != null) {
+            t.interrupt();
+        }
+        pulsing = false;
+        if (thinkingTimer != null) { thinkingTimer.stop(); thinkingTimer = null; }
+        // Remove the last user message from history since we never got a response
+        if (!messages.isEmpty() && "user".equals(messages.get(messages.size() - 1).get("role"))) {
+            messages.remove(messages.size() - 1);
+        }
+        if (!chatMessages.isEmpty() && "user".equals(chatMessages.get(chatMessages.size() - 1).role)) {
+            chatMessages.remove(chatMessages.size() - 1);
+        }
+        renderChat();
+        sendBtn.setEnabled(true);
     }
 
     private void processResponse(String response) {
@@ -873,10 +1041,38 @@ public class AIChatPanel extends JPanel {
         html.append("});");
         html.append("function acceptChanges(idx) { if(window.chatBridge) window.chatBridge.acceptChanges(idx); }");
         html.append("function rejectChanges(idx) { if(window.chatBridge) window.chatBridge.rejectChanges(idx); }");
+        html.append("function cancelRequest() { if(window.chatBridge) window.chatBridge.cancelRequest(); }");
         html.append("function copyMarkdown(idx) {");
         html.append("  if(window.chatBridge) window.chatBridge.copyMarkdown(idx);");
         html.append("  var btn = event.currentTarget;");
         html.append("  btn.innerHTML = '<svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 8.5L6.5 12L13 4\"/></svg>';");
+        html.append("}");
+        // Copy a single fenced code block. Routes the raw text through the Java
+        // bridge because the JavaFX WebView does not expose navigator.clipboard.
+        html.append("function copyCode(btn) {");
+        html.append("  var wrap = btn.closest('.code-block');");
+        html.append("  if(!wrap) return;");
+        html.append("  var code = wrap.querySelector('pre');");
+        html.append("  var text = code ? (code.innerText || code.textContent || '') : '';");
+        html.append("  if(window.chatBridge) window.chatBridge.copyText(text);");
+        html.append("  btn.innerHTML = '<svg width=\"13\" height=\"13\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 8.5L6.5 12L13 4\"/></svg>';");
+        html.append("  setTimeout(function(){ btn.innerHTML = '<svg width=\"13\" height=\"13\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"5\" y=\"5\" width=\"9\" height=\"9\" rx=\"1.5\"/><path d=\"M3 11V2.5A1.5 1.5 0 0 1 4.5 1H11\"/></svg>'; }, 1200);");
+        html.append("}");
+        // Wrap every code block in a positioned container and add a copy button.
+        html.append("function addCodeCopyButtons() {");
+        html.append("  document.querySelectorAll('pre').forEach(function(pre) {");
+        html.append("    if(pre.parentElement && pre.parentElement.classList.contains('code-block')) return;");
+        html.append("    var wrap = document.createElement('div');");
+        html.append("    wrap.className = 'code-block';");
+        html.append("    pre.parentNode.insertBefore(wrap, pre);");
+        html.append("    wrap.appendChild(pre);");
+        html.append("    var btn = document.createElement('button');");
+        html.append("    btn.className = 'code-copy-btn';");
+        html.append("    btn.title = 'Copy code';");
+        html.append("    btn.setAttribute('onclick', 'copyCode(this)');");
+        html.append("    btn.innerHTML = '<svg width=\"13\" height=\"13\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><rect x=\"5\" y=\"5\" width=\"9\" height=\"9\" rx=\"1.5\"/><path d=\"M3 11V2.5A1.5 1.5 0 0 1 4.5 1H11\"/></svg>';");
+        html.append("    wrap.appendChild(btn);");
+        html.append("  });");
         html.append("}");
         html.append("document.addEventListener('DOMContentLoaded', function() {");
         html.append("  if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){");
@@ -885,6 +1081,7 @@ public class AIChatPanel extends JPanel {
         html.append("    pre.parentElement.replaceChild(div,pre);});");
         html.append("  mermaid.run();}");
         html.append("  if(window.hljs){hljs.highlightAll();}");
+        html.append("  addCodeCopyButtons();");
         html.append("});");
         html.append("</script>");
         // Lightbox for images and Mermaid diagrams (right-click to enlarge)
@@ -938,7 +1135,10 @@ public class AIChatPanel extends JPanel {
 
         // Pulsing "thinking" indicator
         if (pulsing) {
-            html.append("<div class=\"thinking\"><img class=\"bubble-icon\" src=\"").append(aiIconSrc()).append("\">" + AIChatMessages.get("aichat.thinking") + "</div>");
+            html.append("<div class=\"thinking\"><img class=\"bubble-icon\" src=\"").append(aiIconSrc()).append("\">");
+            html.append(AIChatMessages.get("aichat.thinking"));
+            html.append("<button class=\"cancel-btn\" onclick=\"cancelRequest()\" title=\"").append(AIChatMessages.get("aichat.cancel")).append("\">\u2715</button>");
+            html.append("</div>");
         }
 
         // Auto-scroll to bottom
@@ -949,6 +1149,7 @@ public class AIChatPanel extends JPanel {
         html.append("div.className='mermaid';div.textContent=el.textContent;");
         html.append("pre.parentElement.replaceChild(div,pre);});");
         html.append("mermaid.run();}");
+        html.append("if(typeof addCodeCopyButtons==='function') addCodeCopyButtons();");
         html.append("};</script>");
 
         html.append("</body></html>");
@@ -978,17 +1179,31 @@ public class AIChatPanel extends JPanel {
                    .replace("\n", "<br>");
     }
 
-    private String buildSystemPrompt() {
+    private String buildSystemPrompt(List<String> docIndexPaths) {
+        String base;
         try (var is = AIChatPanel.class.getResourceAsStream("/system_prompt.md")) {
             if (is != null) {
-                return new String(is.readAllBytes(), StandardCharsets.UTF_8).trim() +
-                        "\nResponses should be in " + AIChatMessages.get("aichat.languageName") + ".";
+                base = new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+            } else {
+                base = "You are an AI writing assistant.";
             }
         } catch (Exception e) {
-            // Fall through to hardcoded fallback
+            base = "You are an AI writing assistant.";
         }
-        return "You are an AI writing assistant. Help users write and improve markdown documents. "
-                + "Responses should be in " + AIChatMessages.get("aichat.languageName") + ".";
+
+        StringBuilder sb = new StringBuilder(base);
+
+        // Append stripped HTML documentation (if any) directly into the system prompt
+        if (docIndexPaths != null && !docIndexPaths.isEmpty()) {
+            String docs = DocumentRetriever.loadAndStripDocuments(docIndexPaths);
+            if (docs != null && !docs.isBlank()) {
+                sb.append("\n\n# Reference Documentation\n");
+                sb.append(docs);
+            }
+        }
+
+        sb.append("\nResponses should be in ").append(AIChatMessages.get("aichat.languageName")).append(".");
+        return sb.toString();
     }
 
     private String humanIconSrc() {

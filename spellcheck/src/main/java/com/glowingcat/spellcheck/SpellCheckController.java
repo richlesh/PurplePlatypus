@@ -130,6 +130,28 @@ public class SpellCheckController {
         this.onLanguageReady = callback;
     }
 
+    /**
+     * Enables or disables extended style checks (LanguageTool PICKY level) and
+     * re-runs the check if spell checking is currently active.
+     *
+     * @param enabled true to enable extended style/picky checks
+     */
+    public void setStyleChecksEnabled(boolean enabled) {
+        service.setStyleChecksEnabled(enabled);
+        if (enabled) {
+            recheck();
+        } else {
+            // Clear any style-only highlights, then re-check with the reduced rule set
+            highlighter.clearHighlights();
+            recheck();
+        }
+    }
+
+    /** Returns whether extended style checks (PICKY level) are enabled. */
+    public boolean isStyleChecksEnabled() {
+        return service.isStyleChecksEnabled();
+    }
+
     /** Returns the current language code. */
     public String getLanguage() {
         return service.getCurrentLanguage();

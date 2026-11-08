@@ -33,6 +33,8 @@ public class AIChatPreferencesDialog extends JDialog {
     private final Color[] aiTextColor;
     private boolean confirmed = false;
     private final Runnable[] fetchModelsHolder = new Runnable[1];
+    /** When true, re-selects the saved model after a fetch; false clears the selection. */
+    private final boolean[] preserveModelSelection = {true};
 
     private static final Integer[] FONT_SIZES = {8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36};
 
@@ -119,10 +121,15 @@ public class AIChatPreferencesDialog extends JDialog {
                     try {
                         GenericVendorConfig config = new GenericVendorConfig();
                         List<String> models = config.fetchModels(apiKey);
+                        models.sort(String.CASE_INSENSITIVE_ORDER);
                         SwingUtilities.invokeLater(() -> {
                             llmModelCombo.removeAllItems();
                             for (String mod : models) llmModelCombo.addItem(mod);
-                            if (prefs.getLlmModel() != null) llmModelCombo.setSelectedItem(prefs.getLlmModel());
+                            if (preserveModelSelection[0] && prefs.getLlmModel() != null) {
+                                llmModelCombo.setSelectedItem(prefs.getLlmModel());
+                            } else {
+                                llmModelCombo.setSelectedItem(null);
+                            }
                         });
                     } catch (Exception ex) {
                         // leave model combo empty on failure
@@ -171,10 +178,15 @@ public class AIChatPreferencesDialog extends JDialog {
                         }
                         models.add(id);
                     }
+                    models.sort(String.CASE_INSENSITIVE_ORDER);
                     SwingUtilities.invokeLater(() -> {
                         llmModelCombo.removeAllItems();
                         for (String mod : models) llmModelCombo.addItem(mod);
-                        if (prefs.getLlmModel() != null) llmModelCombo.setSelectedItem(prefs.getLlmModel());
+                        if (preserveModelSelection[0] && prefs.getLlmModel() != null) {
+                            llmModelCombo.setSelectedItem(prefs.getLlmModel());
+                        } else {
+                            llmModelCombo.setSelectedItem(null);
+                        }
                     });
                 } catch (Exception ex) {
                     // leave model combo empty on failure
@@ -183,15 +195,20 @@ public class AIChatPreferencesDialog extends JDialog {
         };
         fetchModelsHolder[0] = fetchModels;
         if (prefs.getLlmModel() != null) llmModelCombo.addItem(prefs.getLlmModel());
+        preserveModelSelection[0] = true;
         fetchModels.run();
         llmVendorCombo.addActionListener(e -> {
             llmApiKeyField.setText("");
             llmModelCombo.removeAllItems();
+            llmModelCombo.setSelectedItem(null);
+            preserveModelSelection[0] = false;
             fetchModels.run();
         });
         llmApiKeyField.getDocument().addDocumentListener(new DocumentListener() {
             private final Timer debounce = new Timer(500, e -> {
                 llmModelCombo.removeAllItems();
+                llmModelCombo.setSelectedItem(null);
+                preserveModelSelection[0] = false;
                 fetchModels.run();
             });
             { debounce.setRepeats(false); }
@@ -202,6 +219,8 @@ public class AIChatPreferencesDialog extends JDialog {
         llmEndpointField.getDocument().addDocumentListener(new DocumentListener() {
             private final Timer debounce = new Timer(500, e -> {
                 llmModelCombo.removeAllItems();
+                llmModelCombo.setSelectedItem(null);
+                preserveModelSelection[0] = false;
                 fetchModels.run();
             });
             { debounce.setRepeats(false); }

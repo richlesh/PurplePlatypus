@@ -232,6 +232,24 @@ li:has(> input[type=checkbox]) {
     animation: pulse 1.5s ease-in-out infinite;
 }
 
+.thinking .cancel-btn {
+    margin-left: 4px;
+    background: none;
+    border: none;
+    color: #cc0000;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    animation: none;
+    opacity: 1;
+}
+
+.thinking .cancel-btn:hover {
+    color: #ff0000;
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 0.4; }
     50% { opacity: 1; }
@@ -262,3 +280,41 @@ mjx-container svg {
 .markdown-alert-important { border-left-color: #8250df; } .markdown-alert-important .markdown-alert-title { color: #8250df; }
 .markdown-alert-warning { border-left-color: #9a6700; } .markdown-alert-warning .markdown-alert-title { color: #9a6700; }
 .markdown-alert-caution { border-left-color: #cf222e; } .markdown-alert-caution .markdown-alert-title { color: #cf222e; }
+
+/* Per-code-block copy button */
+.code-block {
+    position: relative;
+}
+
+.code-block pre {
+    /* leave room so the copy button never overlaps code text */
+    padding-right: 36px;
+}
+
+.code-copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(255, 255, 255, 0.75);
+    color: #333333;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+    padding: 3px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+    line-height: 0;
+}
+
+.code-block:hover .code-copy-btn {
+    opacity: 0.8;
+}
+
+.code-copy-btn:hover {
+    opacity: 1;
+    background: #ffffff;
+}
+
+.code-copy-btn:active {
+    background: #e6e6e6;
+}

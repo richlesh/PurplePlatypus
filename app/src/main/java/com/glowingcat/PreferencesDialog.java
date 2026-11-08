@@ -24,6 +24,7 @@ public class PreferencesDialog extends JDialog {
     private final JComboBox<String> previewCodeFontCombo;
     private final JComboBox<Integer> previewCodeSizeCombo;
     private final JComboBox<String> spellCheckLanguageCombo;
+    private final JCheckBox styleChecksBox;
     private final JComboBox<String> uiLanguageCombo;
     private final Color[] selectionColor;
     private final JCheckBox useTabsBox;
@@ -88,6 +89,9 @@ public class PreferencesDialog extends JDialog {
         spellCheckLanguageCombo = new JComboBox<>(languageDisplayNames);
         String currentLangCode = prefs.getSpellCheckLanguage();
         spellCheckLanguageCombo.setSelectedItem(LanguageDownloader.getDisplayName(currentLangCode));
+
+        styleChecksBox = new JCheckBox(Messages.get("dialog.prefs.styleChecks"), prefs.isStyleChecks());
+        styleChecksBox.setToolTipText(Messages.get("dialog.prefs.styleChecks.tooltip"));
 
         // === Main layout ===
         JPanel mainPanel = buildFontPanel();
@@ -226,6 +230,10 @@ public class PreferencesDialog extends JDialog {
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(spellCheckLanguageCombo, gbc);
 
+        gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.NONE;
+        panel.add(styleChecksBox, gbc);
+        gbc.gridwidth = 1;
+
         // Separator
         gbc.gridy = ++row; gbc.gridx = 0; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 6, 10, 6);
@@ -283,6 +291,7 @@ public class PreferencesDialog extends JDialog {
         prefs.setButtonHighlightColor(buttonHighlightColor[0]);
         String selectedDisplayName = (String) spellCheckLanguageCombo.getSelectedItem();
         prefs.setSpellCheckLanguage(LanguageDownloader.getCodeForDisplayName(selectedDisplayName));
+        prefs.setStyleChecks(styleChecksBox.isSelected());
         String selectedUiLang = (String) uiLanguageCombo.getSelectedItem();
         prefs.setUiLanguage(switch (selectedUiLang) {
             case "Español" -> "es";
