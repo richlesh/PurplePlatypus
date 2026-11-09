@@ -477,6 +477,8 @@ public class PreviewPanel extends JPanel {
         sb.append("<style>").append(loadPreviewCss(dark)).append("</style>");
         // Emoji image styles
         sb.append("<style>").append(com.glowingcat.aichat.EmojiReplacer.emojiCss()).append("</style>");
+        // Emoji image fallback handler (Twemoji -> GitHub) used by onerror="emojiFallback(this)"
+        sb.append("<script>").append(com.glowingcat.aichat.EmojiReplacer.emojiFallbackScript()).append("</script>");
         // Keyboard symbol image styles (dark-mode inversion)
         sb.append("<style>").append(com.glowingcat.aichat.SymbolReplacer.symbolCss()).append("</style>");
 

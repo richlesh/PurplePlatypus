@@ -346,7 +346,11 @@ public class AIChatPanel extends JPanel {
             icon.setVerticalAlignment(SwingConstants.TOP);
             row.add(icon, BorderLayout.WEST);
 
-            JTextArea textArea = new JTextArea(msg.markdown);
+            String displayText = msg.markdown;
+            if (msg instanceof ApprovalMessage am && am.diff != null) {
+                displayText += buildChangePreviewText(am.diff);
+            }
+            JTextArea textArea = new JTextArea(displayText);
             textArea.setFont(chatFont);
             textArea.setLineWrap(true);
             textArea.setWrapStyleWord(true);
@@ -963,6 +967,83 @@ public class AIChatPanel extends JPanel {
         return -1;
     }
 
+    /**
+     * Builds an HTML fragment that previews each change in a unified diff.
+     * <p>
+     * Each change is rendered as its own block containing the post-change text
+     * (context + added lines), preceded by a short label. Added lines are shown
+     * in bold red so the actual changes clearly stand out from the surrounding
+     * (muted) context. This is emitted as HTML rather than markdown so the chat's
+     * syntax highlighter does not recolor the content. Returns "" if the diff has
+     * no parseable changes.
+     *
+     * @param diff the unified diff content
+     * @return an HTML fragment to append after the approval explanation, or "" if
+     *         there is nothing to preview
+     */
+    private static String buildChangePreviewHtml(String diff) {
+        if (diff == null || diff.isBlank()) return "";
+        List<DiffApplier.ChangePreview> previews = DiffApplier.previewReplacements(diff);
+        if (previews.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div class=\"change-preview\">");
+        sb.append("<div class=\"change-preview-heading\">")
+          .append(escapeHtml(AIChatMessages.get("aichat.previewHeading")))
+          .append("</div>");
+        for (int i = 0; i < previews.size(); i++) {
+            DiffApplier.ChangePreview p = previews.get(i);
+            sb.append("<div class=\"change-preview-label\">")
+              .append(escapeHtml(AIChatMessages.get("aichat.previewChangeLabel",
+                      i + 1, p.added(), p.removed())))
+              .append("</div>");
+            sb.append("<pre class=\"change-preview-block\">");
+            for (DiffApplier.PreviewLine line : p.lines()) {
+                boolean added = line.kind() == DiffApplier.LineKind.ADDED;
+                // Keep empty lines visible with a zero-width space.
+                String text = line.text().isEmpty() ? "\u200b" : escapeHtml(line.text());
+                sb.append("<span class=\"")
+                  .append(added ? "change-added" : "change-context")
+                  .append("\">")
+                  .append(text)
+                  .append("</span>\n");
+            }
+            sb.append("</pre>");
+        }
+        sb.append("</div>");
+        return sb.toString();
+    }
+
+    /**
+     * Builds a plain-text preview of each change in a unified diff for the Swing
+     * fallback renderer (which has no HTML/CSS). Added lines are prefixed with
+     * "+ " and context lines with "  " so the changes remain distinguishable.
+     * Returns "" if the diff has no parseable changes.
+     *
+     * @param diff the unified diff content
+     * @return plain text to append after the approval explanation (starts with a
+     *         blank line), or "" if there is nothing to preview
+     */
+    private static String buildChangePreviewText(String diff) {
+        if (diff == null || diff.isBlank()) return "";
+        List<DiffApplier.ChangePreview> previews = DiffApplier.previewReplacements(diff);
+        if (previews.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n\n").append(AIChatMessages.get("aichat.previewHeading"));
+        for (int i = 0; i < previews.size(); i++) {
+            DiffApplier.ChangePreview p = previews.get(i);
+            sb.append("\n\n")
+              .append(AIChatMessages.get("aichat.previewChangeLabel", i + 1, p.added(), p.removed()))
+              .append("\n");
+            for (DiffApplier.PreviewLine line : p.lines()) {
+                boolean added = line.kind() == DiffApplier.LineKind.ADDED;
+                sb.append(added ? "+ " : "  ").append(line.text()).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
     /** Special message type for document replacement approvals. */
     private static class ApprovalMessage extends ChatMessage {
         final String explanation;
@@ -1019,6 +1100,8 @@ public class AIChatPanel extends JPanel {
         html.append("<style>").append(loadCssResource(darkMode)).append("</style>");
         // Emoji image styles
         html.append("<style>").append(EmojiReplacer.emojiCss()).append("</style>");
+        // Emoji image fallback handler (Twemoji -> GitHub) used by onerror="emojiFallback(this)"
+        html.append("<script>").append(EmojiReplacer.emojiFallbackScript()).append("</script>");
         html.append("<script>");
         html.append("MathJax = {");
         html.append("  tex: { inlineMath: [['$','$'], ['\\\\(','\\\\)']], displayMath: [['$$','$$'], ['\\\\[','\\\\]']] },");
@@ -1061,6 +1144,7 @@ public class AIChatPanel extends JPanel {
         // Wrap every code block in a positioned container and add a copy button.
         html.append("function addCodeCopyButtons() {");
         html.append("  document.querySelectorAll('pre').forEach(function(pre) {");
+        html.append("    if(pre.classList.contains('change-preview-block')) return;");
         html.append("    if(pre.parentElement && pre.parentElement.classList.contains('code-block')) return;");
         html.append("    var wrap = document.createElement('div');");
         html.append("    wrap.className = 'code-block';");
@@ -1102,9 +1186,17 @@ public class AIChatPanel extends JPanel {
                 // AI message — render markdown as HTML
                 String renderedContent;
                 if (msg instanceof ApprovalMessage am) {
-                    renderedContent = renderMarkdownToHtml(am.explanation.isEmpty()
+                    String explanationMd = am.explanation.isEmpty()
                         ? AIChatMessages.get("aichat.updatedDocument")
-                        : am.explanation);
+                        : am.explanation;
+                    renderedContent = renderMarkdownToHtml(explanationMd);
+                    // When the change is a diff, append an HTML preview of each
+                    // change. Added lines are emphasized (bold red) and context
+                    // lines are muted, so the actual changes clearly stand out.
+                    // Built as HTML (not markdown) so highlight.js does not recolor it.
+                    if (am.diff != null) {
+                        renderedContent += buildChangePreviewHtml(am.diff);
+                    }
                 } else {
                     renderedContent = renderMarkdownToHtml(msg.markdown);
                 }

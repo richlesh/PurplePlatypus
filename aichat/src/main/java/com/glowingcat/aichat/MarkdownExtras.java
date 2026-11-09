@@ -146,6 +146,34 @@ public final class MarkdownExtras {
     }
 
     /**
+     * Returns whether the given shortcode (without surrounding colons) is a known, valid
+     * emoji shortcode — either a Unicode emoji or an image-only GitHub-custom one. The lookup
+     * is case-insensitive. Null/blank input returns {@code false}.
+     *
+     * @param code the shortcode without colons (e.g. {@code "tada"})
+     * @return true if the shortcode resolves to an emoji
+     */
+    public static boolean isKnownShortcode(String code) {
+        if (code == null || code.isEmpty()) return false;
+        String key = code.toLowerCase(Locale.US);
+        return EMOJI.containsKey(key) || CUSTOM_EMOJI.containsKey(key);
+    }
+
+    /**
+     * Returns an immutable snapshot of every known emoji shortcode (without colons), combining
+     * Unicode and image-only GitHub-custom shortcodes. Useful for validation and for computing
+     * similar-shortcode suggestions. The returned set is a copy and is safe to iterate.
+     *
+     * @return all known shortcodes, lower-cased
+     */
+    public static java.util.Set<String> knownShortcodes() {
+        java.util.Set<String> all = new java.util.HashSet<>(EMOJI.size() + CUSTOM_EMOJI.size());
+        all.addAll(EMOJI.keySet());
+        all.addAll(CUSTOM_EMOJI.keySet());
+        return java.util.Collections.unmodifiableSet(all);
+    }
+
+    /**
      * Image-only GitHub-custom shortcodes (e.g. {@code :shipit:}, {@code :octocat:}) that have
      * no Unicode character. Maps shortcode → image URL; rendered as an {@code <img>} directly
      * during preprocessing since there is no character for {@link EmojiReplacer} to handle.

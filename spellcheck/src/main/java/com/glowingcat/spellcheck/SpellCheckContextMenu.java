@@ -60,6 +60,21 @@ public class SpellCheckContextMenu {
 
                 int insertIndex = 0;
 
+                boolean isGrammar = error.isGrammar();
+
+                // For grammar/style issues, show LanguageTool's explanation as a
+                // non-clickable header so the user understands the suggestion.
+                if (isGrammar) {
+                    String message = error.message();
+                    if (message != null && !message.isBlank()) {
+                        JMenuItem header = new JMenuItem(truncate(message, 80));
+                        header.setEnabled(false);
+                        header.setToolTipText(message);
+                        menu.insert(header, insertIndex++);
+                        dynamicItems.add(header);
+                    }
+                }
+
                 // Add suggestions
                 List<String> suggestions = error.suggestions();
                 int count = Math.min(suggestions.size(), MAX_SUGGESTIONS);
@@ -88,14 +103,18 @@ public class SpellCheckContextMenu {
                     dynamicItems.add(noSuggestions);
                 }
 
-                // Add to Dictionary item
-                JMenuItem addToDict = new JMenuItem("Add \"" + misspelledWord + "\" to Dictionary");
-                addToDict.addActionListener(evt -> {
-                    service.addToDictionary(misspelledWord);
-                    recheckCallback.run();
-                });
-                menu.insert(addToDict, insertIndex++);
-                dynamicItems.add(addToDict);
+                // "Add to Dictionary" only makes sense for spelling mistakes —
+                // adding a grammar phrase like "the the" to the dictionary is
+                // meaningless, so suppress it for grammar/style issues.
+                if (!isGrammar) {
+                    JMenuItem addToDict = new JMenuItem("Add \"" + misspelledWord + "\" to Dictionary");
+                    addToDict.addActionListener(evt -> {
+                        service.addToDictionary(misspelledWord);
+                        recheckCallback.run();
+                    });
+                    menu.insert(addToDict, insertIndex++);
+                    dynamicItems.add(addToDict);
+                }
 
                 // Separator
                 JPopupMenu.Separator separator = new JPopupMenu.Separator();
@@ -120,6 +139,13 @@ public class SpellCheckContextMenu {
             menu.remove(item);
         }
         dynamicItems.clear();
+    }
+
+    /** Truncates a message for display in a menu header, appending an ellipsis if shortened. */
+    private static String truncate(String s, int maxLen) {
+        if (s == null) return "";
+        s = s.trim();
+        return s.length() <= maxLen ? s : s.substring(0, Math.max(0, maxLen - 1)) + "\u2026";
     }
 
     /**

@@ -1,6 +1,6 @@
 ![](app/src/main/resources/app_icon_256.png)
 
-# PurplePlatypus 1.12.0
+# PurplePlatypus 1.13.0
 
 A lightweight desktop Markdown editor built with Java Swing, featuring a live preview pane that renders your Markdown as you type and an AI writing assistant powered by LLM APIs.
 
@@ -9,7 +9,8 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Split-pane editor** — Write Markdown on the left, see the rendered HTML preview on the right, with synchronized scrolling so the preview stays aligned with your position in the editor
 - **Live preview** — The preview updates in real time as you type, with no manual refresh needed
 - **AI writing assistant** — Built-in chat panel powered by LLM APIs to help draft, edit, and improve your markdown content
-- **Live spell checker** — Real-time spell and grammar checking powered by LanguageTool with support for 31 languages; right-click suggestions and user dictionary; language packs download on demand from Maven Central
+- **Improve Writing (AI)** — One-click command (Edit menu, ⌘/Ctrl+⌥/Alt+I) that sends the selected text, or the whole document, to the AI to fix grammar, spelling, clarity, and flow while preserving meaning and Markdown structure; the result comes back as a reviewable diff
+- **Live spell checker** — Real-time spell and grammar checking powered by LanguageTool with support for 31 languages; spelling mistakes get a red squiggly underline and grammar/style issues a blue one; right-click a word for spelling suggestions and "Add to Dictionary", or right-click a grammar issue for its explanation and suggested fixes; language packs download on demand from Maven Central
 - **Localization** — Full UI localization in English, Spanish, French, German, Italian, Japanese, and Simplified Chinese; select language in Preferences; RTL content support (Arabic, Hebrew) in preview and AI chat
 - **Multi-vendor LLM support** — Connect to OpenAI, Anthropic, Google, Amazon Bedrock, IBM watsonx, Microsoft Azure, DeepSeek, Alibaba, Cerebras, Groq, Meta, Mistral, Moonshot AI, Perplexity, xAI, or local Ollama models; also supports a Generic OpenAI API endpoint for any OpenAI-compatible service
 - **Generic LLM vendor** — YAML-configurable API endpoint for any LLM service (corporate APIs, custom proxies, etc.) with OAuth/IAM token exchange, configurable request/response format, and single-shot or multi-turn conversation modes
@@ -70,6 +71,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Markdown support** — CommonMark with extensions: GFM tables, strikethrough, task lists, autolink, footnotes, heading anchors, image attributes, insert (underline), and YAML front matter
 - **GitHub-style alerts** — Callout blockquotes `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, and `[!CAUTION]` render as colored callout boxes in the preview, exports, and AI chat
 - **Emoji shortcodes** — GitHub-style `:shortcode:` syntax (e.g. `:tada:`, `:rocket:`) renders as emoji, backed by the full gemoji dataset (~1,870 emoji) plus GitHub-custom shortcodes such as `:shipit:` and `:octocat:`
+- **Emoji shortcode validation** — Unknown `:shortcode:` tokens are flagged in the editor with an orange squiggly underline; right-click an underlined shortcode for a list of similar valid shortcodes (prefix, contains, or spelled-like) to replace it with. The known set is the bundled gemoji dataset and can be refreshed on launch from `https://api.github.com/emojis`
 - **Subscript & superscript syntax** — Inline `~subscript~` and `^superscript^` render as `<sub>`/`<sup>` (single tildes; `~~strikethrough~~` is preserved, and code spans are left literal)
 - **Styled preview** — Clean, readable HTML output with custom CSS styling and MathJax support
 - **Syntax highlighting** — Code blocks in the preview and AI chat are syntax-highlighted via highlight.js with automatic language detection and light/dark theme support
@@ -80,7 +82,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Preferences** — Configurable font family and size for editor, preview, and AI chat panes; LLM vendor/model/API key settings; chat bubble colors; toolbar button highlight color
 - **Window state persistence** — Window size, divider positions, and panel visibility are remembered between sessions
 - **License key** — Optional license key to support continued development; enter via File > License Key on macOS or the application menu on other platforms
-- **Emoji support** — Non-BMP emoji characters are rendered using Twemoji SVG images in both the preview and AI chat panes
+- **Emoji support** — Emoji are rendered as Twemoji SVG images in the preview and AI chat panes for consistent color, including BMP symbols such as ✔️, ☹️, and ⚠️ that platform fonts often draw in black-and-white; GitHub-only shortcodes with no Unicode character (e.g. `:shipit:`) render from their hosted GitHub image, with the known set refreshed on launch from `https://api.github.com/emojis`
 - **Keyboard symbols** — Keyboard/modifier glyphs (⌘ ⇧ ⌥ ⌃, arrows, Return, Escape, Windows/Super, Caps Lock, Enter, Eject, and more) are rendered as inline SVG images built from system-font outlines, so they display and print correctly (including in PDF export) even in fonts that lack them
 
 ## AI Assistant
@@ -93,7 +95,7 @@ The built-in AI chat panel helps you write and improve markdown content:
 - Generate tables from descriptions
 - Help with technical writing, blog posts, documentation, and READMEs
 
-When the AI suggests a document change, you're given Allow/Reject buttons to accept or decline the changes.
+When the AI suggests a document change, you're given Allow/Reject buttons to accept or decline the changes. For diff-based edits, each change is previewed in its own block showing the resulting text, with added lines emphasized in bold so the actual changes stand out from the surrounding context.
 
 The AI chat panel renders responses with full markdown support (tables, code blocks, math, links) via an embedded WebView with MathJax. A copy button on each AI response copies the raw markdown to the clipboard. For large documents, the AI returns efficient unified diffs instead of full replacements, reducing token usage and response time.
 

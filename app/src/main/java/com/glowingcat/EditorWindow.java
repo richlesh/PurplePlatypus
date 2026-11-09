@@ -47,27 +47,71 @@ public class EditorWindow {
     static final List<EditorWindow> openInstances = new ArrayList<>();
 
     /**
-     * Timestamp of the last accelerator-driven menu action, used to suppress the
-     * duplicate ActionEvent that the macOS screen menu bar delivers for menu-item
-     * accelerators that include the Option/Alt modifier (e.g. the Export items).
-     * Without this guard such actions fire twice, presenting file dialogs twice.
+     * Timestamp (ms) at which the last accelerator-driven menu action finished,
+     * used to suppress the duplicate ActionEvent that the macOS screen menu bar
+     * delivers for menu-item accelerators that include the Option/Alt modifier
+     * (e.g. the Export items). Without this guard such actions fire twice,
+     * presenting file dialogs twice.
+     * <p>
+     * The timestamp is recorded on <em>completion</em> (not start) of the action
+     * because dialog-opening actions block the EDT via a modal/nested event loop;
+     * the duplicate event is only processed after the first dialog closes, so a
+     * start-time window would already have expired by then.
      */
     private long lastAcceleratorActionTime = 0L;
 
     /**
-     * Wraps a menu action so that a second invocation arriving within a short
-     * window (the duplicate event burst) is ignored. This neutralizes the macOS
-     * screen-menu-bar double-fire of Option/Alt accelerators while leaving normal
-     * menu clicks unaffected (real clicks are never this close together).
+     * True while a debounced action is running. Because macOS can deliver the
+     * duplicate accelerator event through the nested event loop that a modal
+     * {@link FileDialog} pumps, the second event may be dispatched <em>during</em>
+     * the first action; this flag suppresses such re-entrant invocations.
      */
+    private boolean acceleratorActionInProgress = false;
+
+    /**
+     * Wraps a menu action so that the duplicate event burst macOS delivers for
+     * Option/Alt accelerators is ignored, while leaving normal menu clicks
+     * unaffected (real repeat clicks are never this close together).
+     * <p>
+     * Two guards are combined so this works for both instant actions and actions
+     * that open a modal dialog (which blocks the EDT until dismissed):
+     * <ul>
+     *   <li>a re-entrancy flag suppresses a duplicate dispatched while the action
+     *       is still running inside a modal dialog's nested event loop, and</li>
+     *   <li>a short window measured from the action's completion suppresses a
+     *       duplicate that arrives immediately after it returns.</li>
+     * </ul>
+     */
+    /** Suppression window (ms) for the macOS Option/Alt accelerator double-fire. */
+    static final long ACCELERATOR_DEBOUNCE_MS = 300;
+
+    /**
+     * Decides whether an incoming debounced action event is a macOS duplicate
+     * that should be suppressed. Extracted as a pure function so the policy can
+     * be unit-tested without constructing a window.
+     *
+     * @param inProgress         whether a debounced action is currently running
+     * @param lastCompletionTime completion timestamp (ms) of the previous action
+     * @param now                current timestamp (ms)
+     * @return true if the event should be ignored
+     */
+    static boolean shouldSuppressDuplicate(boolean inProgress, long lastCompletionTime, long now) {
+        return inProgress || now - lastCompletionTime < ACCELERATOR_DEBOUNCE_MS;
+    }
+
     private java.awt.event.ActionListener debounced(Runnable action) {
         return e -> {
-            long now = System.currentTimeMillis();
-            if (now - lastAcceleratorActionTime < 300) {
+            if (shouldSuppressDuplicate(acceleratorActionInProgress, lastAcceleratorActionTime,
+                    System.currentTimeMillis())) {
                 return;
             }
-            lastAcceleratorActionTime = now;
-            action.run();
+            acceleratorActionInProgress = true;
+            try {
+                action.run();
+            } finally {
+                acceleratorActionInProgress = false;
+                lastAcceleratorActionTime = System.currentTimeMillis();
+            }
         };
     }
 
@@ -90,6 +134,7 @@ public class EditorWindow {
     private JToggleButton spellCheckToggle;
     private JPanel toolbar;
     private SpellCheckController spellCheckController;
+    private EmojiShortcodeChecker emojiShortcodeChecker;
     private boolean previewVisible = true;
     private boolean aiVisible = true;
     private boolean syncScrollEnabled = false;
@@ -159,6 +204,9 @@ public class EditorWindow {
                     saveWindowState();
                     if (spellCheckController != null) {
                         spellCheckController.dispose();
+                    }
+                    if (emojiShortcodeChecker != null) {
+                        emojiShortcodeChecker.dispose();
                     }
                     frame.dispose();
                 }
@@ -419,6 +467,8 @@ public class EditorWindow {
 
         editMenu.addSeparator();
         JMenuItem improveWritingItem = new JMenuItem(Messages.get("menu.edit.improveWriting"));
+        improveWritingItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_I,
+                shortcutMask | java.awt.event.InputEvent.ALT_DOWN_MASK));
         improveWritingItem.addActionListener(e -> improveWriting());
         editMenu.add(improveWritingItem);
 
@@ -1414,6 +1464,23 @@ public class EditorWindow {
                     Messages.get("msg.spellCheckReadyTitle"), JOptionPane.INFORMATION_MESSAGE);
         });
         spellCheckController.setEnabled(true);
+
+        // Emoji shortcode validation — underline unknown :shortcodes: in orange and offer
+        // similar valid ones on right-click. Enabled by default, like spell checking.
+        emojiShortcodeChecker = new EmojiShortcodeChecker(editorPane);
+        emojiShortcodeChecker.setEnabled(true);
+        // The app-wide GitHub emoji refresh (started in Main) populates the shared shortcode
+        // map asynchronously. Re-scan once a few seconds after the window opens so any
+        // GitHub-only shortcodes learned by then lose their "unknown" underline. One-shot,
+        // on the EDT, no extra network call.
+        Timer emojiRescan = new Timer(4000, ev -> {
+            if (emojiShortcodeChecker != null && emojiShortcodeChecker.isEnabled()) {
+                emojiShortcodeChecker.setEnabled(false);
+                emojiShortcodeChecker.setEnabled(true);
+            }
+        });
+        emojiRescan.setRepeats(false);
+        emojiRescan.start();
 
         // Drag-and-drop: insert markdown image link when an image file is dropped onto the editor
         new DropTarget(editorPane, DnDConstants.ACTION_COPY, new DropTargetAdapter() {

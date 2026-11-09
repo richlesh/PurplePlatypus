@@ -14,12 +14,17 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Manages squiggly-underline highlights on the editor for misspelled words.
+ * Manages squiggly-underline highlights on the editor: red for misspelled
+ * words and blue for grammar/style issues.
  */
 public class SpellCheckHighlighter {
 
-    /** Custom painter that draws a red squiggly underline beneath text. */
-    private static final Highlighter.HighlightPainter SQUIGGLY_PAINTER = new SquigglyPainter();
+    /** Red squiggle for spelling mistakes. */
+    private static final Highlighter.HighlightPainter SPELLING_PAINTER =
+            new SquigglyPainter(new Color(255, 0, 0, 180));
+    /** Blue squiggle for grammar/style issues. */
+    private static final Highlighter.HighlightPainter GRAMMAR_PAINTER =
+            new SquigglyPainter(new Color(0, 100, 220, 190));
 
     private final RSyntaxTextArea textArea;
     private final List<Object> highlightTags = new ArrayList<>();
@@ -49,8 +54,10 @@ public class SpellCheckHighlighter {
         Highlighter highlighter = textArea.getHighlighter();
         for (SpellCheckService.SpellError error : filtered) {
             try {
+                Highlighter.HighlightPainter painter =
+                        error.isGrammar() ? GRAMMAR_PAINTER : SPELLING_PAINTER;
                 Object tag = highlighter.addHighlight(
-                        error.startOffset(), error.endOffset(), SQUIGGLY_PAINTER);
+                        error.startOffset(), error.endOffset(), painter);
                 highlightTags.add(tag);
             } catch (BadLocationException e) {
                 // Offset out of range — skip this highlight
@@ -100,13 +107,19 @@ public class SpellCheckHighlighter {
     }
 
     /**
-     * Paints a red squiggly (wave) underline beneath the highlighted text.
+     * Paints a squiggly (wave) underline beneath the highlighted text in a
+     * configurable color (red for spelling, blue for grammar/style).
      */
     private static class SquigglyPainter implements Highlighter.HighlightPainter {
 
-        private static final Color SQUIGGLY_COLOR = new Color(255, 0, 0, 180);
         private static final int WAVE_HEIGHT = 2;
         private static final int WAVE_WIDTH = 4;
+
+        private final Color color;
+
+        SquigglyPainter(Color color) {
+            this.color = color;
+        }
 
         @Override
         public void paint(Graphics g, int offs0, int offs1, Shape bounds, JTextComponent c) {
@@ -117,7 +130,7 @@ public class SpellCheckHighlighter {
 
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(SQUIGGLY_COLOR);
+                g2.setColor(color);
                 g2.setStroke(new BasicStroke(1.0f));
 
                 // Draw on each line the text spans

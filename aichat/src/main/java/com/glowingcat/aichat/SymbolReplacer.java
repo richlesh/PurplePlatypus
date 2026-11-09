@@ -114,10 +114,25 @@ public final class SymbolReplacer {
         if (!any) return html;
 
         StringBuilder out = new StringBuilder(html.length() + 64);
+        // Only rewrite symbols that appear in text content, never inside an HTML tag
+        // (e.g. a symbol character sitting in another element's attribute such as
+        // <img alt="⏏️">). Rewriting inside a tag would corrupt it and spill the rest of
+        // the tag as visible text. We track a simple in-tag flag by watching for '<' / '>'.
+        boolean inTag = false;
         for (int i = 0; i < html.length(); i++) {
             char c = html.charAt(i);
+            if (c == '<') {
+                inTag = true;
+                out.append(c);
+                continue;
+            }
+            if (c == '>') {
+                inTag = false;
+                out.append(c);
+                continue;
+            }
             int cp = c;
-            if (HANDLED.contains(cp)) {
+            if (!inTag && HANDLED.contains(cp)) {
                 String svg = svgFor(cp);
                 if (svg != null && !svg.isEmpty()) {
                     out.append(svg);

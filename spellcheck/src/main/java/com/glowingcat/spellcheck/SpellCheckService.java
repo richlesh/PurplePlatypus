@@ -33,8 +33,31 @@ import java.util.stream.Collectors;
  */
 public class SpellCheckService {
 
-    /** A spelling or grammar error found in the text. */
-    public record SpellError(int startOffset, int endOffset, String message, List<String> suggestions) {}
+    /** Classifies an error as a dictionary spelling mistake or a grammar/style issue. */
+    public enum ErrorType { SPELLING, GRAMMAR }
+
+    /**
+     * A spelling or grammar error found in the text.
+     *
+     * @param startOffset inclusive start offset in the document
+     * @param endOffset   exclusive end offset in the document
+     * @param message     human-readable explanation from LanguageTool
+     * @param suggestions suggested replacements (may be empty)
+     * @param type        whether this is a SPELLING or GRAMMAR/style issue
+     */
+    public record SpellError(int startOffset, int endOffset, String message,
+                             List<String> suggestions, ErrorType type) {
+
+        /** Backward-compatible constructor; defaults the type to SPELLING. */
+        public SpellError(int startOffset, int endOffset, String message, List<String> suggestions) {
+            this(startOffset, endOffset, message, suggestions, ErrorType.SPELLING);
+        }
+
+        /** Convenience: true when this is a grammar/style issue rather than a spelling mistake. */
+        public boolean isGrammar() {
+            return type == ErrorType.GRAMMAR;
+        }
+    }
 
     private static final String USER_DICT_FILENAME = "user-dictionary.txt";
 
@@ -154,11 +177,18 @@ public class SpellCheckService {
                 if (userDictionary.contains(word.toLowerCase(Locale.ROOT))) {
                     continue;
                 }
+                // Dictionary-based spelling rules are context-free word checks;
+                // everything else (agreement, repetition, style, etc.) is grammar.
+                ErrorType type = match.getRule() != null
+                        && match.getRule().isDictionaryBasedSpellingRule()
+                        ? ErrorType.SPELLING
+                        : ErrorType.GRAMMAR;
                 errors.add(new SpellError(
                         match.getFromPos(),
                         match.getToPos(),
                         match.getMessage(),
-                        match.getSuggestedReplacements()
+                        match.getSuggestedReplacements(),
+                        type
                 ));
             }
             return errors;

@@ -318,3 +318,39 @@ mjx-container svg {
 .code-copy-btn:active {
     background: rgba(255, 255, 255, 0.35);
 }
+
+/* AI change preview (diff-update suggestions) */
+.change-preview {
+    margin-top: 10px;
+}
+
+.change-preview-heading {
+    font-weight: 600;
+    margin: 6px 0 2px 0;
+}
+
+.change-preview-label {
+    font-size: 0.9em;
+    color: #aaaaaa;
+    margin: 8px 0 2px 0;
+}
+
+pre.change-preview-block {
+    color: #ffffff;
+    background: #333333;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+pre.change-preview-block .change-context {
+    color: #9a9a9a;
+}
+
+pre.change-preview-block .change-added {
+    color: #ff6b6b;
+    font-weight: bold;
+}

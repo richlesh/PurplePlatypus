@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version tag (e.g. 1.12.0)'
+        description: 'Release version tag (e.g. 1.13.0)'
         required: true
 
 permissions:
@@ -130,9 +130,12 @@ jobs:
         shell: bash
         run: |
           MAVEN_OPTS=""
-          if [ "${{ runner.os }}" = "Linux" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
-            MAVEN_OPTS="-Djavafx.platform=linux"
-          elif [ "${{ runner.os }}" = "Windows" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
+          # Linux/macOS and Windows x64 auto-detect the JavaFX native classifier
+          # via the OS-activated profiles in the parent POM (javafx-* profiles),
+          # so no override is needed. Windows ARM64 is forced to the x64 (win)
+          # classifier because OpenJFX has no usable win-aarch64 WebView build;
+          # the app falls back to the Swing renderer there.
+          if [ "${{ runner.os }}" = "Windows" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
             MAVEN_OPTS="-Djavafx.platform=win"
           fi
           mvn clean package -DskipTests=true $MAVEN_OPTS
