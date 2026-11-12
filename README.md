@@ -135,6 +135,17 @@ Sample configurations for Amazon Bedrock, Anthropic, IBM watsonx.ai, Microsoft A
 | Linux x64 | JavaFX WebView | Full support |
 | Linux ARM64 | JavaFX WebView | Full support |
 
+### Windows installer
+
+The Windows installer (`PurplePlatypus-<version>-x64.exe` / `-arm64.exe`) is built with Inno Setup and supports per-user and all-users installs:
+
+| Switch | Installs for | Default folder | Admin rights |
+|--------|--------------|----------------|--------------|
+| *(none)* or `/CURRENTUSER` | Current user | `%LOCALAPPDATA%\Programs\PurplePlatypus` | Not required |
+| `/ALLUSERS` | All users | `%ProgramFiles%\PurplePlatypus` | Required (UAC prompt) |
+
+Standard Inno Setup switches also work, e.g. `/SILENT`, `/VERYSILENT`, `/DIR="path"`, `/LOG="file"`, and `/MERGETASKS="!desktopicon"` to skip the desktop shortcut. Installing over a previous MSI-based version removes the old install automatically.
+
 ## Requirements
 
 - Java 21 or later

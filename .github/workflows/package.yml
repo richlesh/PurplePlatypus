@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version tag (e.g. 1.13.0)'
+        description: 'Release version tag (e.g. 1.14.0)'
         required: true
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
             icon: app/src/main/resources/app_icon.ico
             doc_icon: app/src/main/resources/doc_icon.ico
             textbundle_icon: app/src/main/resources/textbundle_icon.ico
-            pkg_type: msi
+            pkg_type: exe
             label: windows-x64
           - os: windows-11-arm
             arch: arm64
@@ -149,14 +149,27 @@ jobs:
         if: matrix.pkg_type == 'rpm'
         run: sudo apt-get update && sudo apt-get install -y rpm
 
-      - name: Install WiX Toolset (Windows)
+      - name: Install Inno Setup (Windows)
         if: runner.os == 'Windows'
-        shell: bash
+        shell: pwsh
         run: |
-          curl -L -o wix314-binaries.zip https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip
-          mkdir -p wix
-          unzip -q wix314-binaries.zip -d wix
-          echo "$PWD/wix" >> $GITHUB_PATH
+          # Pinned and checksum-verified. Installed under RUNNER_TEMP (not the
+          # workspace) so its setup .exe is never picked up as a release artifact.
+          $version = '6.7.4'
+          $sha256  = 'A549929319F9120716677C685535CA4671E4B937B5FDC87E2585F32D8EB30E8C'
+          $tag     = 'is-' + ($version -replace '\.', '_')
+          $url     = "https://github.com/jrsoftware/issrc/releases/download/$tag/innosetup-$version.exe"
+          $setup   = Join-Path $env:RUNNER_TEMP "innosetup-$version.exe"
+          $dir     = Join-Path $env:RUNNER_TEMP 'InnoSetup'
+          Invoke-WebRequest -Uri $url -OutFile $setup
+          $actual = (Get-FileHash -Algorithm SHA256 -Path $setup).Hash
+          if ($actual -ne $sha256) { throw "Inno Setup checksum mismatch: $actual" }
+          $p = Start-Process -FilePath $setup -Wait -PassThru -ArgumentList @(
+            '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/CURRENTUSER', "/DIR=`"$dir`"")
+          if ($p.ExitCode -ne 0) { throw "Inno Setup install failed with exit code $($p.ExitCode)" }
+          $iscc = Join-Path $dir 'ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found in $dir" }
+          "ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Create file associations config
         shell: bash
@@ -196,10 +209,6 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp -R demo lib/
             cp -R aichat/src/main/resources/config "lib/AI Config Examples"
-          fi
-          # Ensure WiX is on PATH for Windows builds
-          if [ -d "$GITHUB_WORKSPACE/wix" ]; then
-            export PATH="$GITHUB_WORKSPACE/wix:$PATH"
           fi
           if [ "${{ runner.os }}" = "macOS" ]; then
             # Build app-image first so we can sign before creating DMG
@@ -456,12 +465,10 @@ jobs:
               fi
             fi
           else
-            # Windows: build in two steps. A single-step `--type msi` straight
-            # from --input does not reliably embed the launcher .exe icon, so the
-            # app shows a blank/default icon in Explorer, the Start menu and the
-            # shortcut. Building an app-image first (with --icon) embeds the icon
-            # into PurplePlatypus.exe; the installer step then packages that image
-            # and also sets the Add/Remove-Programs icon via --icon.
+            # Windows: build only the app-image here (launcher with embedded icon,
+            # bundled runtime, app jar, demo and AI Config Examples). The installer
+            # is created from this image by Inno Setup in the next step, which
+            # supports both per-user and all-users installs (/CURRENTUSER, /ALLUSERS).
             jpackage \
               --input lib \
               --main-jar ${{ env.JARFILE }} \
@@ -476,32 +483,19 @@ jobs:
               --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6" \
               --java-options "--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED" \
               --type app-image
-
-            # Package the installer from the app-image. --win-per-user-install
-            # makes jpackage author a fully per-user MSI: the stock WiX template
-            # sets InstallScope=perUser AND the generated registry/directory
-            # components use the per-user (HKCU) roots, so installing without
-            # admin succeeds. (A main.wxs override that only forced perUser in
-            # the Package element left jpackage's generated registry component
-            # pointed at HKLM, which failed with "need access to key …
-            # \Software\Glowing Cat\… ProductCode" under a per-user install.)
-            jpackage \
-              --app-image PurplePlatypus \
-              --win-per-user-install \
-              --name PurplePlatypus \
-              --app-version "${{ env.APP_VERSION }}" \
-              --vendor "Glowing Cat" \
-              --copyright "(C) 2026 Glowing Cat" \
-              --description "A lightweight desktop Markdown editor with live preview" \
-              --icon "${{ matrix.icon }}" \
-              --file-associations fa-md.properties \
-              --file-associations fa-markdown.properties \
-              --file-associations fa-textbundle.properties \
-              --file-associations fa-textpack.properties \
-              --win-menu \
-              --win-shortcut \
-              --type ${{ matrix.pkg_type }}
           fi
+
+      - name: Build installer with Inno Setup (Windows)
+        if: runner.os == 'Windows'
+        # pwsh, not bash: Git Bash rewrites arguments that start with '/' (such
+        # as ISCC's /D defines) into filesystem paths.
+        shell: pwsh
+        run: |
+          & $env:ISCC "/DAppVersion=$env:APP_VERSION" "/DArch=${{ matrix.arch }}" 'packaging\PurplePlatypus.iss'
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+          $installer = "PurplePlatypus-$env:APP_VERSION.exe"
+          if (-not (Test-Path $installer)) { throw "Expected installer $installer was not produced" }
+          Get-Item $installer | Format-Table Name, Length
 
       - name: Patch Info.plist with UTI declarations (macOS)
         if: runner.os == 'macOS'
