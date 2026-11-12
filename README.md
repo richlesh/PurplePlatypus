@@ -50,12 +50,12 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Replace** — Find and replace with Replace, Replace and Find, and Replace All operations
 - **Escape sequences in Find/Replace** — "Interpret Escapes" option processes `\t`, `\n`, `\r`, `\\`, and `\uXXXX` in find and replace fields
 - **Search/Replace recents** — Save frequently used search and replace expressions with +/- buttons; recall them from a dropdown menu
-- **Find in Preview** — Search for selected editor text in the rendered preview (⇧⌘F); right-click selected preview text to find it in the source
+- **Find in Preview** — Search for selected editor text in the rendered preview (⇧⌘F); right-click selected preview text for Copy Markdown, Copy HTML, or Find in Source
 - **Internal link navigation** — Click internal anchor links (e.g. `[Section](#section)`) in the preview to jump to the corresponding heading in both the editor and preview; following a link disconnects synchronized scrolling and moves both panes to the target
 - **Go Back** — Return to the location you were viewing before following an internal link (Search menu, ⌘/Ctrl+K); supports chained jumps
 - **Go to Line** — Jump to a specific line number in the source (⇧⌘J)
 - **Line ending conversion** — Detect and convert between Unix (`\n`) and Windows (`\r\n`) line endings via the Edit menu; line ending format is preserved on save
-- **Cleanup Pandoc Tables** — Convert Pandoc grid-style tables to standard GFM pipe-style tables
+- **Cleanup Pandoc Tables** — Convert Pandoc grid-style tables to standard GFM pipe-style tables, joining cell text that wraps across lines so each row becomes one line and keeping `:` column alignment; when the selection or document contains a table drawn with Unicode box-drawing characters (┌─┬─┐ │ ├─┼─┤), the command becomes **Convert Box Drawing Table** and converts it the same way
 - **Format Table** — Auto-format the GFM table at the cursor, padding columns to uniform width respecting header alignment (left, center, right)
 - **Validate Links** — Check every link in the document and list the ones that don't resolve: missing heading anchors, missing local/relative files (including cross-file `#reference` anchors), and unreachable web URLs; results appear in a dialog where you can click to jump to each problem link
 - **Wrap Lines / Unwrap Lines** — Reflow the selected text to a chosen maximum line length, or join wrapped lines back together (with an option to preserve paragraph and heading breaks)

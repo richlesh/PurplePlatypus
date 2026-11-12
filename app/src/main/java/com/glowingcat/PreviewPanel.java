@@ -146,7 +146,7 @@ public class PreviewPanel extends JPanel {
                             webEngine.executeScript(
                                 "if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){"
                                 + "var pre=el.parentElement;var div=document.createElement('div');"
-                                + "div.className='mermaid';div.textContent=el.textContent;"
+                                + "div.className='mermaid';div.textContent=el.textContent;div.setAttribute('data-src',el.textContent);"
                                 + "pre.parentElement.replaceChild(div,pre);});"
                                 + "mermaid.run();}");
 
@@ -303,7 +303,8 @@ public class PreviewPanel extends JPanel {
             java.util.regex.Matcher matcher = imgPattern.matcher(html);
             StringBuilder sb = new StringBuilder();
             while (matcher.find()) {
-                String src = matcher.group(2);
+                String originalSrc = matcher.group(2);
+                String src = originalSrc;
                 if (!src.startsWith("http://") && !src.startsWith("https://")
                         && !src.startsWith("data:") && !src.startsWith("file://")) {
                     String decodedSrc = src.replace("%20", " ");
@@ -314,8 +315,11 @@ public class PreviewPanel extends JPanel {
                     }
                     src = imgFile.toURI().toString();
                 }
+                // Keep the author's original (relative) path so "Copy Markdown" from the
+                // preview can reproduce it instead of the absolute file:// URL.
+                String origAttr = src.equals(originalSrc) ? "" : "\" data-md-src=\"" + originalSrc;
                 matcher.appendReplacement(sb,
-                        java.util.regex.Matcher.quoteReplacement(matcher.group(1) + src + matcher.group(3)));
+                        java.util.regex.Matcher.quoteReplacement(matcher.group(1) + src + origAttr + matcher.group(3)));
             }
             matcher.appendTail(sb);
             html = sb.toString();
@@ -361,7 +365,7 @@ public class PreviewPanel extends JPanel {
                         webEngine.executeScript(
                             "if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){"
                             + "var pre=el.parentElement;var div=document.createElement('div');"
-                            + "div.className='mermaid';div.textContent=el.textContent;"
+                            + "div.className='mermaid';div.textContent=el.textContent;div.setAttribute('data-src',el.textContent);"
                             + "pre.parentElement.replaceChild(div,pre);});"
                             + "mermaid.run();}");
                         // Re-highlight code blocks (skip mermaid)
@@ -522,7 +526,7 @@ public class PreviewPanel extends JPanel {
         if (needsMermaid) {
             sb.append("if(window.mermaid){document.querySelectorAll('pre code.language-mermaid').forEach(function(el){");
             sb.append("var pre=el.parentElement;var div=document.createElement('div');");
-            sb.append("div.className='mermaid';div.textContent=el.textContent;");
+            sb.append("div.className='mermaid';div.textContent=el.textContent;div.setAttribute('data-src',el.textContent);");
             sb.append("pre.parentElement.replaceChild(div,pre);});");
             sb.append("mermaid.run();}");
         }
@@ -551,14 +555,9 @@ public class PreviewPanel extends JPanel {
             sb.append("    e.preventDefault();");
             sb.append("    if(window.java) window.java.openMarkdownLink(raw);");
             sb.append("  }");
-            sb.append("});");
-            sb.append("document.addEventListener('contextmenu', function(e) {");
-            sb.append("  var sel = window.getSelection().toString();");
-            sb.append("  if(sel && sel.trim().length > 0 && window.java) {");
-            sb.append("    e.preventDefault();");
-            sb.append("    window.java.findInSource(sel.trim());");
-            sb.append("  }");
             sb.append("});</script>");
+            // Right-click on selected text: Copy Markdown / Copy HTML / Find in Source menu
+            sb.append("<script>").append(SELECTION_SCRIPT).append("</script>");
         }
 
         // Lightbox for images and Mermaid diagrams (right-click to enlarge)
@@ -768,6 +767,23 @@ public class PreviewPanel extends JPanel {
         }
 
         /**
+         * Called from preview_selection.js when the user right-clicks selected text.
+         * {@code json} describes the selection (see {@link SelectionRequest}).
+         */
+        public void showSelectionMenu(String json) {
+            if (json == null || json.isEmpty()) return;
+            SelectionRequest request;
+            try {
+                request = new com.google.gson.Gson().fromJson(json, SelectionRequest.class);
+            } catch (RuntimeException ex) {
+                return;
+            }
+            if (request != null) {
+                SwingUtilities.invokeLater(() -> showSelectionPopup(request));
+            }
+        }
+
+        /**
          * Called from JavaScript when the user clicks an internal anchor link.
          */
         public void navigateToAnchor(String anchor) {
@@ -861,8 +877,63 @@ public class PreviewPanel extends JPanel {
         return result.toString();
     }
 
+    /** Selection details sent by preview_selection.js (deserialized from JSON). */
+    private static final class SelectionRequest {
+        String text;
+        String html;
+        String markdownHtml;
+        List<String> tokens;
+        double x;
+        double y;
+    }
+
+    /**
+     * Shows the Copy Markdown / Copy HTML / Find in Source menu for a preview selection
+     * at the click position. Runs on the EDT.
+     */
+    private void showSelectionPopup(SelectionRequest request) {
+        if (jfxPanel == null || !jfxPanel.isShowing()) return;
+        String text = request.text == null ? "" : request.text.trim();
+
+        JMenuItem copyMarkdown = new JMenuItem(Messages.get("context.copyMarkdown"));
+        copyMarkdown.addActionListener(e -> copyToClipboard(
+                PreviewSelectionConverter.toMarkdown(request.markdownHtml, request.tokens)));
+
+        JMenuItem copyHtml = new JMenuItem(Messages.get("context.copyHtml"));
+        copyHtml.addActionListener(e -> copyToClipboard(request.html));
+
+        JMenuItem findInSource = new JMenuItem(Messages.get("context.findInSource"));
+        findInSource.setEnabled(findInSourceCallback != null && !text.isEmpty());
+        findInSource.addActionListener(e -> findInSourceCallback.accept(text));
+
+        JPopupMenu menu = new JPopupMenu();
+        // Heavyweight so the menu reliably paints above the embedded JavaFX content
+        menu.setLightWeightPopupEnabled(false);
+        menu.add(copyMarkdown);
+        menu.add(copyHtml);
+        menu.addSeparator();
+        menu.add(findInSource);
+        menu.show(jfxPanel, (int) Math.round(request.x), (int) Math.round(request.y));
+    }
+
+    private static void copyToClipboard(String content) {
+        if (content == null || content.isEmpty()) return;
+        try {
+            Toolkit.getDefaultToolkit().getSystemClipboard()
+                    .setContents(new java.awt.datatransfer.StringSelection(content), null);
+        } catch (IllegalStateException ex) {
+            // Clipboard temporarily unavailable — ignore
+        }
+    }
+
     private static String loadPreviewCss(boolean dark) {
-        String path = dark ? "/preview_dark.css" : "/preview.css";
+        return loadTextResource(dark ? "/preview_dark.css" : "/preview.css");
+    }
+
+    /** Script handling right-click on selected preview text (see preview_selection.js). */
+    private static final String SELECTION_SCRIPT = loadTextResource("/preview_selection.js");
+
+    private static String loadTextResource(String path) {
         try (var is = PreviewPanel.class.getResourceAsStream(path)) {
             if (is != null) {
                 return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);

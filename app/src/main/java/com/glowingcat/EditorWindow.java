@@ -478,7 +478,9 @@ public class EditorWindow {
                 boolean hasSel = editorPane.getSelectionStart() != editorPane.getSelectionEnd();
                 wrapLinesItem.setEnabled(hasSel);
                 unwrapLinesItem.setEnabled(hasSel);
-                cleanupTablesItem.setText(hasSel ? Messages.get("menu.edit.convertPandocTable.selection") : Messages.get("menu.edit.convertPandocTable"));
+                String tableKey = tablesInScope(BoxTableConverter::findTables).isEmpty()
+                        ? "menu.edit.convertPandocTable" : "menu.edit.convertBoxTable";
+                cleanupTablesItem.setText(Messages.get(hasSel ? tableKey + ".selection" : tableKey));
                 zapGremlinsItem.setText(hasSel ? Messages.get("menu.edit.zapGremlins.selection") : Messages.get("menu.edit.zapGremlins"));
                 htmlEncodeItem.setText(hasSel ? Messages.get("menu.edit.htmlEncode.selection") : Messages.get("menu.edit.htmlEncode"));
                 // Update TOC item text based on whether a TOC already exists
@@ -1861,49 +1863,76 @@ public class EditorWindow {
     /**
      * Converts grid/Pandoc-style tables in the document to standard GFM pipe tables.
      * Removes +---+ row separators and converts +:===+: header separators to |:---|.
+     * If the selection (or, with no selection, the document) contains a table drawn with
+     * Unicode box-drawing characters, that table is converted instead.
      */
     private void cleanupPandocTables() {
+        java.util.List<TableRange> boxTables = tablesInScope(BoxTableConverter::findTables);
+        if (!boxTables.isEmpty()) {
+            convertTables(boxTables, BoxTableConverter::convertTable);
+            return;
+        }
+        java.util.List<TableRange> gridTables = tablesInScope(GridTableConverter::findTables);
+        if (!gridTables.isEmpty()) {
+            convertTables(gridTables, GridTableConverter::convertTable);
+            return;
+        }
+        JOptionPane.showMessageDialog(frame, Messages.get("msg.noPandocTables"),
+            Messages.get("msg.noPandocTablesTitle"), JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Returns the tables found by {@code finder} that the table-conversion command applies
+     * to: every table that overlaps the selection (even partly, so the whole table is
+     * converted), or every table in the document when nothing is selected.
+     */
+    private java.util.List<TableRange> tablesInScope(
+            java.util.function.Function<String[], java.util.List<TableRange>> finder) {
+        String[] lines = editorPane.getText().split("\n", -1);
+        java.util.List<TableRange> all = finder.apply(lines);
         int selStart = editorPane.getSelectionStart();
         int selEnd = editorPane.getSelectionEnd();
-        boolean hasSel = selStart != selEnd;
-
-        String text = hasSel ? editorPane.getSelectedText() : editorPane.getText();
-        String[] lines = text.split("\n", -1);
-        StringBuilder result = new StringBuilder();
-        boolean changed = false;
-
-        for (int i = 0; i < lines.length; i++) {
-            String trimmed = lines[i].trim();
-
-            if (trimmed.matches("^\\+[-=:+]+\\+$")) {
-                changed = true;
-                if (trimmed.contains("=")) {
-                    String converted = trimmed.replace('+', '|').replace('=', '-');
-                    result.append(converted).append('\n');
-                }
-                continue;
+        if (all.isEmpty() || selStart == selEnd) return all;
+        try {
+            int firstLine = editorPane.getLineOfOffset(selStart);
+            // A selection ending at the very start of a line does not include that line.
+            int lastLine = editorPane.getLineOfOffset(selEnd);
+            if (lastLine > firstLine && editorPane.getLineStartOffset(lastLine) == selEnd) lastLine--;
+            java.util.List<TableRange> hit = new java.util.ArrayList<>();
+            for (TableRange b : all) {
+                if (b.endLine() >= firstLine && b.startLine() <= lastLine) hit.add(b);
             }
-
-            result.append(lines[i]);
-            if (i < lines.length - 1) result.append('\n');
+            return hit;
+        } catch (javax.swing.text.BadLocationException ex) {
+            return java.util.List.of();
         }
+    }
 
-        if (changed) {
-            String newText = result.toString();
-            if (hasSel) {
-                editorPane.replaceSelection(newText);
-            } else {
-                int caretPos = editorPane.getCaretPosition();
-                editorPane.setText(newText);
-                editorPane.setCaretPosition(Math.min(caretPos, newText.length()));
+    /** Replaces each given table with {@code converter}'s GFM output as a single undoable edit. */
+    private void convertTables(java.util.List<TableRange> blocks,
+            java.util.function.Function<java.util.List<String>, String> converter) {
+        String[] lines = editorPane.getText().split("\n", -1);
+        int caret = editorPane.getCaretPosition();
+        editorPane.beginAtomicEdit();
+        try {
+            // Work bottom-up so earlier offsets stay valid.
+            for (int i = blocks.size() - 1; i >= 0; i--) {
+                TableRange b = blocks.get(i);
+                int start = editorPane.getLineStartOffset(b.startLine());
+                int end = editorPane.getLineStartOffset(b.endLine()) + lines[b.endLine()].length();
+                String gfm = converter.apply(
+                        java.util.Arrays.asList(lines).subList(b.startLine(), b.endLine() + 1));
+                editorPane.replaceRange(gfm, start, end);
             }
-            dirty = true;
-            updateTitle();
-            updatePreview();
-        } else {
-            JOptionPane.showMessageDialog(frame, Messages.get("msg.noPandocTables"),
-                Messages.get("msg.noPandocTablesTitle"), JOptionPane.INFORMATION_MESSAGE);
+        } catch (javax.swing.text.BadLocationException ex) {
+            // Document changed underneath us — leave whatever was converted
+        } finally {
+            editorPane.endAtomicEdit();
         }
+        editorPane.setCaretPosition(Math.min(caret, editorPane.getDocument().getLength()));
+        dirty = true;
+        updateTitle();
+        updatePreview();
     }
 
     /**

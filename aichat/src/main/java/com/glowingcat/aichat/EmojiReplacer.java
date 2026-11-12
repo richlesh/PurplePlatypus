@@ -246,8 +246,21 @@ public class EmojiReplacer {
              + "}";
     }
 
+    /**
+     * Escapes an attribute value. Non-ASCII characters are written as numeric character
+     * references ({@code &#x1f389;}) so the markup is pure ASCII: JavaFX WebView corrupts
+     * supplementary-plane characters in loaded content (each emoji arrives as several
+     * U+FFFD), whereas character references are decoded correctly by the HTML parser.
+     * This keeps the emoji intact in {@code alt}, which "Copy Markdown/HTML" reads.
+     */
     private static String escapeAttr(String s) {
-        return s.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;");
+        String escaped = s.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;");
+        StringBuilder sb = new StringBuilder(escaped.length() + 16);
+        escaped.codePoints().forEach(cp -> {
+            if (cp < 0x80) sb.append((char) cp);
+            else sb.append("&#x").append(Integer.toHexString(cp)).append(';');
+        });
+        return sb.toString();
     }
 
     /**
