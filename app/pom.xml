@@ -19,7 +19,7 @@
         <dependency>
             <groupId>com.glowingcat</groupId>
             <artifactId>aichat</artifactId>
-            <version>1.13.0</version>
+            <version>1.13.1</version>
         </dependency>
         <dependency>
             <groupId>com.glowingcat</groupId>

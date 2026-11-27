@@ -1566,6 +1566,12 @@ public class EditorWindow {
                             String imgPath = computeImageRelativePath(file);
                             String altText = file.getName().replaceFirst("\\.[^.]+$", "");
                             markdown.append("![").append(altText).append("](").append(imgPath).append(")\n");
+                        } else if (file.isFile()) {
+                            // Any other file (txt, md, html, cpp, hpp, ...): insert a relative hyperlink
+                            String linkPath = computeImageRelativePath(file)
+                                    .replace(" ", "%20").replace("(", "%28").replace(")", "%29");
+                            String label = file.getName().replace("[", "\\[").replace("]", "\\]");
+                            markdown.append("[").append(label).append("](").append(linkPath).append(")\n");
                         }
                     }
                     if (markdown.length() > 0) {
@@ -4642,6 +4648,14 @@ public class EditorWindow {
         editorPane.replaceSelection(out.toString());
     }
 
+    /** Enables or disables a component and all of its descendants. */
+    private static void setEnabledDeep(Component c, boolean enabled) {
+        c.setEnabled(enabled);
+        if (c instanceof Container container) {
+            for (Component child : container.getComponents()) setEnabledDeep(child, enabled);
+        }
+    }
+
     /** A line to be sorted together with its sort key parts. */
     private record SortRow(String line, java.util.List<String> key) {}
 
@@ -4669,10 +4683,13 @@ public class EditorWindow {
         JLabel groupsLabel = new JLabel(Messages.get("dialog.sortLines.groups"));
         JTextField groupsField = new JTextField("\\1", 10);
 
+        JPanel patternFieldPanel = FindDialog.buildRecentsField(patternField,
+                preferences::getSortPatternRecents, preferences::addSortPatternRecent,
+                preferences::removeSortPatternRecent, preferences);
         Runnable updateEnabled = () -> {
             boolean usePattern = patternBox.isSelected();
             patternLabel.setEnabled(usePattern);
-            patternField.setEnabled(usePattern);
+            setEnabledDeep(patternFieldPanel, usePattern);
             entireRadio.setEnabled(usePattern);
             groupsRadio.setEnabled(usePattern);
             boolean groups = usePattern && groupsRadio.isSelected();
@@ -4688,7 +4705,7 @@ public class EditorWindow {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         JPanel patternRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         patternRow.add(patternLabel);
-        patternRow.add(patternField);
+        patternRow.add(patternFieldPanel);
         JPanel groupsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         groupsRow.add(Box.createHorizontalStrut(20));
         groupsRow.add(groupsLabel);

@@ -99,6 +99,9 @@ public class Preferences {
     /** Saved replace expressions (most recent first). */
     private java.util.List<String> replaceRecents = new java.util.ArrayList<>();
 
+    /** Saved Sort Lines patterns (most recent first). */
+    private java.util.List<String> sortPatternRecents = new java.util.ArrayList<>();
+
     /** Gremlin character substitution rules: each entry is [enabled, search, replacement]. */
     private java.util.List<String[]> gremlins = null;
 
@@ -323,6 +326,28 @@ public class Preferences {
     public void removeReplaceRecent(String expr) {
         if (replaceRecents == null) replaceRecents = new java.util.ArrayList<>();
         replaceRecents.remove(expr);
+    }
+
+    /** Get the list of saved Sort Lines patterns (most recent first). */
+    public java.util.List<String> getSortPatternRecents() {
+        if (sortPatternRecents == null) sortPatternRecents = new java.util.ArrayList<>();
+        return java.util.Collections.unmodifiableList(sortPatternRecents);
+    }
+
+    /** Add a Sort Lines pattern to the recents (moves to front if already present). */
+    public void addSortPatternRecent(String expr) {
+        if (sortPatternRecents == null) sortPatternRecents = new java.util.ArrayList<>();
+        sortPatternRecents.remove(expr);
+        sortPatternRecents.add(0, expr);
+        while (sortPatternRecents.size() > MAX_SEARCH_RECENTS) {
+            sortPatternRecents.remove(sortPatternRecents.size() - 1);
+        }
+    }
+
+    /** Remove a Sort Lines pattern from the recents. */
+    public void removeSortPatternRecent(String expr) {
+        if (sortPatternRecents == null) sortPatternRecents = new java.util.ArrayList<>();
+        sortPatternRecents.remove(expr);
     }
 
     // --- Gremlin Substitutions ---

@@ -66,7 +66,7 @@ Welcome to a comprehensive demonstration of **Markdown** features supported by P
 
 ---
 
-## 4. Links and Images
+## 4. Links
 
 Visit [PurplePlatypus on GitHub](https://github.com/richlesh/PurplePlatypus) for more info.
 
@@ -74,26 +74,25 @@ You can also use reference-style links like [this one](#6-code-blocks) to headin
 
 You can also use reference-style links like [this one](#my-target) to arbitrary named anchor using HTML.
 
-![Placeholder Image](mascot.png)
-
 You can also link to other markdown documents ([GFM Extension](#15-github-flavored-markdown-extensions))...
 
-- [Emojii Demo](emojii_demo.md)
+- [Emoji Demo](emoji_demo.md)
 - [Languages Demo](languages_demo.md)
 - [Mermaid Demo](mermaid_demo.md)
 - [Stress Demo](stress_1M.md)
 - [Table Demo](table_demo.md#lanthanides-and-actinides)
-
+- [Github Emoji Shortcuts](github_emoji_shortcuts.html)
 
 <a id="my-target"></a>https://glowingcat.com "Example Website"
 
 Missing local .html links fallback to try as a .md link for testing without need to convert all documents to HTML...
 
-- [Emojii Demo](emojii_demo.html)
+- [Emoji Demo](emoji_demo.html)
 - [Languages Demo](languages_demo.html)
 - [Mermaid Demo](mermaid_demo.html)
 - [Stress Demo](stress_1M.html)
 - [Table Demo](table_demo.html#lanthanides-and-actinides)
+- [Github Emoji Shortcuts](github_emoji_shortcuts.md)
 
 ---
 
@@ -166,6 +165,13 @@ Cells can also contain **formatting**, `code`, and [links](https://glowingcat.co
 
 
 ![width=100](mascot.png){width=100}
+
+### Bitmap and SVG Support
+
+![mascot_cartoon](mascot_cartoon.svg){width=9%}
+![mascot_cartoon](mascot_cartoon.svg){width=19%}
+![mascot_cartoon](mascot_cartoon.svg){width=29%}
+![mascot_cartoon](mascot_cartoon.svg){width=39%}
 
 ---
 
@@ -344,7 +350,7 @@ beyond standard CommonMark. Here they are in action.
 
 Github allows links to point to other markdown documents.  Github will convert the files to HTML on the fly when linked.
 
-- [Emojii Demo](emojii_demo.md)
+- [Emoji Demo](emoji_demo.md)
 - [Languages Demo](languages_demo.md)
 - [Mermaid Demo](mermaid_demo.md)
 - [Stress Demo](stress_1M.md)

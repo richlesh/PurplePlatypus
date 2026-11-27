@@ -302,7 +302,7 @@ public class FindDialog extends JDialog {
         });
     }
 
-    private JButton createSmallButton(String label, String tooltip) {
+    static JButton createSmallButton(String label, String tooltip) {
         JButton btn = new JButton() {
             private boolean hovered = false;
             private boolean pressed = false;
@@ -370,6 +370,30 @@ public class FindDialog extends JDialog {
      * @return a panel containing the field and buttons
      */
     protected JPanel createFieldWithRecents(JTextField field, boolean isSearch) {
+        return isSearch
+            ? buildRecentsField(field, preferences::getSearchRecents,
+                    preferences::addSearchRecent, preferences::removeSearchRecent, preferences)
+            : buildRecentsField(field, preferences::getReplaceRecents,
+                    preferences::addReplaceRecent, preferences::removeReplaceRecent, preferences);
+    }
+
+    /**
+     * Builds a panel with a text field and +, -, ▼ buttons that add the field's text to a
+     * persisted most-recently-used list, remove it, or pick an entry from a popup menu.
+     * Shared by the Find/Replace dialogs and other dialogs that offer saved expressions.
+     *
+     * @param field       the text field
+     * @param getRecents  supplies the current list (most recent first)
+     * @param add         adds an entry to the list
+     * @param remove      removes an entry from the list
+     * @param preferences saved after each add/remove
+     * @return a panel containing the field and buttons
+     */
+    static JPanel buildRecentsField(JTextField field,
+                                    java.util.function.Supplier<java.util.List<String>> getRecents,
+                                    java.util.function.Consumer<String> add,
+                                    java.util.function.Consumer<String> remove,
+                                    Preferences preferences) {
         JPanel panel = new JPanel(new BorderLayout(4, 0));
         panel.add(field, BorderLayout.CENTER);
 
@@ -381,29 +405,19 @@ public class FindDialog extends JDialog {
         addBtn.addActionListener(e -> {
             String text = field.getText();
             if (text.isEmpty()) return;
-            if (isSearch) {
-                preferences.addSearchRecent(text);
-            } else {
-                preferences.addReplaceRecent(text);
-            }
+            add.accept(text);
             preferences.save();
         });
 
         removeBtn.addActionListener(e -> {
             String text = field.getText();
             if (text.isEmpty()) return;
-            if (isSearch) {
-                preferences.removeSearchRecent(text);
-            } else {
-                preferences.removeReplaceRecent(text);
-            }
+            remove.accept(text);
             preferences.save();
         });
 
         dropBtn.addActionListener(e -> {
-            java.util.List<String> recents = isSearch
-                ? preferences.getSearchRecents()
-                : preferences.getReplaceRecents();
+            java.util.List<String> recents = getRecents.get();
             if (recents.isEmpty()) return;
             JPopupMenu popup = new JPopupMenu();
             for (String item : recents) {
