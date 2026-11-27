@@ -3,8 +3,8 @@
 ; Built by .github/workflows/package.yml, which first creates the jpackage app-image
 ; (PurplePlatypus\ at the repository root) and then compiles this script:
 ;
-;   ISCC.exe /DAppVersion=1.14.0 /DArch=x64   packaging\PurplePlatypus.iss
-;   ISCC.exe /DAppVersion=1.14.0 /DArch=arm64 packaging\PurplePlatypus.iss
+;   ISCC.exe /DAppVersion=1.15.0 /DArch=x64   packaging\PurplePlatypus.iss
+;   ISCC.exe /DAppVersion=1.15.0 /DArch=arm64 packaging\PurplePlatypus.iss
 ;
 ; The installer is written to the repository root as PurplePlatypus-<version>.exe.
 ;
@@ -20,7 +20,7 @@
 ; On upgrade with no scope switch, the previous install's scope is reused.
 
 #ifndef AppVersion
-  #error Define AppVersion on the ISCC command line, e.g. /DAppVersion=1.14.0
+  #error Define AppVersion on the ISCC command line, e.g. /DAppVersion=1.15.0
 #endif
 
 #ifndef Arch

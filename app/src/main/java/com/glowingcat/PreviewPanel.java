@@ -105,6 +105,14 @@ public class PreviewPanel extends JPanel {
         try {
             jfxPanel = new javafx.embed.swing.JFXPanel();
             add(jfxPanel, BorderLayout.CENTER);
+            // Make sure a click in the preview moves Swing keyboard focus here, so that
+            // Edit > Copy (Cmd/Ctrl+C) knows to copy the preview selection, not the editor's.
+            jfxPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mousePressed(java.awt.event.MouseEvent e) {
+                    jfxPanel.requestFocusInWindow();
+                }
+            });
 
             javafx.application.Platform.runLater(() -> {
                 try {
@@ -703,6 +711,45 @@ public class PreviewPanel extends JPanel {
             // Silently fail
         }
         return null;
+    }
+
+    /** Returns true if keyboard focus is currently inside the preview component. */
+    public boolean isPreviewFocusOwner() {
+        Component owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        return owner != null && SwingUtilities.isDescendingFrom(owner, this);
+    }
+
+    /**
+     * Copies the current preview selection to the system clipboard as rich text
+     * (text/html plus plain text).
+     *
+     * @return true if a selection existed and was copied
+     */
+    public boolean copySelectionToClipboard() {
+        if (!useWebView || webEngine == null) {
+            if (editorPane != null && editorPane.getSelectedText() != null) {
+                editorPane.copy();
+                return true;
+            }
+            return false;
+        }
+        java.util.concurrent.CompletableFuture<Object> future = new java.util.concurrent.CompletableFuture<>();
+        javafx.application.Platform.runLater(() -> {
+            try {
+                future.complete(webEngine.executeScript(com.glowingcat.aichat.RichTextSelection.SELECTION_SCRIPT));
+            } catch (Exception ex) {
+                future.complete(null);
+            }
+        });
+        try {
+            com.glowingcat.aichat.RichTextSelection sel = com.glowingcat.aichat.RichTextSelection
+                    .fromScriptResult(future.get(2, java.util.concurrent.TimeUnit.SECONDS));
+            if (sel == null) return false;
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
     /**

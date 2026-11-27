@@ -225,7 +225,8 @@ public class ImageDialog extends JDialog {
         fileDialog.setFilenameFilter((dir, name) -> {
             String lower = name.toLowerCase();
             return lower.endsWith(".gif") || lower.endsWith(".jpg")
-                    || lower.endsWith(".jpeg") || lower.endsWith(".png");
+                    || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".svg")
+                    || lower.endsWith(".bmp") || lower.endsWith(".webp");
         });
         fileDialog.setVisible(true);
         if (fileDialog.getFile() != null) {

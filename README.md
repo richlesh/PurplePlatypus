@@ -29,14 +29,14 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **TextPack support** — Open and export `.textpack` files (compressed TextBundle archives); Save is disabled for files opened from a TextPack (use Save As or Export instead)
 - **Dirty checking** — Prompts to save unsaved changes when closing a window or quitting the application
 - **Undo/Redo** — Full multi-level undo and redo support
-- **Clipboard** — Cut, Copy, and Paste via the Edit menu
+- **Clipboard** — Cut, Copy, and Paste via the Edit menu; they follow keyboard focus, so ⌘/Ctrl+C copies from the preview, the AI chat conversation, or the AI chat input box when that pane is focused. Copying from the preview or AI chat conversation puts rich text (HTML plus plain text) on the clipboard so formatting survives pasting into Word, Mail, and similar apps
 - **Markdown formatting** — Bold, Italic, Underline, Strikethrough, Superscript, Subscript, Center, and Insert (++underline++) via the Markdown menu (enabled when text is selected)
 - **Headings** — Insert Heading 1 through Heading 6 via the Markdown menu (replaces any existing heading prefix)
 - **Horizontal Rule** — Insert a `---` separator via the Markdown menu
 - **Footnotes** — Insert footnote references and definitions via the Markdown menu
-- **Image drag-and-drop** — Drag GIF, JPEG, or PNG files onto the editor to insert markdown image links with relative paths; the caret tracks the pointer for precise placement
+- **Image drag-and-drop** — Drag GIF, JPEG, PNG, SVG, BMP, or WebP files onto the editor to insert markdown image links with relative paths; the caret tracks the pointer for precise placement
 - **Lightbox viewer** - View images in a lightbox with zoom and pan features via right-click on image
-- **Links and Images** — Insert or edit markdown links and images via dialogs
+- **Links and Images** — Insert or edit markdown links and images via dialogs; the image Browse button accepts GIF, JPEG, PNG, SVG, BMP, and WebP files
 - **Links to other documents** — GitHub-style relative Markdown links such as `[text](other.md)` or `[text](docs/other.md#section)` open the target file in the preview and jump to the referenced heading
 - **Tables** — Insert or edit GFM pipe-style markdown tables via a visual dialog with dynamic row/column add/remove, clipboard operations, per-column alignment, and an editable row-header column (top-left corner cell).  Pandoc grid tables also supported.  Table cells word-wrap in the preview and exports.
 - **Lists** — Convert lines to ordered, unordered, or task lists
@@ -59,6 +59,7 @@ A lightweight desktop Markdown editor built with Java Swing, featuring a live pr
 - **Format Table** — Auto-format the GFM table at the cursor, padding columns to uniform width respecting header alignment (left, center, right)
 - **Validate Links** — Check every link in the document and list the ones that don't resolve: missing heading anchors, missing local/relative files (including cross-file `#reference` anchors), and unreachable web URLs; results appear in a dialog where you can click to jump to each problem link
 - **Wrap Lines / Unwrap Lines** — Reflow the selected text to a chosen maximum line length, or join wrapped lines back together (with an option to preserve paragraph and heading breaks)
+- **Sort Lines** — Sort the selected lines (Edit menu) numerically, ignoring whitespace, and/or case-insensitively. An optional "Using pattern" regex picks the part of each line to sort by: the entire match, or specific groups in a chosen order (e.g. `\2 \1`). Lines that don't match the pattern are kept after the sorted lines
 - **Zap Gremlins** — Configurable substitution of Unicode characters (smart quotes, em-dashes, non-breaking spaces, etc.) with ASCII equivalents; user-editable rules saved to preferences
 - **HTML Encode** — Convert non-ASCII characters and the HTML-special characters `< > & "` to HTML entities (named where available per HTML5, otherwise numeric code points)
 - **Table of Contents** — Create or update a localized Table of Contents section with internal links to headings; user-selectable depth (H2–H6) with nested lists for heading hierarchy
@@ -117,9 +118,9 @@ Sample configurations for Amazon Bedrock, Anthropic, IBM watsonx.ai, Microsoft A
 
 ## Export Formats
 
-- **HTML** — Fully styled HTML with CSS, relative image paths preserved
+- **HTML** — Fully styled HTML with CSS. The export dialog offers **Embed Images** (SVG images are inlined as `<svg>` markup, bitmaps as Base64 data URIs; otherwise relative image links are preserved) and **Convert .md links to .html** (rewrites relative links to `.md`/`.markdown` files, keeping any `#fragment`)
 - **PDF** — Print-to-file via the system's PDF output, with print-friendly links (URLs shown in parentheses)
-- **Word Document (DOCX)** — Export to `.docx` with math support (LaTeX converted to OMML) and Mermaid diagrams rendered as PNG images
+- **Word Document (DOCX)** — Export to `.docx` with real Heading 1–6 styles (shown in Word's Navigation pane), tables with borders, shaded repeating header rows, column alignment and inline formatting in cells, images at their natural proportions (scaled down to the page width), math support for inline and multi-line `$$` block LaTeX (converted to OMML), and Mermaid diagrams rendered as PNG images
 - **TextBundle** — Standard `.textbundle` package with `text.md`, `info.json`, and images copied into `assets/` (preserving subfolder hierarchy)
 - **TextPack** — Compressed `.textpack` file (zipped TextBundle) for easy sharing
 - **RTF** — Rich Text Format with headings, bold, italic, strikethrough, code, lists, and block quotes

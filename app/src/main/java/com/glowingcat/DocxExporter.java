@@ -52,8 +52,124 @@ public class DocxExporter {
     public DocxExporter(File sourceFile) {
         this.sourceFile = sourceFile;
         this.document = new XWPFDocument();
+        addHeadingStyles();
         this.snuggleEngine = new SnuggleEngine();
         initMathTransformer();
+    }
+
+    /**
+     * A new XWPFDocument has no style definitions, so paragraphs tagged "Heading1".."Heading6"
+     * would render as ordinary text. Define the six heading styles (bold, graduated sizes,
+     * outline levels so Word's navigation pane and TOC recognise them).
+     */
+    private void addHeadingStyles() {
+        XWPFStyles styles = document.createStyles();
+        // Font sizes in half-points: 24pt, 20pt, 16pt, 14pt, 12pt, 11pt.
+        int[] halfPoints = {48, 40, 32, 28, 24, 22};
+        for (int level = 1; level <= 6; level++) {
+            String id = "Heading" + level;
+            CTStyle ct = CTStyle.Factory.newInstance();
+            ct.setType(STStyleType.PARAGRAPH);
+            ct.setStyleId(id);
+            ct.addNewName().setVal("heading " + level);
+            ct.addNewNext().setVal("Normal");
+            ct.addNewUiPriority().setVal(java.math.BigInteger.valueOf(9));
+            ct.addNewQFormat();
+
+            CTPPrGeneral ppr = ct.addNewPPr();
+            ppr.addNewKeepNext();
+            ppr.addNewKeepLines();
+            CTSpacing spacing = ppr.addNewSpacing();
+            spacing.setBefore(java.math.BigInteger.valueOf(level == 1 ? 360 : 240));
+            spacing.setAfter(java.math.BigInteger.valueOf(120));
+            ppr.addNewOutlineLvl().setVal(java.math.BigInteger.valueOf(level - 1));
+
+            CTRPr rpr = ct.addNewRPr();
+            rpr.addNewB();
+            rpr.addNewSz().setVal(java.math.BigInteger.valueOf(halfPoints[level - 1]));
+            rpr.addNewSzCs().setVal(java.math.BigInteger.valueOf(halfPoints[level - 1]));
+
+            styles.addStyle(new XWPFStyle(ct));
+        }
+    }
+
+    // --- Display math protection ---
+
+    private static final java.util.regex.Pattern MATH_PLACEHOLDER =
+            java.util.regex.Pattern.compile("PPMATHBLOCK(\\d+)END");
+    private static final java.util.regex.Pattern FENCE_LINE =
+            java.util.regex.Pattern.compile("^ {0,3}(`{3,}|~{3,})");
+    private static final java.util.regex.Pattern WHOLE_LINE_DISPLAY_MATH =
+            java.util.regex.Pattern.compile("(?m)^[ \\t]{0,3}\\$\\$(?!\\$)([\\s\\S]+?)\\$\\$[ \\t]*$");
+    private static final java.util.regex.Pattern CODE_SPAN_OR_DISPLAY_MATH =
+            java.util.regex.Pattern.compile("(`+)(?:(?!\\1)[\\s\\S])+?\\1|\\$\\$(?!\\$)([\\s\\S]+?)\\$\\$");
+
+    private final java.util.List<String> displayMathBlocks = new java.util.ArrayList<>();
+
+    /**
+     * Replaces display math ({@code $$ ... $$}), including formulas spread over several lines,
+     * with opaque placeholders before the Markdown is parsed. Otherwise the parser splits a
+     * multi-line block into separate text nodes (and may apply Markdown escapes/emphasis to
+     * the LaTeX), so the exporter never sees a complete {@code $$...$$} pair. The placeholders
+     * are turned back into equations by {@link #processTextWithMath}. Fenced code blocks and
+     * inline code spans are left untouched. Call this on the Markdown source before parsing.
+     */
+    public String protectDisplayMath(String markdown) {
+        if (markdown == null || !markdown.contains("$$")) return markdown;
+        StringBuilder result = new StringBuilder(markdown.length());
+        StringBuilder segment = new StringBuilder();
+        String fence = null; // opening fence while inside a fenced code block
+        int pos = 0;
+        while (pos < markdown.length()) {
+            int nl = markdown.indexOf('\n', pos);
+            int end = nl < 0 ? markdown.length() : nl + 1;
+            String line = markdown.substring(pos, end);
+            pos = end;
+            java.util.regex.Matcher fm = FENCE_LINE.matcher(line);
+            if (fence != null) {
+                result.append(line);
+                if (fm.find() && fm.group(1).charAt(0) == fence.charAt(0)
+                        && fm.group(1).length() >= fence.length()) {
+                    fence = null;
+                }
+            } else if (fm.find()) {
+                result.append(protectInSegment(segment.toString()));
+                segment.setLength(0);
+                fence = fm.group(1);
+                result.append(line);
+            } else {
+                segment.append(line);
+            }
+        }
+        result.append(protectInSegment(segment.toString()));
+        return result.toString();
+    }
+
+    private String protectInSegment(String text) {
+        if (!text.contains("$$")) return text;
+        // Blocks that occupy whole lines become their own paragraph.
+        java.util.regex.Matcher m = WHOLE_LINE_DISPLAY_MATH.matcher(text);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            displayMathBlocks.add(m.group(1).trim());
+            String ph = "PPMATHBLOCK" + (displayMathBlocks.size() - 1) + "END";
+            m.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement("\n" + ph + "\n"));
+        }
+        m.appendTail(sb);
+        // Any remaining $$...$$ (mid-line, in lists or quotes) is replaced in place.
+        m = CODE_SPAN_OR_DISPLAY_MATH.matcher(sb.toString());
+        StringBuilder out = new StringBuilder();
+        while (m.find()) {
+            if (m.group(2) == null) {
+                m.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(m.group()));
+            } else {
+                displayMathBlocks.add(m.group(2).trim());
+                String ph = "PPMATHBLOCK" + (displayMathBlocks.size() - 1) + "END";
+                m.appendReplacement(out, ph);
+            }
+        }
+        m.appendTail(out);
+        return out.toString();
     }
 
     private void initMathTransformer() {
@@ -178,12 +294,7 @@ public class DocxExporter {
                 } else {
                     pictureType = XWPFDocument.PICTURE_TYPE_PNG;
                 }
-                try (InputStream is = new FileInputStream(imgFile)) {
-                    // Default width 5 inches (EMU)
-                    int width = 5 * 914400;
-                    int height = (int) (width * 0.6); // Default aspect ratio
-                    run.addPicture(is, pictureType, imgFile.getName(), width, height);
-                }
+                addPictureWithNaturalSize(run, imgFile, pictureType);
             } catch (Exception e) {
                 // Fall back to showing alt text
                 XWPFRun run = xpara.createRun();
@@ -196,6 +307,54 @@ public class DocxExporter {
             run.setText("[Image: " + (alt.isEmpty() ? image.getDestination() : alt) + "]");
             run.setItalic(true);
         }
+    }
+
+    /** Widest picture placed in the document: 6 inches fits Letter/A4 with 1" margins. */
+    private static final long MAX_PICTURE_WIDTH_EMU = 6L * 914400;
+    private static final long EMU_PER_PIXEL = 9525; // 96 DPI
+
+    /**
+     * Adds the image to the run at its natural size (96 DPI), scaled down proportionally
+     * if wider than the page text width. The aspect ratio always follows the image's own
+     * pixel dimensions.
+     */
+    private void addPictureWithNaturalSize(XWPFRun run, File imgFile, int pictureType) throws Exception {
+        long widthEmu = 5L * 914400;            // used only if the size cannot be read
+        long heightEmu = (long) (widthEmu * 0.6);
+        int[] px = readImagePixelSize(imgFile);
+        if (px != null) {
+            widthEmu = px[0] * EMU_PER_PIXEL;
+            heightEmu = px[1] * EMU_PER_PIXEL;
+            if (widthEmu > MAX_PICTURE_WIDTH_EMU) {
+                heightEmu = heightEmu * MAX_PICTURE_WIDTH_EMU / widthEmu;
+                widthEmu = MAX_PICTURE_WIDTH_EMU;
+            }
+        }
+        try (InputStream is = new FileInputStream(imgFile)) {
+            run.addPicture(is, pictureType, imgFile.getName(), (int) widthEmu, (int) heightEmu);
+        }
+    }
+
+    /** Reads width and height in pixels without decoding the whole image; null if unreadable. */
+    private static int[] readImagePixelSize(File file) {
+        try (javax.imageio.stream.ImageInputStream in = javax.imageio.ImageIO.createImageInputStream(file)) {
+            if (in == null) return null;
+            java.util.Iterator<javax.imageio.ImageReader> readers = javax.imageio.ImageIO.getImageReaders(in);
+            while (readers.hasNext()) {
+                javax.imageio.ImageReader reader = readers.next();
+                try {
+                    reader.setInput(in);
+                    int w = reader.getWidth(0);
+                    int h = reader.getHeight(0);
+                    if (w > 0 && h > 0) return new int[] {w, h};
+                } finally {
+                    reader.dispose();
+                }
+            }
+        } catch (Exception e) {
+            // fall through
+        }
+        return null;
     }
 
     private File resolveImagePath(String path) {
@@ -512,9 +671,8 @@ public class DocxExporter {
     }
 
     private void processTable(TableBlock tableBlock) {
-        // Collect table data
-        List<List<String>> headerRows = new ArrayList<>();
-        List<List<String>> bodyRows = new ArrayList<>();
+        List<List<Node>> headerRows = new ArrayList<>();
+        List<List<Node>> bodyRows = new ArrayList<>();
         List<TableCell.Alignment> alignments = new ArrayList<>();
 
         Node child = tableBlock.getFirstChild();
@@ -528,68 +686,69 @@ public class DocxExporter {
         }
 
         int numCols = 0;
-        if (!headerRows.isEmpty()) numCols = headerRows.get(0).size();
-        else if (!bodyRows.isEmpty()) numCols = bodyRows.get(0).size();
-        if (numCols == 0) return;
+        for (List<Node> r : headerRows) numCols = Math.max(numCols, r.size());
+        for (List<Node> r : bodyRows) numCols = Math.max(numCols, r.size());
+        int totalRows = headerRows.size() + bodyRows.size();
+        if (numCols == 0 || totalRows == 0) return;
 
-        XWPFTable table = document.createTable();
-        // Remove the default row that createTable adds
-        table.removeRow(0);
+        XWPFTable table = document.createTable(totalRows, numCols);
 
-        // Set table width to 100%
+        // Full-width table (5000 = 100% in fiftieths of a percent) with visible grid lines.
         CTTblPr tblPr = table.getCTTbl().getTblPr();
         if (tblPr == null) tblPr = table.getCTTbl().addNewTblPr();
-        CTTblWidth tblWidth = tblPr.addNewTblW();
+        CTTblWidth tblWidth = tblPr.isSetTblW() ? tblPr.getTblW() : tblPr.addNewTblW();
         tblWidth.setW(BigInteger.valueOf(5000));
         tblWidth.setType(STTblWidth.PCT);
+        table.setTopBorder(XWPFTable.XWPFBorderType.SINGLE, 4, 0, "808080");
+        table.setBottomBorder(XWPFTable.XWPFBorderType.SINGLE, 4, 0, "808080");
+        table.setLeftBorder(XWPFTable.XWPFBorderType.SINGLE, 4, 0, "808080");
+        table.setRightBorder(XWPFTable.XWPFBorderType.SINGLE, 4, 0, "808080");
+        table.setInsideHBorder(XWPFTable.XWPFBorderType.SINGLE, 4, 0, "808080");
+        table.setInsideVBorder(XWPFTable.XWPFBorderType.SINGLE, 4, 0, "808080");
+        table.setCellMargins(40, 80, 40, 80);
 
-        // Header rows
-        for (List<String> row : headerRows) {
-            XWPFTableRow tblRow = table.createRow();
-            for (int i = 0; i < numCols; i++) {
-                XWPFTableCell cell = i < tblRow.getTableCells().size()
-                        ? tblRow.getCell(i)
-                        : tblRow.addNewTableCell();
-                String text = i < row.size() ? row.get(i) : "";
-                cell.setText(text);
-                // Bold header cells
-                XWPFParagraph p = cell.getParagraphs().get(0);
-                if (!p.getRuns().isEmpty()) {
-                    p.getRuns().get(0).setBold(true);
+        BigInteger colWidth = BigInteger.valueOf(5000L / numCols);
+        int rowIndex = 0;
+        for (int pass = 0; pass < 2; pass++) {
+            boolean header = pass == 0;
+            for (List<Node> cells : header ? headerRows : bodyRows) {
+                XWPFTableRow tblRow = table.getRow(rowIndex++);
+                if (header) tblRow.setRepeatHeader(true);
+                for (int i = 0; i < numCols; i++) {
+                    XWPFTableCell cell = tblRow.getCell(i);
+                    CTTcPr tcPr = cell.getCTTc().isSetTcPr() ? cell.getCTTc().getTcPr() : cell.getCTTc().addNewTcPr();
+                    CTTblWidth tcW = tcPr.isSetTcW() ? tcPr.getTcW() : tcPr.addNewTcW();
+                    tcW.setW(colWidth);
+                    tcW.setType(STTblWidth.PCT);
+                    if (header) {
+                        CTShd shd = tcPr.isSetShd() ? tcPr.getShd() : tcPr.addNewShd();
+                        shd.setFill("DDDDDD");
+                        shd.setVal(STShd.CLEAR);
+                    }
+                    XWPFParagraph p = cell.getParagraphs().get(0);
+                    applyCellAlignment(p, i < alignments.size() ? alignments.get(i) : null);
+                    if (i < cells.size()) {
+                        boolean savedBold = bold;
+                        if (header) bold = true;
+                        processInlineChildren(p, cells.get(i));
+                        bold = savedBold;
+                    }
                 }
-                applyCellAlignment(p, i < alignments.size() ? alignments.get(i) : null);
-                // Header shading
-                CTTcPr tcPr = cell.getCTTc().addNewTcPr();
-                CTShd shd = tcPr.addNewShd();
-                shd.setFill("DDDDDD");
-                shd.setVal(STShd.CLEAR);
             }
         }
-
-        // Body rows
-        for (List<String> row : bodyRows) {
-            XWPFTableRow tblRow = table.createRow();
-            for (int i = 0; i < numCols; i++) {
-                XWPFTableCell cell = i < tblRow.getTableCells().size()
-                        ? tblRow.getCell(i)
-                        : tblRow.addNewTableCell();
-                String text = i < row.size() ? row.get(i) : "";
-                cell.setText(text);
-                XWPFParagraph p = cell.getParagraphs().get(0);
-                applyCellAlignment(p, i < alignments.size() ? alignments.get(i) : null);
-            }
-        }
+        // Keep following content from being merged into the table by Word.
+        document.createParagraph();
     }
 
-    private void collectTableRows(Node section, List<List<String>> rows, List<TableCell.Alignment> alignments) {
+    private void collectTableRows(Node section, List<List<Node>> rows, List<TableCell.Alignment> alignments) {
         Node row = section.getFirstChild();
         while (row != null) {
             if (row instanceof TableRow) {
-                List<String> cells = new ArrayList<>();
+                List<Node> cells = new ArrayList<>();
                 Node cell = row.getFirstChild();
                 while (cell != null) {
                     if (cell instanceof TableCell tc) {
-                        cells.add(getTextContent(cell));
+                        cells.add(tc);
                         if (alignments.size() < cells.size()) {
                             alignments.add(tc.getAlignment());
                         }
@@ -724,11 +883,7 @@ public class DocxExporter {
                 } else {
                     pictureType = XWPFDocument.PICTURE_TYPE_PNG;
                 }
-                try (InputStream is = new FileInputStream(imgFile)) {
-                    int width = 4 * 914400; // 4 inches
-                    int height = (int) (width * 0.6);
-                    run.addPicture(is, pictureType, imgFile.getName(), width, height);
-                }
+                addPictureWithNaturalSize(run, imgFile, pictureType);
             } catch (Exception e) {
                 XWPFRun run = para.createRun();
                 run.setText("[" + getTextContent(image) + "]");
@@ -762,6 +917,23 @@ public class DocxExporter {
      */
     private void processTextWithMath(XWPFParagraph para, String text) {
         if (text == null || text.isEmpty()) return;
+        if (text.contains("PPMATHBLOCK")) {
+            java.util.regex.Matcher pm = MATH_PLACEHOLDER.matcher(text);
+            int last = 0;
+            while (pm.find()) {
+                processTextWithMath(para, text.substring(last, pm.start()));
+                int idx = Integer.parseInt(pm.group(1));
+                String latex = idx < displayMathBlocks.size() ? displayMathBlocks.get(idx) : null;
+                if (latex != null && !insertMath(para, latex, true)) {
+                    addTextRun(para, "$$" + latex + "$$");
+                } else if (latex == null) {
+                    addTextRun(para, pm.group());
+                }
+                last = pm.end();
+            }
+            processTextWithMath(para, text.substring(last));
+            return;
+        }
         if (mml2ommlTransformer == null || !text.contains("$")) {
             addTextRun(para, text);
             return;

@@ -86,4 +86,29 @@ class WebViewHelper {
             }
         });
     }
+
+    /**
+     * Copies the current WebView selection to the system clipboard as HTML plus plain text.
+     *
+     * @return true if a selection existed and was copied
+     */
+    public boolean copySelectionToClipboard() {
+        if (webEngine == null) return false;
+        java.util.concurrent.CompletableFuture<Object> future = new java.util.concurrent.CompletableFuture<>();
+        Platform.runLater(() -> {
+            try {
+                future.complete(webEngine.executeScript(RichTextSelection.SELECTION_SCRIPT));
+            } catch (Exception ex) {
+                future.complete(null);
+            }
+        });
+        try {
+            RichTextSelection sel = RichTextSelection.fromScriptResult(future.get(2, java.util.concurrent.TimeUnit.SECONDS));
+            if (sel == null) return false;
+            java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
 }

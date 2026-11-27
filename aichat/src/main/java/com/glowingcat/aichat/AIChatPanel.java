@@ -309,12 +309,48 @@ public class AIChatPanel extends JPanel {
             webViewHelper = helper;
             java.awt.Component fxPanel = (java.awt.Component) helperClass.getField("fxPanel").get(helper);
             add(fxPanel, BorderLayout.CENTER);
+            // Move Swing keyboard focus here on click so Edit > Copy targets the chat selection.
+            fxPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mousePressed(java.awt.event.MouseEvent e) {
+                    fxPanel.requestFocusInWindow();
+                }
+            });
             useWebView = true;
         } catch (Throwable t) {
             webViewHelper = null;
             useWebView = false;
             initFallback();
         }
+    }
+
+    /** Returns true if keyboard focus is currently inside this panel. */
+    public boolean isChatFocusOwner() {
+        java.awt.Component owner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        return owner != null && SwingUtilities.isDescendingFrom(owner, this);
+    }
+
+    /**
+     * Copies the selection from whichever part of the chat panel has focus: the input box
+     * (or any text component in the fallback view), or the WebView conversation as rich text.
+     *
+     * @return true if something was copied
+     */
+    public boolean copySelection() {
+        java.awt.Component owner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        if (owner instanceof javax.swing.text.JTextComponent tc) {
+            if (tc.getSelectedText() == null) return false;
+            tc.copy();
+            return true;
+        }
+        if (useWebView && webViewHelper != null) {
+            try {
+                return (boolean) webViewHelper.getClass().getMethod("copySelectionToClipboard").invoke(webViewHelper);
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                return false;
+            }
+        }
+        return false;
     }
 
     private void initFallback() {

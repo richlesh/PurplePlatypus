@@ -266,6 +266,23 @@ public class EditorWindow {
     public boolean isDirty() { return dirty; }
     public File getCurrentFile() { return currentFile; }
 
+    /**
+     * Returns the text component that Cut/Paste should act on: the focused text component
+     * (such as the AI chat input box), otherwise the editor. If focus is in a read-only
+     * WebView (preview or chat conversation) a throwaway component is returned so that
+     * Cut/Paste do nothing instead of altering the editor.
+     */
+    private javax.swing.text.JTextComponent focusedTextComponent() {
+        Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        if (focused instanceof javax.swing.text.JTextComponent tc && SwingUtilities.getWindowAncestor(tc) == frame) {
+            return tc;
+        }
+        if (previewPanel.isPreviewFocusOwner() || aiChatPanel.isChatFocusOwner()) {
+            return new JTextArea();
+        }
+        return editorPane;
+    }
+
     private void buildMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         int shortcutMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
@@ -407,23 +424,40 @@ public class EditorWindow {
 
         JMenuItem cutItem = new JMenuItem(Messages.get("menu.edit.cut"));
         cutItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_X, shortcutMask));
-        cutItem.addActionListener(e -> editorPane.cut());
+        cutItem.addActionListener(e -> focusedTextComponent().cut());
 
         JMenuItem copyItem = new JMenuItem(Messages.get("menu.edit.copy"));
         copyItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C, shortcutMask));
-        copyItem.addActionListener(e -> editorPane.copy());
+        copyItem.addActionListener(e -> {
+            // The menu accelerator fires regardless of focus, so copy from whichever pane has focus.
+            Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            if (focused != null && focused != editorPane) {
+                if (previewPanel.isPreviewFocusOwner()) {
+                    if (previewPanel.copySelectionToClipboard()) return;
+                } else if (aiChatPanel.isChatFocusOwner()) {
+                    if (aiChatPanel.copySelection()) return;
+                } else if (focused instanceof javax.swing.text.JTextComponent tc && tc.getSelectedText() != null) {
+                    tc.copy();
+                    return;
+                }
+            }
+            editorPane.copy();
+        });
 
         JMenuItem pasteItem = new JMenuItem(Messages.get("menu.edit.paste"));
         pasteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V, shortcutMask));
-        pasteItem.addActionListener(e -> editorPane.paste());
+        pasteItem.addActionListener(e -> focusedTextComponent().paste());
 
         JMenuItem wrapLinesItem = new JMenuItem(Messages.get("menu.edit.wrapLines"));
         wrapLinesItem.addActionListener(e -> wrapLines());
 
         JMenuItem unwrapLinesItem = new JMenuItem(Messages.get("menu.edit.unwrapLines"));
         unwrapLinesItem.addActionListener(e -> unwrapLines());
+        JMenuItem sortLinesItem = new JMenuItem(Messages.get("menu.edit.sortLines"));
+        sortLinesItem.addActionListener(e -> sortLines());
         wrapLinesItem.setEnabled(false);
         unwrapLinesItem.setEnabled(false);
+        sortLinesItem.setEnabled(false);
 
         editMenu.add(undoItem);
         editMenu.add(redoItem);
@@ -434,6 +468,7 @@ public class EditorWindow {
         editMenu.addSeparator();
         editMenu.add(wrapLinesItem);
         editMenu.add(unwrapLinesItem);
+        editMenu.add(sortLinesItem);
 
         JMenuItem htmlEncodeItem = new JMenuItem(Messages.get("menu.edit.htmlEncode"));
         htmlEncodeItem.addActionListener(e -> htmlEncodeNonAscii());
@@ -478,6 +513,7 @@ public class EditorWindow {
                 boolean hasSel = editorPane.getSelectionStart() != editorPane.getSelectionEnd();
                 wrapLinesItem.setEnabled(hasSel);
                 unwrapLinesItem.setEnabled(hasSel);
+                sortLinesItem.setEnabled(hasSel);
                 String tableKey = tablesInScope(BoxTableConverter::findTables).isEmpty()
                         ? "menu.edit.convertPandocTable" : "menu.edit.convertBoxTable";
                 cleanupTablesItem.setText(Messages.get(hasSel ? tableKey + ".selection" : tableKey));
@@ -1524,7 +1560,9 @@ public class EditorWindow {
                     for (File file : files) {
                         String name = file.getName().toLowerCase();
                         if (name.endsWith(".gif") || name.endsWith(".jpg")
-                                || name.endsWith(".jpeg") || name.endsWith(".png")) {
+                                || name.endsWith(".jpeg") || name.endsWith(".png")
+                                || name.endsWith(".svg") || name.endsWith(".bmp")
+                                || name.endsWith(".webp")) {
                             String imgPath = computeImageRelativePath(file);
                             String altText = file.getName().replaceFirst("\\.[^.]+$", "");
                             markdown.append("![").append(altText).append("](").append(imgPath).append(")\n");
@@ -2804,7 +2842,26 @@ public class EditorWindow {
             if (!outFile.getName().contains(".")) {
                 outFile = new File(outFile.getAbsolutePath() + ".html");
             }
-            String html = previewPanel.getStyledHtml(getRenderedHtml(), currentFile, preferences, true, editorPane.getText());
+            JCheckBox embedBox = new JCheckBox(Messages.get("export.html.embedImages"));
+            JCheckBox convertLinksBox = new JCheckBox(Messages.get("export.html.convertMdLinks"));
+            JPanel optionsPanel = new JPanel();
+            optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.Y_AXIS));
+            embedBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+            convertLinksBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+            optionsPanel.add(embedBox);
+            optionsPanel.add(convertLinksBox);
+            int choice = JOptionPane.showConfirmDialog(frame, optionsPanel,
+                    Messages.get("menu.file.export") + " HTML",
+                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+            if (choice != JOptionPane.OK_OPTION) return;
+            String body = getRenderedHtml();
+            if (embedBox.isSelected()) {
+                body = embedImages(body);
+            }
+            if (convertLinksBox.isSelected()) {
+                body = convertMdLinksToHtml(body);
+            }
+            String html = previewPanel.getStyledHtml(body, currentFile, preferences, true, editorPane.getText());
             try {
                 Files.writeString(outFile.toPath(), html, StandardCharsets.UTF_8);
             } catch (IOException ex) {
@@ -2812,6 +2869,131 @@ public class EditorWindow {
                         Messages.get("msg.error"), JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    /**
+     * Embeds local images in the HTML body. SVG files are inlined as {@code <svg>} markup;
+     * bitmap images become Base64 data URIs. Remote (http/https) images, existing data:
+     * URIs, and images that cannot be found or read are left unchanged.
+     */
+    private String embedImages(String html) {
+        if (currentFile == null || currentFile.getParentFile() == null) return html;
+        File baseDir = currentFile.getParentFile();
+        java.util.regex.Pattern srcPattern = java.util.regex.Pattern.compile("\\bsrc=\"([^\"]+)\"");
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("<img\\b[^>]*>").matcher(html);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            String tag = m.group();
+            String replacement = tag;
+            java.util.regex.Matcher sm = srcPattern.matcher(tag);
+            if (sm.find()) {
+                String src = sm.group(1);
+                String lower = src.toLowerCase();
+                if (!lower.startsWith("http://") && !lower.startsWith("https://") && !lower.startsWith("data:")) {
+                    try {
+                        String path;
+                        if (lower.startsWith("file:")) {
+                            path = new File(java.net.URI.create(src)).getPath();
+                        } else {
+                            path = java.net.URLDecoder.decode(src.replace("+", "%2B"), StandardCharsets.UTF_8);
+                        }
+                        File img = new File(path);
+                        if (!img.isAbsolute()) img = new File(baseDir, path);
+                        if (!img.isFile() && baseDir.getName().toLowerCase().endsWith(".textbundle")) {
+                            File inAssets = new File(new File(baseDir, "assets"), path);
+                            if (inAssets.isFile()) img = inAssets;
+                        }
+                        String mime = imageMimeType(img.getName());
+                        if (img.isFile() && mime != null) {
+                            if ("image/svg+xml".equals(mime)) {
+                                String svg = inlineSvg(Files.readString(img.toPath(), StandardCharsets.UTF_8), tag);
+                                if (svg != null) {
+                                    replacement = svg;
+                                } else {
+                                    replacement = tag.replace(src, "data:" + mime + ";base64,"
+                                            + java.util.Base64.getEncoder().encodeToString(Files.readAllBytes(img.toPath())));
+                                }
+                            } else {
+                                String uri = "data:" + mime + ";base64,"
+                                        + java.util.Base64.getEncoder().encodeToString(Files.readAllBytes(img.toPath()));
+                                replacement = tag.substring(0, sm.start(1)) + uri + tag.substring(sm.end(1));
+                            }
+                        }
+                    } catch (IOException | IllegalArgumentException ex) {
+                        // Leave the original link in place
+                    }
+                }
+            }
+            m.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(replacement));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    /**
+     * Returns the SVG document as inline markup (XML prolog, DOCTYPE and leading comments
+     * removed), carrying over width/height from the {@code <img>} tag and making it
+     * responsive otherwise. Returns null if no usable root {@code <svg>} element is found.
+     */
+    private static String inlineSvg(String svg, String imgTag) {
+        String s = svg.replaceFirst("^\\uFEFF", "")
+                .replaceAll("(?s)<\\?xml.*?\\?>", "")
+                .replaceAll("(?s)<!DOCTYPE.*?(\\[.*?\\])?\\s*>", "")
+                .replaceAll("(?s)<!--.*?-->", "")
+                .trim();
+        java.util.regex.Matcher root = java.util.regex.Pattern.compile("(?s)^<svg\\b([^>]*)>").matcher(s);
+        if (!root.find() || !s.toLowerCase().endsWith("</svg>")) return null;
+        String attrs = root.group(1);
+        boolean selfClosed = attrs.endsWith("/");
+        if (selfClosed) attrs = attrs.substring(0, attrs.length() - 1);
+        for (String name : new String[] {"width", "height"}) {
+            java.util.regex.Matcher im = java.util.regex.Pattern
+                    .compile("\\b" + name + "=\"([^\"]*)\"").matcher(imgTag);
+            if (im.find()) {
+                attrs = attrs.replaceAll("\\s" + name + "=\"[^\"]*\"", "");
+                attrs += " " + name + "=\"" + im.group(1) + "\"";
+            }
+        }
+        java.util.regex.Matcher alt = java.util.regex.Pattern.compile("\\balt=\"([^\"]*)\"").matcher(imgTag);
+        if (alt.find() && !attrs.contains("aria-label=")) {
+            attrs += " role=\"img\" aria-label=\"" + alt.group(1) + "\"";
+        }
+        if (!attrs.contains("style=")) attrs += " style=\"max-width:100%;height:auto\"";
+        return "<svg" + attrs + (selfClosed ? "/>" : ">") + s.substring(root.end());
+    }
+
+    /**
+     * Rewrites relative hyperlinks that point to Markdown files ({@code .md} or
+     * {@code .markdown}, optionally followed by a {@code #fragment} or {@code ?query})
+     * so they point to {@code .html} instead. Links with a URL scheme (http:, mailto:, ...)
+     * and same-page anchors are left unchanged.
+     */
+    private static String convertMdLinksToHtml(String html) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(<a\\b[^>]*?\\bhref=\")([^\"]*)(\")", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(html);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            String href = m.group(2);
+            String converted = href;
+            if (!href.matches("(?i)^[a-z][a-z0-9+.-]*:.*") && !href.startsWith("//") && !href.startsWith("#")) {
+                converted = href.replaceFirst("(?i)\\.(md|markdown)(?=([#?].*)?$)", ".html");
+            }
+            m.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(m.group(1) + converted + m.group(3)));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    private static String imageMimeType(String fileName) {
+        String n = fileName.toLowerCase();
+        if (n.endsWith(".png")) return "image/png";
+        if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+        if (n.endsWith(".gif")) return "image/gif";
+        if (n.endsWith(".svg")) return "image/svg+xml";
+        if (n.endsWith(".webp")) return "image/webp";
+        if (n.endsWith(".bmp")) return "image/bmp";
+        return null;
     }
 
     private void exportPdf() {
@@ -3176,9 +3358,9 @@ public class EditorWindow {
                         tablesExt, strikethroughExt, taskListExt, autolinkExt, footnotesExt,
                         headingAnchorExt, imageAttrExt, insExt, yamlExt);
                 org.commonmark.parser.Parser parser = org.commonmark.parser.Parser.builder().extensions(extensions).build();
-                org.commonmark.node.Node document = parser.parse(markdown);
-
                 DocxExporter exporter = new DocxExporter(currentFile);
+                // Protect $$...$$ blocks (including multi-line ones) from the Markdown parser.
+                org.commonmark.node.Node document = parser.parse(exporter.protectDisplayMath(markdown));
                 exporter.export(document, outFile);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, Messages.get("msg.error", ex.getMessage()),
@@ -4457,6 +4639,185 @@ public class EditorWindow {
             }
         }
 
+        editorPane.replaceSelection(out.toString());
+    }
+
+    /** A line to be sorted together with its sort key parts. */
+    private record SortRow(String line, java.util.List<String> key) {}
+
+    /**
+     * Sorts the selected lines. A dialog offers numeric sorting, ignoring whitespace,
+     * case-insensitive comparison, and an optional regex ("Using pattern") that selects
+     * the part of each line used as the sort key: either the entire match or specific
+     * groups (\1 \2 ...) compared in the order given. Lines that don't match the pattern
+     * are kept, in their original order, after the sorted lines.
+     */
+    private void sortLines() {
+        if (editorPane.getSelectionStart() == editorPane.getSelectionEnd()) return;
+
+        JCheckBox numericBox = new JCheckBox(Messages.get("dialog.sortLines.numeric"));
+        JCheckBox whitespaceBox = new JCheckBox(Messages.get("dialog.sortLines.ignoreWhitespace"));
+        JCheckBox caseBox = new JCheckBox(Messages.get("dialog.sortLines.ignoreCase"));
+        JCheckBox patternBox = new JCheckBox(Messages.get("dialog.sortLines.usePattern"));
+        JLabel patternLabel = new JLabel(Messages.get("dialog.sortLines.pattern"));
+        JTextField patternField = new JTextField(24);
+        JRadioButton entireRadio = new JRadioButton(Messages.get("dialog.sortLines.entireMatch"), true);
+        JRadioButton groupsRadio = new JRadioButton(Messages.get("dialog.sortLines.matchedGroups"));
+        ButtonGroup radioGroup = new ButtonGroup();
+        radioGroup.add(entireRadio);
+        radioGroup.add(groupsRadio);
+        JLabel groupsLabel = new JLabel(Messages.get("dialog.sortLines.groups"));
+        JTextField groupsField = new JTextField("\\1", 10);
+
+        Runnable updateEnabled = () -> {
+            boolean usePattern = patternBox.isSelected();
+            patternLabel.setEnabled(usePattern);
+            patternField.setEnabled(usePattern);
+            entireRadio.setEnabled(usePattern);
+            groupsRadio.setEnabled(usePattern);
+            boolean groups = usePattern && groupsRadio.isSelected();
+            groupsLabel.setEnabled(groups);
+            groupsField.setEnabled(groups);
+        };
+        patternBox.addActionListener(e -> updateEnabled.run());
+        entireRadio.addActionListener(e -> updateEnabled.run());
+        groupsRadio.addActionListener(e -> updateEnabled.run());
+        updateEnabled.run();
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        JPanel patternRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        patternRow.add(patternLabel);
+        patternRow.add(patternField);
+        JPanel groupsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        groupsRow.add(Box.createHorizontalStrut(20));
+        groupsRow.add(groupsLabel);
+        groupsRow.add(groupsField);
+        JPanel entireRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        entireRow.add(Box.createHorizontalStrut(20));
+        entireRow.add(entireRadio);
+        JPanel groupsRadioRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        groupsRadioRow.add(Box.createHorizontalStrut(20));
+        groupsRadioRow.add(groupsRadio);
+        for (JComponent c : new JComponent[] {numericBox, whitespaceBox, caseBox, patternBox,
+                patternRow, entireRow, groupsRadioRow, groupsRow}) {
+            c.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panel.add(c);
+        }
+
+        java.util.regex.Pattern pattern = null;
+        java.util.List<Integer> groupRefs = new ArrayList<>();
+        while (true) {
+            int choice = JOptionPane.showConfirmDialog(frame, panel,
+                    Messages.get("dialog.sortLines.title"),
+                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+            if (choice != JOptionPane.OK_OPTION) return;
+            pattern = null;
+            groupRefs.clear();
+            if (!patternBox.isSelected()) break;
+            try {
+                pattern = java.util.regex.Pattern.compile(patternField.getText());
+            } catch (java.util.regex.PatternSyntaxException ex) {
+                JOptionPane.showMessageDialog(frame,
+                        Messages.get("dialog.sortLines.invalidPattern", ex.getDescription()),
+                        Messages.get("dialog.sortLines.title"), JOptionPane.WARNING_MESSAGE);
+                continue;
+            }
+            if (!groupsRadio.isSelected()) break;
+            java.util.regex.Matcher refs = java.util.regex.Pattern.compile("\\\\(\\d+)").matcher(groupsField.getText());
+            int groupCount = pattern.matcher("").groupCount();
+            boolean valid = true;
+            while (refs.find()) {
+                int n = Integer.parseInt(refs.group(1));
+                if (n > groupCount) { valid = false; break; }
+                groupRefs.add(n);
+            }
+            if (valid && !groupRefs.isEmpty()) break;
+            JOptionPane.showMessageDialog(frame,
+                    Messages.get("dialog.sortLines.invalidGroups", groupCount),
+                    Messages.get("dialog.sortLines.title"), JOptionPane.WARNING_MESSAGE);
+        }
+
+        final boolean numeric = numericBox.isSelected();
+        final boolean ignoreWs = whitespaceBox.isSelected();
+        final boolean ignoreCase = caseBox.isSelected();
+
+        String selected = editorPane.getSelectedText();
+        String nl = selected.contains("\r\n") ? "\r\n" : (selected.contains("\r") && !selected.contains("\n") ? "\r" : "\n");
+        String normalized = selected.replace("\r\n", "\n").replace("\r", "\n");
+        boolean trailingBreak = normalized.endsWith("\n");
+        if (trailingBreak) normalized = normalized.substring(0, normalized.length() - 1);
+        String[] lines = normalized.split("\n", -1);
+
+        java.util.List<SortRow> matched = new ArrayList<>();
+        java.util.List<String> unmatched = new ArrayList<>();
+        for (String line : lines) {
+            java.util.List<String> key;
+            if (pattern == null) {
+                key = java.util.List.of(line);
+            } else {
+                java.util.regex.Matcher lm = pattern.matcher(line);
+                if (!lm.find()) {
+                    unmatched.add(line);
+                    continue;
+                }
+                if (groupRefs.isEmpty()) {
+                    key = java.util.List.of(lm.group());
+                } else {
+                    key = new ArrayList<>();
+                    for (int g : groupRefs) {
+                        String v = lm.group(g);
+                        key.add(v == null ? "" : v);
+                    }
+                }
+            }
+            if (ignoreWs) {
+                java.util.List<String> stripped = new ArrayList<>();
+                for (String part : key) stripped.add(part.replaceAll("\\s+", ""));
+                key = stripped;
+            }
+            matched.add(new SortRow(line, key));
+        }
+
+        java.util.regex.Pattern numberPattern = java.util.regex.Pattern.compile("[-+]?\\d+(?:\\.\\d+)?");
+        matched.sort((a, b) -> {
+            for (int i = 0; i < a.key().size(); i++) {
+                String x = a.key().get(i);
+                String y = b.key().get(i);
+                int c = 0;
+                if (numeric) {
+                    java.util.regex.Matcher mx = numberPattern.matcher(x);
+                    java.util.regex.Matcher my = numberPattern.matcher(y);
+                    boolean hx = mx.find();
+                    boolean hy = my.find();
+                    if (hx && hy) {
+                        c = new java.math.BigDecimal(mx.group()).compareTo(new java.math.BigDecimal(my.group()));
+                    } else if (hx != hy) {
+                        c = hx ? -1 : 1; // lines without a number sort last
+                    } else {
+                        c = ignoreCase ? x.compareToIgnoreCase(y) : x.compareTo(y);
+                    }
+                } else {
+                    c = ignoreCase ? x.compareToIgnoreCase(y) : x.compareTo(y);
+                }
+                if (c != 0) return c;
+            }
+            return 0;
+        });
+
+        StringBuilder out = new StringBuilder(selected.length());
+        boolean first = true;
+        for (SortRow row : matched) {
+            if (!first) out.append(nl);
+            out.append(row.line());
+            first = false;
+        }
+        for (String line : unmatched) {
+            if (!first) out.append(nl);
+            out.append(line);
+            first = false;
+        }
+        if (trailingBreak) out.append(nl);
         editorPane.replaceSelection(out.toString());
     }
 
